@@ -1,0 +1,49 @@
+Created At: 2026-07-12T21:37:37Z
+Completed At: 2026-07-12T21:37:37Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1236
+Total Bytes: 62879
+Showing lines 485 to 525
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+485:                             </p>
+486:                           )}
+487:                         </div>
+488: 
+489:                         <div className="grid grid-cols-2 gap-2">
+490:                           <div className="bg-slate-950 p-2 rounded-xl border border-slate-800/80">
+491:                             <span className="text-[10px] uppercase font-bold text-slate-500 block">Operator</span>
+492:                             <span className="font-bold text-amber-400 text-xs block truncate">
+493:                               {d.operator?.name || "Optional / None"}
+494:                             </span>
+495:                           </div>
+496:                           <div className="bg-slate-950 p-2 rounded-xl border border-slate-800/80">
+497:                             <span className="text-[10px] uppercase font-bold text-slate-500 block">Conveyance / Driver</span>
+498:                             <span className="font-bold text-slate-300 text-xs block truncate">
+499:                               {d.publicTransportUsed ? "Public Transport / Outside" : (d.driver?.name || "Company Driver")}
+500:                             </span>
+501:                           </div>
+502:                         </div>
+503: 
+504:                         {(d.multiOperators?.length > 0 || d.multiWorkers?.length > 0) && (
+505:                           <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-800/60 text-[11px] space-y-1">
+506:                             <span className="text-slate-500 font-bold uppercase block text-[10px]">Additional Crew:</span>
+507:                             {d.multiOperators?.map((mo: any) => (
+508:                               <div key={mo.id} className="flex justify-between text-slate-300">
+509:                                 <span>Op: {mo.employee?.name}</span>
+510:                               </div>
+511:                             ))}
+512:                             {d.multiWorkers?.map((mw: any) => (
+513:                               <div key={mw.id} className="flex justify-between text-slate-300">
+514:                                 <span>Helper: {mw.employee?.name}</span>
+515:                               </div>
+516:                             ))}
+517:                           </div>
+518:                         )}
+519:                       </td>
+520: 
+521:                       {/* COLUMN 3: Equipment, Setup & Bill Slip Action */}
+522:                       <td className="p-4 align-top space-y-3">
+523:                         <div className="flex flex-wrap gap-1.5">
+524:                           {hasLift && (
+525:                             <span className="bg-blue-950/80 text-blue-300 border border-blue-500/40 px-2.5 py-1 rounded-lg font-bold text-xs flex items-center gap-1">
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

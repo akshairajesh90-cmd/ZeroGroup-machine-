@@ -1,0 +1,60 @@
+Created At: 2026-07-12T21:36:33Z
+Completed At: 2026-07-12T21:36:33Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1220
+Total Bytes: 62409
+Showing lines 1000 to 1060
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1000:                       id="pubTransCheck"
+1001:                       checked={publicTransportUsed}
+1002:                       onChange={(e) => setPublicTransportUsed(e.target.checked)}
+1003:                       className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+1004:                     />
+1005:                     <label htmlFor="pubTransCheck" className="text-xs font-bold text-slate-200 cursor-pointer select-none">
+1006:                       Public Transport / Bus / Auto used (No Company Driver vehicle)
+1007:                     </label>
+1008:                   </div>
+1009: 
+1010:                   {!publicTransportUsed && (
+1011:                     <div className="flex items-center gap-2 w-full sm:w-auto">
+1012:                       <span className="text-xs font-bold text-slate-400 shrink-0">Company Driver:</span>
+1013:                       <select
+1014:                         value={driverId}
+1015:                         onChange={(e) => setDriverId(e.target.value)}
+1016:                         className="bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs font-bold text-white focus:border-amber-500 outline-none min-w-[180px]"
+1017:                       >
+1018:                         <option value="">Select driver...</option>
+1019:                         {driversOnly.map((d) => (
+1020:                           <option key={d.id} value={d.id}>{d.name} ({d.role})</option>
+1021:                         ))}
+1022:                       </select>
+1023:                     </div>
+1024:                   )
+<truncated 668 bytes>
+5:                   <span className="text-[11px] text-slate-500 italic">Enter quantity for tools sent with setup</span>
+1036:                 </div>
+1037: 
+1038:                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-48 overflow-y-auto pr-1">
+1039:                   {tools.map((t) => {
+1040:                     const qty = toolQuantities[t.id] || 0;
+1041:                     return (
+1042:                       <div key={t.id} className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between">
+1043:                         <div>
+1044:                           <span className="text-xs font-bold text-white block">{t.name}</span>
+1045:                           <span className="text-[10px] text-slate-500 font-mono">{t.toolId}</span>
+1046:                         </div>
+1047:                         <div className="flex items-center gap-1.5">
+1048:                           <button
+1049:                             type="button"
+1050:                             onClick={() => handleToolQuantityChange(t.id, qty - 1)}
+1051:                             className="w-7 h-7 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 font-bold flex items-center justify-center text-sm"
+1052:                           >
+1053:                             -
+1054:                           </button>
+1055:                           <span className="w-6 text-center text-xs font-bold text-amber-400">{qty}</span>
+1056:                           <button
+1057:                             type="button"
+1058:                             onClick={() => handleToolQuantityChange(t.id, qty + 1)}
+1059:                             className="w-7 h-7 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 font-bold flex items-center justify-center text-sm"
+1060:                           >
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

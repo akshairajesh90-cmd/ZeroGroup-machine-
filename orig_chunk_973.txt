@@ -1,0 +1,72 @@
+Created At: 2026-07-12T07:03:11Z
+Completed At: 2026-07-12T07:03:11Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 862
+Total Bytes: 41308
+Showing lines 550 to 750
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+550:                     ))}
+551:                   </select>
+552:                 </div>
+553:               )}
+554: 
+555:               {/* Strict Role Segregated Crew Pickers */}
+556:               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-800">
+557:                 <div>
+558:                   <label className="text-xs font-bold text-slate-400 block mb-1">Driver (Tows/Delivers Equipment Only)</label>
+559:                   <select
+560:                     value={driverId}
+561:                     onChange={(e) => setDriverId(e.target.value)}
+562:                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white outline-none"
+563:                   >
+564:                     {driversOnly.map((e) => (
+565:                       <option key={e.id} value={e.id}>{e.name} ({e.role})</option>
+566:                     ))}
+567:                   </select>
+568:                   <span className="text-[10px] text-amber-400 block mt-1">Driver never performs Operator Pani work on site.</span>
+569:                 </div>
+570: 
+571:                 <div>
+572:                   <label className="text-xs font-bold text-slate-400 block mb-1">Primary Operator (Runs Machine / Concrete Pour)</label>
+573:                   <select
+574:                     value={operatorId}
+575:                     onChange={(e) => setOperatorId(e.target.value)}
+576:                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white outline-none"
+577:
+<truncated 8002 bytes>
+ame="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold transition-all"
+717:                 >
+718:                   Cancel
+719:                 </button>
+720:                 <button
+721:                   type="submit"
+722:                   disabled={isPending}
+723:                   className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-black transition-all flex items-center gap-2 shadow-lg shadow-amber-500/20"
+724:                 >
+725:                   {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+726:                   Confirm & Dispatch Crew / Tools
+727:                 </button>
+728:               </div>
+729:             </form>
+730:           </div>
+731:         </div>
+732:       )}
+733: 
+734:       {/* RESOLVE CONFLICT MODAL */}
+735:       {resolvingDispatchId && (
+736:         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+737:           <div className="bg-slate-900 border border-red-500/60 rounded-3xl max-w-md w-full p-6 shadow-2xl">
+738:             <h3 className="text-lg font-bold text-white flex items-center gap-2 text-red-400">
+739:               <ShieldAlert className="w-5 h-5" />
+740:               Owner Conflict Resolution
+741:             </h3>
+742:             <p className="text-xs text-slate-400 mt-1">
+743:               Log your resolution details. This clears the Critical Alert on the dashboard.
+744:             </p>
+745: 
+746:             <form onSubmit={handleResolveConflict} className="mt-4 space-y-4">
+747:               <textarea
+748:                 value={resolutionNotes}
+749:                 onChange={(e) => setResolutionNotes(e.target.value)}
+750:                 placeholder="e.g. Customer agreed to pay 50% for damaged hose. Worker paid ₹300 bonus."
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

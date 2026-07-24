@@ -1,0 +1,61 @@
+Created At: 2026-07-13T08:46:43Z
+Completed At: 2026-07-13T08:46:43Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1517
+Total Bytes: 79999
+Showing lines 960 to 1060
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+960:                           onChange={(e: any) => setVibratorType(e.target.value)}
+961:                           className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm font-bold text-white focus:border-amber-500 outline-none"
+962:                         >
+963:                           <option value="PETROL">Petrol (Optional Operator)</option>
+964:                           <option value="ELECTRIC">Electric (Wire only, no op)</option>
+965:                         </select>
+966:                       </div>
+967:                     )}
+968: 
+969:                     {/* Trolly + Bench (ONLY shown if TROLLY is checked) */}
+970:                     {activeModes.includes("TROLLY") && (
+971:                       <div className="bg-slate-900/80 p-3 rounded-xl border border-emerald-500/30">
+972:                         <label className="text-xs font-bold text-emerald-300 block mb-1">One-Wheel Trolly + Bench</label>
+973:                         <div className="flex items-center gap-2 pt-1.5">
+974:                           <input
+975:                             type="checkbox"
+976:                             id="trollyBenchCheck"
+977:                             checked={hasTrollyBench || activeModes.includes("TROLLY")}
+978:                             onChange={(e) => setHasTrollyBench(e.target.checked)}
+979:                             className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
+980:                           />
+981:                           <label htmlFor="trollyBenchCheck" className="text-xs fon
+<truncated 3299 bytes>
+               3. Labor Crew & Multiple Mestri Allocation (`Exact Helpers per Leader`)
+1032:                     </h4>
+1033:                     <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-xl">
+1034:                       <span className="text-xs font-bold text-slate-300">Total Helper Headcount:</span>
+1035:                       <input
+1036:                         type="number"
+1037:                         min="0"
+1038:                         max="200"
+1039:                         value={
+1040:                           leaderAllocations.reduce((s, l) => s + Number(l.helperCount || 0), 0) > 0
+1041:                             ? leaderAllocations.reduce((s, l) => s + Number(l.helperCount || 0), 0)
+1042:                             : helperCount
+1043:                         }
+1044:                         onChange={(e) => {
+1045:                           const val = parseInt(e.target.value) || 0;
+1046:                           setHelperCount(val);
+1047:                           if (leaderAllocations.length === 1 && leaderAllocations[0].helperCount === 0) {
+1048:                             const next = [...leaderAllocations];
+1049:                             next[0].helperCount = val;
+1050:                             setLeaderAllocations(next);
+1051:                           }
+1052:                         }}
+1053:                         placeholder="0"
+1054:                         className="w-16 bg-slate-950 border border-amber-500/50 rounded-lg p-1 text-center font-black text-amber-400 text-sm outline-none"
+1055:                       />
+1056:                       <span className="text-[10px] text-slate-400">(`Shown on Bill #1583`)</span>
+1057:                     </div>
+1058:                   </div>
+1059: 
+1060:                   {/* Leader Allocation Rows */}
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

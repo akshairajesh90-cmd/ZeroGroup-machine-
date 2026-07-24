@@ -1,0 +1,54 @@
+Created At: 2026-07-12T21:52:27Z
+Completed At: 2026-07-12T21:52:27Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1360
+Total Bytes: 70759
+Showing lines 190 to 235
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+190: 
+191:   const handleCreateDispatch = async (e: React.FormEvent) => {
+192:     e.preventDefault();
+193:     setErrorMsg(null);
+194:     setSuccessMsg(null);
+195: 
+196:     const isMachineRental = workCategory === "MACHINE";
+197:     const chosenMachineIds = isMachineRental ? selectedMachineIds : [];
+198: 
+199:     const toolItems = Object.entries(toolQuantities).map(([toolId, quantity]) => ({
+200:       toolId,
+201:       quantity,
+202:     }));
+203: 
+204:     // Find main helper name if selected from dropdown or manual entry
+205:     let finalMainHelperName = mainHelperName;
+206:     if (mainHelperId) {
+207:       const empRow = employees.find(x => x.id === mainHelperId);
+208:       if (empRow) finalMainHelperName = empRow.name;
+209:     }
+210: 
+211:     startTransition(async () => {
+212:       const payload: any = {
+213:         customerId,
+214:         machineId: chosenMachineIds[0] || "INDEPENDENT",
+215:         machineIds: chosenMachineIds.length > 0 ? chosenMachineIds : ["INDEPENDENT"],
+216:         driverId: publicTransportUsed ? undefined : (driverId || undefined),
+217:         operatorId: operatorId || undefined,
+218:         mainHelperId: mainHelperId || undefined,
+219:         mainHelperName: finalMainHelperName || undefined,
+220:         helperCount: Number(helperCount || 0),
+221:         trollyWorkerCount: Number(trollyWorkerCount || 0),
+222:         multiOperatorIds,
+223:         multiWorkerIds,
+224:         siteBundleId: siteBundleId.trim() || undefined,
+225:         location,
+226:         mapLink: mapLink.trim() || undefined,
+227:         dateOfService,
+228:         workType,
+229:         liftFloors: Number(liftFloors || 1),
+230:         mixerCategory: mixerCategory,
+231:         vibratorType: vibratorType === "NONE" ? undefined : vibratorType,
+232:         hasTrollyBench: hasTrollyBench,
+233:         publicTransportUsed: publicTransportUsed,
+234:         toolItems,
+235:         notes: notes || undefined,
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

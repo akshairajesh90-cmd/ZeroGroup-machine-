@@ -1,0 +1,39 @@
+Created At: 2026-07-12T22:09:19Z
+Completed At: 2026-07-12T22:09:19Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1469
+Total Bytes: 77029
+Showing lines 110 to 140
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+110:   const [location, setLocation] = useState("");
+111:   const [mapLink, setMapLink] = useState("");
+112:   const [dateOfService, setDateOfService] = useState(new Date().toISOString().split("T")[0]);
+113:   const [workType, setWorkType] = useState("NORMAL");
+114:   const [toolQuantities, setToolQuantities] = useState<Record<string, number>>({});
+115:   const [twoWheelTrollyQty, setTwoWheelTrollyQty] = useState<number>(0);
+116:   const [notes, setNotes] = useState("");
+117: 
+118:   // New Customer quick modal state
+119:   const [newCustName, setNewCustName] = useState("");
+120:   const [newCustPhone, setNewCustPhone] = useState("");
+121:   const [newCustAddress, setNewCustAddress] = useState("");
+122: 
+123:   // Post-work scope discovery modal state
+124:   const [finalizingDispatch, setFinalizingDispatch] = useState<any | null>(null);
+125:   const [finalWorkType, setFinalWorkType] = useState("NORMAL");
+126:   const [closingNotes, setClosingNotes] = useState("");
+127:   const [adjustedOperatorRate, setAdjustedOperatorRate] = useState<number | string>("");
+128:   const [adjustedCustomerCharge, setAdjustedCustomerCharge] = useState<number | string>("");
+129: 
+130:   // Resolve conflict state
+131:   const [resolvingDispatchId, setResolvingDispatchId] = useState<string | null>(null);
+132:   const [resolutionNotes, setResolutionNotes] = useState("");
+133: 
+134:   const handleToolQuantityChange = (tId: string, qty: number) => {
+135:     if (qty <= 0) {
+136:       const next = { ...toolQuantities };
+137:       delete next[tId];
+138:       setToolQuantities(next);
+139:     } else {
+140:       setToolQuantities({ ...toolQuantities, [tId]: qty });
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

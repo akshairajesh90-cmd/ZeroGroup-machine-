@@ -1,0 +1,54 @@
+Created At: 2026-07-12T21:53:09Z
+Completed At: 2026-07-12T21:53:09Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1402
+Total Bytes: 72812
+Showing lines 1120 to 1165
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1120:                       <input
+1121:                         type="checkbox"
+1122:                         id="pubTransCheck"
+1123:                         checked={publicTransportUsed}
+1124:                         onChange={(e) => setPublicTransportUsed(e.target.checked)}
+1125:                         className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+1126:                       />
+1127:                       <label htmlFor="pubTransCheck" className="text-xs font-bold text-slate-200 cursor-pointer select-none">
+1128:                         Public Transport / Bus / Auto used (No Company Driver vehicle)
+1129:                       </label>
+1130:                     </div>
+1131: 
+1132:                     {!publicTransportUsed && (
+1133:                       <div className="flex items-center gap-2 w-full sm:w-auto">
+1134:                         <span className="text-xs font-bold text-slate-400 shrink-0">Company Driver:</span>
+1135:                         <select
+1136:                           value={driverId}
+1137:                           onChange={(e) => setDriverId(e.target.value)}
+1138:                           className="bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs font-bold text-white focus:border-amber-500 outline-none min-w-[180px]"
+1139:                         >
+1140:                           <option value="">Select driver...</option>
+1141:                           {driversOnly.map((d) => (
+1142:                             <option key={d.id} value={d.id}>{d.name} ({d.role})</option>
+1143:                           ))}
+1144:                         </select>
+1145:                       </div>
+1146:                     )}
+1147:                   </div>
+1148:                 </div>
+1149:               )}
+1150: 
+1151:               {/* OPERATOR & DRIVER ONLY SECTION WHEN LABOR IS NOT CHECKED BUT EQUIPMENT NEEDS OP/DRIVER */}
+1152:               {!activeModes.some(m => ["LABOR", "LIFT", "MIXER"].includes(m)) && activeModes.includes("VIBRATOR") && (
+1153:                 <div className="p-5 bg-slate-950 border border-purple-500/30 rounded-2xl space-y-4 animate-in fade-in duration-200">
+1154:                   <h4 className="text-xs font-black uppercase tracking-wider text-purple-400 flex items-center gap-2 border-b border-slate-800/80 pb-2.5">
+1155:                     <Wrench className="w-4 h-4" />
+1156:                     3. Optional Operator & Driver for Vibrator
+1157:                   </h4>
+1158:                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+1159:                     <div>
+1160:                       <label className="text-xs font-bold text-slate-300 block mb-1">Primary Operator (`Mahesh`)</label>
+1161:                       <select
+1162:                         value={operatorId}
+1163:                         onChange={(e) => setOperatorId(e.target.value)}
+1164:                         className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs font-bold text-white focus:border-amber-500 outline-none"
+1165:                       >
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -1,0 +1,64 @@
+Created At: 2026-07-12T07:04:40Z
+Completed At: 2026-07-12T07:04:40Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 926
+Total Bytes: 43785
+Showing lines 480 to 550
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+480:                       onClick={() => handleStatusChange(d.id, "COMPLETED")}
+481:                       className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow transition-all"
+482:                     >
+483:                       {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+484:                       Mark Shift Completed
+485:                     </button>
+486:                   )}
+487:                 </div>
+488: 
+489:                 {(d.status === "DELIVERED" || d.status === "COMPLETED") && !d.isScopeFinalized && (
+490:                   <button
+491:                     onClick={() => {
+492:                       setFinalizingDispatch(d);
+493:                       setFinalWorkType(d.workType);
+494:                       setAdjustedOperatorRate(d.operatorDailyRate?.toString() || "");
+495:                       setAdjustedCustomerCharge(d.customerCharge?.toString() || "");
+496:                     }}
+497:                     className="w-full bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all"
+498:                   >
+499:                     <FileText className="w-3.5 h-3.5 text-amber-400" />
+500:                     Finalize Post-Work Pani Scope & Actuals
+501:                   </button>
+502:                 )}
+503: 
+504:                 {d.isScopeFinalized && (
+505:        
+<truncated 928 bytes>
+  Create New Daily Dispatch / Site Bundle
+523:               </h3>
+524:               <button onClick={() => setShowNewModal(false)} className="text-slate-400 hover:text-white p-1">
+525:                 <X className="w-5 h-5" />
+526:               </button>
+527:             </div>
+528: 
+529:             <form onSubmit={handleCreateDispatch} className="mt-6 space-y-5">
+530:               {/* Work Category & Site Bundle ID */}
+531:               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+532:                 <div>
+533:                   <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-2">Work Category</label>
+534:                   <div className="grid grid-cols-2 gap-2">
+535:                     <button
+536:                       type="button"
+537:                       onClick={() => setWorkCategory("MACHINE")}
+538:                       className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+539:                         workCategory === "MACHINE" ? "bg-amber-500/20 border-amber-500 text-amber-400 shadow-lg" : "bg-slate-950 border-slate-800 text-slate-400"
+540:                       }`}
+541:                     >
+542:                       <Truck className="w-4 h-4" />
+543:                       Machine Rental Job
+544:                     </button>
+545:                     <button
+546:                       type="button"
+547:                       onClick={() => setWorkCategory("INDEPENDENT")}
+548:                       className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+549:                         workCategory === "INDEPENDENT" ? "bg-blue-500/20 border-blue-500 text-blue-400 shadow-lg" : "bg-slate-950 border-slate-800 text-slate-400"
+550:                       }`}
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

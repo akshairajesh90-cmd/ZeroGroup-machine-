@@ -1,0 +1,59 @@
+Created At: 2026-07-12T22:10:12Z
+Completed At: 2026-07-12T22:10:12Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1469
+Total Bytes: 77029
+Showing lines 170 to 220
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+170:     e.preventDefault();
+171:     setErrorMsg(null);
+172:     startTransition(async () => {
+173:       const res = await createQuickCustomer({
+174:         name: newCustName,
+175:         phone: newCustPhone,
+176:         address: newCustAddress,
+177:       });
+178:       if (!res.success) {
+179:         setErrorMsg(res.error || "Failed to add customer.");
+180:       } else if (res.customer) {
+181:         setSuccessMsg(`Customer "${res.customer.name}" added!`);
+182:         setCustomersList([...customersList, res.customer]);
+183:         setCustomerId(res.customer.id);
+184:         setShowNewCustomerModal(false);
+185:         setNewCustName("");
+186:         setNewCustPhone("");
+187:         setNewCustAddress("");
+188:       }
+189:     });
+190:   };
+191: 
+192:   const handleCreateDispatch = async (e: React.FormEvent) => {
+193:     e.preventDefault();
+194:     setErrorMsg(null);
+195:     setSuccessMsg(null);
+196: 
+197:     const isMachineRental = workCategory === "MACHINE";
+198:     const chosenMachineIds = isMachineRental ? selectedMachineIds : [];
+199: 
+200:     const toolItems = Object.entries(toolQuantities).map(([toolId, quantity]) => ({
+201:       toolId,
+202:       quantity,
+203:     }));
+204: 
+205:     // Process Structured Leader Allocations
+206:     let finalHelperCount = Number(helperCount || 0);
+207:     let finalMainLeaderId = mainHelperId || undefined;
+208:     let finalMainLeaderName = mainHelperName || undefined;
+209:     let finalMultiWorkerIds = [...multiWorkerIds];
+210:     let breakdownNotes: string[] = [];
+211: 
+212:     if (twoWheelTrollyQty > 0) {
+213:       const trollyTool = tools.find(t => t.name.toLowerCase().includes("2-wheel") || t.name.toLowerCase().includes("trolly") || t.toolId.toLowerCase().includes("trolly"));
+214:       if (trollyTool) {
+215:         toolItems.push({ toolId: trollyTool.id, quantity: twoWheelTrollyQty });
+216:       } else {
+217:         breakdownNotes.push(`Setup Tools: ${twoWheelTrollyQty}x 2-Wheel Trolly / Cart`);
+218:       }
+219:     }
+220: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

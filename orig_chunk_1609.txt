@@ -1,0 +1,19 @@
+Created At: 2026-07-12T22:12:08Z
+Completed At: 2026-07-12T22:12:08Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1517
+Total Bytes: 80021
+Showing lines 1140 to 1150
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1140:                           )}
+1141:                         </div>
+1142:                       </div>
+1143:                     ))}
+1144:                   </div>
+1145: 
+1146:                   {/* Driver vs Public Transport */}
+1147:                   <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+1148:                     <div className="flex items-center gap-2">
+1149:                       <input
+1150:                         type="checkbox"
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

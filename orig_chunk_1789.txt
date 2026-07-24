@@ -1,0 +1,64 @@
+Created At: 2026-07-13T08:57:45Z
+Completed At: 2026-07-13T08:57:45Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1352
+Total Bytes: 70154
+Showing lines 650 to 760
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+650:                           ) : (
+651:                             <span className="text-[11px] text-slate-500 italic">No specific setup tools logged</span>
+652:                           )}
+653:                         </div>
+654: 
+655:                         {/* BILLING ACTION #1583 LINK OR GENERATE BUTTON */}
+656:                         <div className="pt-2 border-t border-slate-800/80 flex items-center gap-2">
+657:                           {d.invoice ? (
+658:                             <button
+659:                               onClick={() => router.push(`/admin/billing/${d.invoice.id}`)}
+660:                               className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all"
+661:                             >
+662:                               <FileText className="w-4 h-4" />
+663:                               View Bill #{d.invoice.billNumber} (₹{Number(d.invoice.totalAmount).toLocaleString()}) →
+664:                             </button>
+665:                           ) : (
+666:                             <button
+667:                               disabled={isPending}
+668:                               onClick={() => handleGenerateBill(d.id)}
+669:                               className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all"
+670:        
+<truncated 3237 bytes>
+                   </span>
+728:                 </div>
+729:                 <p className="text-xs text-slate-300 flex items-center gap-1">
+730:                   <MapPin className="w-3.5 h-3.5 text-blue-400" /> {d.location}
+731:                 </p>
+732:                 <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1 text-xs">
+733:                   <div><strong>Main Caller:</strong> {d.mainHelperName || d.mainHelper?.name || "Direct"}</div>
+734:                   <div><strong>Helper Count:</strong> {d.helperCount || 0} Workers</div>
+735:                   <div><strong>Lift Storeys:</strong> {d.liftFloors || 1} Floored</div>
+736:                   <div><strong>Mixer:</strong> {d.mixerCategory || "STANDARD"}</div>
+737:                 </div>
+738:               </div>
+739: 
+740:               <div className="mt-4 pt-3 border-t border-slate-800">
+741:                 {d.invoice ? (
+742:                   <button
+743:                     onClick={() => router.push(`/admin/billing/${d.invoice.id}`)}
+744:                     className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow"
+745:                   >
+746:                     View Bill #{d.invoice.billNumber}
+747:                   </button>
+748:                 ) : (
+749:                   <button
+750:                     onClick={() => handleGenerateBill(d.id)}
+751:                     className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow"
+752:                   >
+753:                     Generate Bill Slip #1583
+754:                   </button>
+755:                 )}
+756:               </div>
+757:             </div>
+758:           ))}
+759:         </div>
+760:       )}
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

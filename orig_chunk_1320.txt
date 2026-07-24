@@ -1,0 +1,72 @@
+Created At: 2026-07-12T21:14:04Z
+Completed At: 2026-07-12T21:14:04Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1107
+Total Bytes: 54681
+Showing lines 250 to 350
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+250:       const payload: any = {
+251:         dispatchId: finalizingDispatch.id,
+252:         finalWorkType,
+253:         closingNotes,
+254:       };
+255:       if (adjustedOperatorRate !== "") payload.adjustedOperatorRate = Number(adjustedOperatorRate);
+256:       if (adjustedCustomerCharge !== "") payload.adjustedCustomerCharge = Number(adjustedCustomerCharge);
+257: 
+258:       const res = await finalizeDispatchScope(payload);
+259:       if (!res.success) {
+260:         alert(res.error || "Failed to finalize post-work scope.");
+261:       } else {
+262:         setFinalizingDispatch(null);
+263:         window.location.reload();
+264:       }
+265:     });
+266:   };
+267: 
+268:   return (
+269:     <div className="space-y-6">
+270:       {/* Top action bar */}
+271:       <div className="flex items-center justify-between bg-slate-900/80 border border-slate-800 p-4 rounded-2xl shadow-xl">
+272:         <div>
+273:           <h2 className="text-lg font-bold text-white flex items-center gap-2">
+274:             <Truck className="w-5 h-5 text-amber-400" />
+275:             Active Daily Dispatches & Site Bundles ({dispatches.length})
+276:           </h2>
+277:           <p className="text-xs text-slate-400">
+278:             Supports multi-equipment site orders (Mixer + Lift + Trolly), multi-crew Pani work, bulk tool quantities, and post-work closing discovery.
+279:           </p>
+280:         </div>
+281: 
+282:         <button
+283:           onClick={() => setShowNewModal(true)}
+284:           className="flex items-center gap-2 bg-amber-500 hover:bg-amb
+<truncated 1928 bytes>
+tify-between pb-3 border-b border-slate-800">
+324:                   <div className="flex flex-wrap items-center gap-2">
+325:                     <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+326:                     <span className="font-bold text-white text-base">
+327:                       {d.dispatchMachines?.length > 0
+328:                         ? d.dispatchMachines.map((dm: any) => dm.machine?.machineId).join(" + ")
+329:                         : (d.machine?.machineId ?? "TROLLY / PANI CREW")}
+330:                     </span>
+331:                     {d.dispatchMachines?.length > 0 ? (
+332:                       <span className="text-xs px-2 py-0.5 bg-slate-800 text-amber-300 rounded border border-slate-700 font-semibold">
+333:                         {d.dispatchMachines.length} Machine(s) Assigned
+334:                       </span>
+335:                     ) : (
+336:                       <span className="text-xs px-2 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700 font-semibold">
+337:                         {d.machine?.type ?? "TROLLY/LIFT"}
+338:                       </span>
+339:                     )}
+340:                     {d.paniLaborCount > 1 && (
+341:                       <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full font-bold">
+342:                         Pani Headcount: {d.paniLaborCount}
+343:                       </span>
+344:                     )}
+345:                     {d.siteBundleId && (
+346:                       <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded-full font-bold uppercase">
+347:                         Bundle: {d.siteBundleId}
+348:                       </span>
+349:                     )}
+350:                   </div>
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

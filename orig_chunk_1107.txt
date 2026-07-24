@@ -1,0 +1,72 @@
+Created At: 2026-07-12T07:33:59Z
+Completed At: 2026-07-12T07:33:59Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1107
+Total Bytes: 54681
+Showing lines 500 to 600
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+500:                           Mark Shift Completed
+501:                         </button>
+502:                       )}
+503:                     </div>
+504: 
+505:                     {/* Cancellation / Postponement buttons with Audit Lock */}
+506:                     <div className="grid grid-cols-2 gap-2 pt-1">
+507:                       <button
+508:                         onClick={() => handleStatusChange(d.id, "POSTPONED")}
+509:                         className="bg-slate-800 hover:bg-slate-700 text-amber-400 text-[11px] font-bold py-1.5 rounded-lg border border-slate-700 transition-all"
+510:                       >
+511:                         Postpone Job
+512:                       </button>
+513:                       <button
+514:                         onClick={() => handleStatusChange(d.id, "CANCELLED")}
+515:                         className="bg-slate-800 hover:bg-red-900/50 text-red-400 text-[11px] font-bold py-1.5 rounded-lg border border-slate-700 transition-all"
+516:                       >
+517:                         Cancel Job
+518:                       </button>
+519:                     </div>
+520:                   </>
+521:                 )}
+522: 
+523:                 {(d.status === "DELIVERED" || d.status === "COMPLETED") && !d.isScopeFinalized && (
+524:                   <button
+525:                     onClick={() => {
+526:                       setFinalizingDispatch(d);
+527:                       setFinalWorkType(d.workType);
+528:                       setAdjustedOperatorRate(d.operatorDailyRate?.toString() || "");
+
+<truncated 2261 bytes>
+ols-2 gap-2">
+569:                     <button
+570:                       type="button"
+571:                       onClick={() => setWorkCategory("MACHINE")}
+572:                       className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+573:                         workCategory === "MACHINE" ? "bg-amber-500/20 border-amber-500 text-amber-400 shadow-lg" : "bg-slate-950 border-slate-800 text-slate-400"
+574:                       }`}
+575:                     >
+576:                       <Truck className="w-4 h-4" />
+577:                       Machine Rental Job
+578:                     </button>
+579:                     <button
+580:                       type="button"
+581:                       onClick={() => setWorkCategory("INDEPENDENT")}
+582:                       className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+583:                         workCategory === "INDEPENDENT" ? "bg-blue-500/20 border-blue-500 text-blue-400 shadow-lg" : "bg-slate-950 border-slate-800 text-slate-400"
+584:                       }`}
+585:                     >
+586:                       <UserCheck className="w-4 h-4" />
+587:                       Independent Crew
+588:                     </button>
+589:                   </div>
+590:                 </div>
+591: 
+592:                 <div>
+593:                   <label className="text-xs font-bold text-slate-400 block mb-1">
+594:                     Site Bundle Tag (Optional — Group Mixer + Lift + Pani)
+595:                   </label>
+596:                   <input
+597:                     type="text"
+598:                     value={siteBundleId}
+599:                     onChange={(e) => setSiteBundleId(e.target.value)}
+600:                     placeholder="e.g. BUNDLE-KAKKANAD-SITE-A"
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

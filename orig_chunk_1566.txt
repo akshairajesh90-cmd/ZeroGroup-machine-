@@ -1,0 +1,49 @@
+Created At: 2026-07-12T22:08:53Z
+Completed At: 2026-07-12T22:08:53Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1469
+Total Bytes: 77029
+Showing lines 810 to 850
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+810:                   />
+811:                 </div>
+812:               </div>
+813: 
+814:               {/* WHAT ARE WE SENDING TODAY? (Modular Selector) */}
+815:               <div className="p-4 bg-slate-950/90 border border-amber-500/30 rounded-2xl space-y-3">
+816:                 <label className="text-xs font-black uppercase text-amber-400 block tracking-wider">
+817:                   1. Select Dispatch Categories (`Click ONLY what is going to site today — single or multiple`):
+818:                 </label>
+819:                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+820:                   <button
+821:                     type="button"
+822:                     onClick={() => toggleMode("LIFT")}
+823:                     className={`p-3 rounded-xl border text-xs font-black flex flex-col items-center justify-center gap-1.5 transition-all ${
+824:                       activeModes.includes("LIFT")
+825:                         ? "bg-amber-500 text-slate-950 border-amber-400 shadow-lg scale-102"
+826:                         : "bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white"
+827:                     }`}
+828:                   >
+829:                     <Truck className="w-5 h-5" />
+830:                     <span>Lift Only (`ലിഫ്റ്റ്`)</span>
+831:                   </button>
+832:                   <button
+833:                     type="button"
+834:                     onClick={() => toggleMode("MIXER")}
+835:                     className={`p-3 rounded-xl border text-xs font-black flex flex-col items-center justify-center gap-1.5 transition-all ${
+836:                       activeModes.includes("MIXER")
+837:                         ? "bg-amber-500 text-slate-950 border-amber-400 shadow-lg scale-102"
+838:                         : "bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white"
+839:                     }`}
+840:                   >
+841:                     <Wrench className="w-5 h-5" />
+842:                     <span>Mixer Machine (`മിഷൻ`)</span>
+843:                   </button>
+844:                   <button
+845:                     type="button"
+846:                     onClick={() => toggleMode("VIBRATOR")}
+847:                     className={`p-3 rounded-xl border text-xs font-black flex flex-col items-center justify-center gap-1.5 transition-all ${
+848:                       activeModes.includes("VIBRATOR")
+849:                         ? "bg-amber-500 text-slate-950 border-amber-400 shadow-lg scale-102"
+850:                         : "bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white"
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

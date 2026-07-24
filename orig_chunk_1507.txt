@@ -1,0 +1,39 @@
+Created At: 2026-07-12T21:53:18Z
+Completed At: 2026-07-12T21:53:18Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1402
+Total Bytes: 72812
+Showing lines 1165 to 1195
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1165:                       >
+1166:                         <option value="">No Operator / Optional</option>
+1167:                         {operatorsOnly.map((op) => (
+1168:                           <option key={op.id} value={op.id}>{op.name} (Daily Rate: ₹{Number(op.dailyRate || 800)})</option>
+1169:                         ))}
+1170:                       </select>
+1171:                     </div>
+1172:                     <div>
+1173:                       <label className="text-xs font-bold text-slate-300 block mb-1">Conveyance / Driver</label>
+1174:                       <select
+1175:                         value={driverId}
+1176:                         onChange={(e) => setDriverId(e.target.value)}
+1177:                         className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs font-bold text-white focus:border-amber-500 outline-none"
+1178:                       >
+1179:                         <option value="">Select company driver...</option>
+1180:                         {driversOnly.map((d) => (
+1181:                           <option key={d.id} value={d.id}>{d.name} ({d.role})</option>
+1182:                         ))}
+1183:                       </select>
+1184:                     </div>
+1185:                   </div>
+1186:                 </div>
+1187:               )}
+1188: 
+1189:               {/* SETUP TOOLS (Padutha / Shawal / Wire — NO Cement Bags) - CONDITIONAL OR TOGGLEABLE */}
+1190:               {(activeModes.some(m => ["LIFT", "MIXER"].includes(m)) || showSetupTools) ? (
+1191:                 <div className="p-5 bg-slate-950 border border-slate-800 rounded-2xl space-y-3 animate-in fade-in duration-200">
+1192:                   <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+1193:                     <h4 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
+1194:                       <Wrench className="w-4 h-4" />
+1195:                       Setup Tools & Auxiliaries (Padutha, Shawal, Wire — NO Cement Bags)
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -1,0 +1,64 @@
+Created At: 2026-07-12T21:51:49Z
+Completed At: 2026-07-12T21:51:50Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1351
+Total Bytes: 70233
+Showing lines 35 to 90
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+35: 
+36: interface DispatchClientProps {
+37:   initialDispatches: any[];
+38:   customers: any[];
+39:   machines: any[];
+40:   employees: any[];
+41:   tools: any[];
+42:   userRole: string;
+43: }
+44: 
+45: export default function DispatchBoardClient({
+46:   initialDispatches,
+47:   customers: initialCustomers,
+48:   machines,
+49:   employees,
+50:   tools,
+51:   userRole,
+52: }: DispatchClientProps) {
+53:   const router = useRouter();
+54:   const [dispatches, setDispatches] = useState(initialDispatches);
+55:   const [customersList, setCustomersList] = useState(initialCustomers);
+56:   const [isPending, startTransition] = useTransition();
+57:   const [showNewModal, setShowNewModal] = useState(false);
+58:   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+59:   const [viewMode, setViewMode] = useState<"TABLE" | "GRID">("TABLE");
+60:   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+61:   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+62: 
+63:   // Form state for creating dispatch
+64:   const [workCategory, setWorkCategory] = useState<"MACHINE" | "INDEPENDENT">("MACHINE");
+65:   const [activeModes, setActiveModes] = useState<string[]>(["LIFT"]);
+66:   const [showSetupTools, setShowSetupTools] = useState<boolean>(false);
+67:   const toggleMode = (mode: string) => {
+68:     if (activeModes.includes(mode)) {
+69:       setActiveModes(activeModes.filter(m => m !== mode));
+70:     } else {
+71:       setActiveModes([...activeModes, mode]);
+72:     }
+73:   };
+74:   const [siteBundleId, setSiteBundleId] = useState("");
+75:   const [customerId, setCustomerId] = useState(customersList[0]?.id || "");
+76:   const [selectedMachineIds, setSelectedMachineIds] = useState<string[]>(machines[0]?.id ? [machines[0].id] : []);
+77:   
+78:   // V15.0 Equipment specifics
+79:   const [liftFloors, setLiftFloors] = useState<number>(1);
+80:   const [mixerCategory, setMixerCategory] = useState<"STANDARD" | "HYDRAULIC">("STANDARD");
+81:   const [vibratorType, setVibratorType] = useState<"PETROL" | "ELECTRIC" | "NONE">("NONE");
+82:   const [hasTrollyBench, setHasTrollyBench] = useState<boolean>(false);
+83:   const [trollyWorkerCount, setTrollyWorkerCount] = useState<number>(0);
+84: 
+85:   // Labor Crew (Mestri / Main Helper + Helper Count)
+86:   const driversOnly = employees.filter(e => e.role === "DRIVER" || e.role === "OWNER" || e.role === "STAFF");
+87:   const operatorsOnly = employees.filter(e => e.role === "OPERATOR");
+88:   const workersOnly = employees.filter(e => e.role === "WORKER" || e.role === "OPERATOR");
+89: 
+90:   const [driverId, setDriverId] = useState(driversOnly[0]?.id || "");
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

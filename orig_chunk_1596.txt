@@ -1,0 +1,24 @@
+Created At: 2026-07-12T22:10:59Z
+Completed At: 2026-07-12T22:11:00Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1498
+Total Bytes: 78331
+Showing lines 1250 to 1265
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1250:                               ))}
+1251:                             </select>
+1252:                           </div>
+1253:                         ))}
+1254:                       </div>
+1255:                     </div>
+1256:                   )}
+1257:                 </div>
+1258:               )}
+1259: 
+1260:               {/* SETUP TOOLS (Padutha / Shawal / Wire — NO Cement Bags) - CONDITIONAL OR TOGGLEABLE */}
+1261:               {(activeModes.some(m => ["LIFT", "MIXER"].includes(m)) || showSetupTools) ? (
+1262:                 <div className="p-5 bg-slate-950 border border-slate-800 rounded-2xl space-y-3 animate-in fade-in duration-200">
+1263:                   <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+1264:                     <h4 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
+1265:                       <Wrench className="w-4 h-4" />
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

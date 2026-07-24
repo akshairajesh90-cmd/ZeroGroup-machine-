@@ -1,0 +1,29 @@
+Created At: 2026-07-12T21:55:03Z
+Completed At: 2026-07-12T21:55:04Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1444
+Total Bytes: 75460
+Showing lines 1240 to 1260
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1240:                       <button
+1241:                         type="button"
+1242:                         onClick={() => setShowSetupTools(false)}
+1243:                         className="text-[10px] text-slate-400 hover:text-white font-bold"
+1244:                       >
+1245:                         [Hide Setup Tools]
+1246:                       </button>
+1247:                     )}
+1248:                   </div>
+1249: 
+1250:                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-48 overflow-y-auto pr-1">
+1251:                     {tools.map((t) => {
+1252:                       const qty = toolQuantities[t.id] || 0;
+1253:                       return (
+1254:                         <div key={t.id} className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between">
+1255:                           <div>
+1256:                             <span className="text-xs font-bold text-white block">{t.name}</span>
+1257:                             <span className="text-[10px] text-slate-500 font-mono">{t.toolId}</span>
+1258:                           </div>
+1259:                           <div className="flex items-center gap-1.5">
+1260:                             <button
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

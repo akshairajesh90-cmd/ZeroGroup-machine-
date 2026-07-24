@@ -1,0 +1,66 @@
+Created At: 2026-07-12T21:37:00Z
+Completed At: 2026-07-12T21:37:00Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1220
+Total Bytes: 62409
+Showing lines 920 to 994
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+920:               {/* V15.0 LABOR CREW & CALLER MODEL (`Main Helper + Helper Count`) */}
+921:               <div className="p-5 bg-slate-950 border border-slate-800 rounded-2xl space-y-4">
+922:                 <h4 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2 border-b border-slate-800/80 pb-2.5">
+923:                   <Users className="w-4 h-4" />
+924:                   V15.0 Labor Crew & Caller Leader Model (`12 Helpers only`)
+925:                 </h4>
+926: 
+927:                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+928:                   {/* Main Helper / Caller */}
+929:                   <div>
+930:                     <label className="text-xs font-bold text-slate-300 block mb-1">
+931:                       Main Helper / Caller Leader (`Jose Mesthiri`)
+932:                     </label>
+933:                     <div className="space-y-2">
+934:                       <select
+935:                         value={mainHelperId}
+936:                         onChange={(e) => {
+937:                           setMainHelperId(e.target.value);
+938:                           if (e.target.value) setMainHelperName("");
+939:                         }}
+940:                         className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs font-bold text-white focus:border-amber-500 outline-none"
+941:                       >
+942:                         <option value="">Select Internal Employee Leader...</option>
+943:                         {workersOnl
+<truncated 1008 bytes>
+"text-xs font-bold text-slate-300 block mb-1">
+963:                       Total Helper Headcount (`e.g. 12 Workers`)
+964:                     </label>
+965:                     <input
+966:                       type="number"
+967:                       min="0"
+968:                       max="100"
+969:                       value={helperCount}
+970:                       onChange={(e) => setHelperCount(parseInt(e.target.value) || 0)}
+971:                       placeholder="e.g. 12"
+972:                       className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm font-extrabold text-white focus:border-amber-500 outline-none"
+973:                     />
+974:                     <span className="text-[10px] text-slate-500 block mt-1">
+975:                       Only the total number (`12 Helpers only`) appears on Bill #1583!
+976:                     </span>
+977:                   </div>
+978: 
+979:                   {/* Primary Operator */}
+980:                   <div>
+981:                     <label className="text-xs font-bold text-slate-300 block mb-1">Primary Operator (`Mahesh`)</label>
+982:                     <select
+983:                       value={operatorId}
+984:                       onChange={(e) => setOperatorId(e.target.value)}
+985:                       className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs font-bold text-white focus:border-amber-500 outline-none"
+986:                     >
+987:                       <option value="">No Operator / Optional</option>
+988:                       {operatorsOnly.map((op) => (
+989:                         <option key={op.id} value={op.id}>{op.name} (Daily Rate: ₹{Number(op.dailyRate || 800)})</option>
+990:                       ))}
+991:                     </select>
+992:                   </div>
+993:                 </div>
+994: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

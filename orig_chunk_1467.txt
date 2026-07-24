@@ -1,0 +1,64 @@
+Created At: 2026-07-12T21:37:53Z
+Completed At: 2026-07-12T21:37:53Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1236
+Total Bytes: 62879
+Showing lines 960 to 1015
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+960:                           <option key={w.id} value={w.id}>{w.name} ({w.role})</option>
+961:                         ))}
+962:                       </select>
+963:                       <input
+964:                         type="text"
+965:                         value={mainHelperName}
+966:                         onChange={(e) => {
+967:                           setMainHelperName(e.target.value);
+968:                           if (e.target.value) setMainHelperId("");
+969:                         }}
+970:                         placeholder="OR type external Caller Name..."
+971:                         className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-white placeholder:text-slate-500 focus:border-amber-500 outline-none font-medium"
+972:                       />
+973:                     </div>
+974:                   </div>
+975: 
+976:                   {/* Helper Headcount */}
+977:                   <div>
+978:                     <label className="text-xs font-bold text-slate-300 block mb-1">
+979:                       Total Helper Headcount (`e.g. 12 Workers`)
+980:                     </label>
+981:                     <input
+982:                       type="number"
+983:                       min="0"
+984:                       max="100"
+985:                       value={helperCount}
+986:                       onChange={(e) => setHelperCount(parseInt(e.target.value) || 0)}
+987:                       placeholder="e.g. 12"
+988:                       className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm font-extrabold text-white focus:border-amber-500 outline-none"
+989:                     />
+990:                     <span className="text-[10px] text-slate-500 block mt-1">
+991:                       Only the total number (`12 Helpers only`) appears on Bill #1583!
+992:                     </span>
+993:                   </div>
+994: 
+995:                   {/* Primary Operator */}
+996:                   <div>
+997:                     <label className="text-xs font-bold text-slate-300 block mb-1">Primary Operator (`Mahesh`)</label>
+998:                     <select
+999:                       value={operatorId}
+1000:                       onChange={(e) => setOperatorId(e.target.value)}
+1001:                       className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs font-bold text-white focus:border-amber-500 outline-none"
+1002:                     >
+1003:                       <option value="">No Operator / Optional</option>
+1004:                       {operatorsOnly.map((op) => (
+1005:                         <option key={op.id} value={op.id}>{op.name} (Daily Rate: ₹{Number(op.dailyRate || 800)})</option>
+1006:                       ))}
+1007:                     </select>
+1008:                   </div>
+1009:                 </div>
+1010: 
+1011:                 {/* Driver vs Public Transport */}
+1012:                 <div className="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+1013:                   <div className="flex items-center gap-2">
+1014:                     <input
+1015:                       type="checkbox"
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -1,0 +1,49 @@
+Created At: 2026-07-12T21:37:07Z
+Completed At: 2026-07-12T21:37:07Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1220
+Total Bytes: 62409
+Showing lines 120 to 160
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+120: 
+121:   // Resolve conflict state
+122:   const [resolvingDispatchId, setResolvingDispatchId] = useState<string | null>(null);
+123:   const [resolutionNotes, setResolutionNotes] = useState("");
+124: 
+125:   const handleToolQuantityChange = (tId: string, qty: number) => {
+126:     if (qty <= 0) {
+127:       const next = { ...toolQuantities };
+128:       delete next[tId];
+129:       setToolQuantities(next);
+130:     } else {
+131:       setToolQuantities({ ...toolQuantities, [tId]: qty });
+132:     }
+133:   };
+134: 
+135:   const handleToggleMachine = (id: string) => {
+136:     if (selectedMachineIds.includes(id)) {
+137:       setSelectedMachineIds(selectedMachineIds.filter(x => x !== id));
+138:     } else {
+139:       setSelectedMachineIds([...selectedMachineIds, id]);
+140:     }
+141:   };
+142: 
+143:   // Quick Customer Creation
+144:   const handleQuickCustomerSubmit = async (e: React.FormEvent) => {
+145:     e.preventDefault();
+146:     setErrorMsg(null);
+147:     startTransition(async () => {
+148:       const res = await createQuickCustomer({
+149:         name: newCustName,
+150:         phone: newCustPhone,
+151:         address: newCustAddress,
+152:       });
+153:       if (!res.success) {
+154:         setErrorMsg(res.error || "Failed to add customer.");
+155:       } else if (res.customer) {
+156:         setSuccessMsg(`Customer "${res.customer.name}" added!`);
+157:         setCustomersList([...customersList, res.customer]);
+158:         setCustomerId(res.customer.id);
+159:         setShowNewCustomerModal(false);
+160:         setNewCustName("");
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

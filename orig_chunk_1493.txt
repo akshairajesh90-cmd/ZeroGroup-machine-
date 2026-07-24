@@ -1,0 +1,64 @@
+Created At: 2026-07-12T21:52:07Z
+Completed At: 2026-07-12T21:52:08Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1351
+Total Bytes: 70233
+Showing lines 170 to 225
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+170:       } else if (res.customer) {
+171:         setSuccessMsg(`Customer "${res.customer.name}" added!`);
+172:         setCustomersList([...customersList, res.customer]);
+173:         setCustomerId(res.customer.id);
+174:         setShowNewCustomerModal(false);
+175:         setNewCustName("");
+176:         setNewCustPhone("");
+177:         setNewCustAddress("");
+178:       }
+179:     });
+180:   };
+181: 
+182:   const handleCreateDispatch = async (e: React.FormEvent) => {
+183:     e.preventDefault();
+184:     setErrorMsg(null);
+185:     setSuccessMsg(null);
+186: 
+187:     const isMachineRental = workCategory === "MACHINE";
+188:     const chosenMachineIds = isMachineRental ? selectedMachineIds : [];
+189: 
+190:     const toolItems = Object.entries(toolQuantities).map(([toolId, quantity]) => ({
+191:       toolId,
+192:       quantity,
+193:     }));
+194: 
+195:     // Find main helper name if selected from dropdown or manual entry
+196:     let finalMainHelperName = mainHelperName;
+197:     if (mainHelperId) {
+198:       const empRow = employees.find(x => x.id === mainHelperId);
+199:       if (empRow) finalMainHelperName = empRow.name;
+200:     }
+201: 
+202:     startTransition(async () => {
+203:       const payload: any = {
+204:         customerId,
+205:         machineId: chosenMachineIds[0] || "INDEPENDENT",
+206:         machineIds: chosenMachineIds.length > 0 ? chosenMachineIds : ["INDEPENDENT"],
+207:         driverId: publicTransportUsed ? undefined : (driverId || undefined),
+208:         operatorId: operatorId || undefined,
+209:         mainHelperId: mainHelperId || undefined,
+210:         mainHelperName: finalMainHelperName || undefined,
+211:         helperCount: Number(helperCount || 0),
+212:         trollyWorkerCount: Number(trollyWorkerCount || 0),
+213:         multiOperatorIds,
+214:         multiWorkerIds,
+215:         siteBundleId: siteBundleId.trim() || undefined,
+216:         location,
+217:         mapLink: mapLink.trim() || undefined,
+218:         dateOfService,
+219:         workType,
+220:         liftFloors: Number(liftFloors || 1),
+221:         mixerCategory: mixerCategory,
+222:         vibratorType: vibratorType === "NONE" ? undefined : vibratorType,
+223:         hasTrollyBench: hasTrollyBench,
+224:         publicTransportUsed: publicTransportUsed,
+225:         toolItems,
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

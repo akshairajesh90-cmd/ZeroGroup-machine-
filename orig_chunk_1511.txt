@@ -1,0 +1,60 @@
+Created At: 2026-07-12T21:54:06Z
+Completed At: 2026-07-12T21:54:06Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1434
+Total Bytes: 74959
+Showing lines 900 to 980
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+900:                     {/* Mixer Category (ONLY shown if MIXER is checked) */}
+901:                     {activeModes.includes("MIXER") && (
+902:                       <div className="bg-slate-900/80 p-3 rounded-xl border border-amber-500/30">
+903:                         <label className="text-xs font-bold text-amber-300 block mb-1">Mixer Category</label>
+904:                         <select
+905:                           value={mixerCategory}
+906:                           onChange={(e: any) => setMixerCategory(e.target.value)}
+907:                           className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm font-bold text-white focus:border-amber-500 outline-none"
+908:                         >
+909:                           <option value="STANDARD">Standard Machine</option>
+910:                           <option value="HYDRAULIC">Hydraulic Machine</option>
+911:                         </select>
+912:                       </div>
+913:                     )}
+914: 
+915:                     {/* Vibrator Type (ONLY shown if VIBRATOR is checked) */}
+916:                     {activeModes.includes("VIBRATOR") && (
+917:                       <div className="bg-slate-900/80 p-3 rounded-xl border border-purple-500/30">
+918:                         <label className="text-xs font-bold text-purple-300 block mb-1">Vibrator Type</label>
+919:                         <select
+920:                           value={vibratorType}
+921:                           onChange={(e: any) => setVibratorType(e.target.value)}
+922:           
+<truncated 2088 bytes>
+ry (`Relevant to checked categories`):
+954:                     </label>
+955:                     <div className="flex flex-wrap gap-2">
+956:                       {machines
+957:                         .filter(m => {
+958:                           if (activeModes.includes("LIFT") && m.type === "LIFT") return true;
+959:                           if (activeModes.includes("MIXER") && m.type === "MIXER") return true;
+960:                           if (activeModes.includes("VIBRATOR") && m.type?.includes("VIBRATOR")) return true;
+961:                           if (activeModes.includes("TROLLY") && m.type?.includes("TROLLY")) return true;
+962:                           if (activeModes.length === 1 && activeModes.includes("LABOR")) return false;
+963:                           return activeModes.includes(m.type);
+964:                         })
+965:                         .map((m) => {
+966:                           const isSel = selectedMachineIds.includes(m.id);
+967:                           return (
+968:                             <button
+969:                               key={m.id}
+970:                               type="button"
+971:                               onClick={() => handleToggleMachine(m.id)}
+972:                               className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all ${
+973:                                 isSel ? "bg-amber-500 text-slate-950 border-amber-400 shadow-md scale-105" : "bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700"
+974:                               }`}
+975:                             >
+976:                               <Truck className="w-3.5 h-3.5" />
+977:                               {m.machineId} ({m.type})
+978:                             </button>
+979:                           );
+980:                         })}
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

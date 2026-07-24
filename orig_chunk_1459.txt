@@ -1,0 +1,66 @@
+Created At: 2026-07-12T21:37:22Z
+Completed At: 2026-07-12T21:37:22Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1236
+Total Bytes: 62879
+Showing lines 1000 to 1090
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1000:                       onChange={(e) => setOperatorId(e.target.value)}
+1001:                       className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs font-bold text-white focus:border-amber-500 outline-none"
+1002:                     >
+1003:                       <option value="">No Operator / Optional</option>
+1004:                       {operatorsOnly.map((op) => (
+1005:                         <option key={op.id} value={op.id}>{op.name} (Daily Rate: ₹{Number(op.dailyRate || 800)})</option>
+1006:                       ))}
+1007:                     </select>
+1008:                   </div>
+1009:                 </div>
+1010: 
+1011:                 {/* Driver vs Public Transport */}
+1012:                 <div className="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+1013:                   <div className="flex items-center gap-2">
+1014:                     <input
+1015:                       type="checkbox"
+1016:                       id="pubTransCheck"
+1017:                       checked={publicTransportUsed}
+1018:                       onChange={(e) => setPublicTransportUsed(e.target.checked)}
+1019:                       className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+1020:                     />
+1021:                     <label htmlFor="pubTransCheck" className="text-xs font-bold text-slate-200 cursor-pointer select-none">
+1022:                       Public Transport / Bus / Auto used (No Company Driver vehicle)
+1023:                     <
+<truncated 2199 bytes>
+xl p-2.5 flex items-center justify-between">
+1059:                         <div>
+1060:                           <span className="text-xs font-bold text-white block">{t.name}</span>
+1061:                           <span className="text-[10px] text-slate-500 font-mono">{t.toolId}</span>
+1062:                         </div>
+1063:                         <div className="flex items-center gap-1.5">
+1064:                           <button
+1065:                             type="button"
+1066:                             onClick={() => handleToolQuantityChange(t.id, qty - 1)}
+1067:                             className="w-7 h-7 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 font-bold flex items-center justify-center text-sm"
+1068:                           >
+1069:                             -
+1070:                           </button>
+1071:                           <span className="w-6 text-center text-xs font-bold text-amber-400">{qty}</span>
+1072:                           <button
+1073:                             type="button"
+1074:                             onClick={() => handleToolQuantityChange(t.id, qty + 1)}
+1075:                             className="w-7 h-7 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 font-bold flex items-center justify-center text-sm"
+1076:                           >
+1077:                             +
+1078:                           </button>
+1079:                         </div>
+1080:                       </div>
+1081:                     );
+1082:                   })}
+1083:                 </div>
+1084:               </div>
+1085: 
+1086:               {/* Notes */}
+1087:               <div>
+1088:                 <label className="text-xs font-bold text-slate-400 block mb-1">Special Setup / Dispatch Notes</label>
+1089:                 <textarea
+1090:                   value={notes}
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

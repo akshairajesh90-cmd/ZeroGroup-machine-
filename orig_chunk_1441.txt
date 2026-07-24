@@ -1,0 +1,62 @@
+Created At: 2026-07-12T21:36:20Z
+Completed At: 2026-07-12T21:36:20Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1220
+Total Bytes: 62409
+Showing lines 840 to 920
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+840:                           onChange={(e: any) => setMixerCategory(e.target.value)}
+841:                           className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm font-bold text-white focus:border-amber-500 outline-none"
+842:                         >
+843:                           <option value="STANDARD">Standard Machine</option>
+844:                           <option value="HYDRAULIC">Hydraulic Machine</option>
+845:                         </select>
+846:                       </div>
+847:                     )}
+848: 
+849:                     {/* Vibrator Type (ONLY shown if VIBRATOR is checked) */}
+850:                     {activeModes.includes("VIBRATOR") && (
+851:                       <div className="bg-slate-900/80 p-3 rounded-xl border border-purple-500/30">
+852:                         <label className="text-xs font-bold text-purple-300 block mb-1">Vibrator Type</label>
+853:                         <select
+854:                           value={vibratorType}
+855:                           onChange={(e: any) => setVibratorType(e.target.value)}
+856:                           className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm font-bold text-white focus:border-amber-500 outline-none"
+857:                         >
+858:                           <option value="PETROL">Petrol (Optional Operator)</option>
+859:                           <option value="ELECTRIC">Electric (Wire only, no op)</option>
+860:                         </select>
+861:                       </div>
+862:     
+<truncated 1846 bytes>
+er(m => {
+892:                           if (activeModes.includes("LIFT") && m.type === "LIFT") return true;
+893:                           if (activeModes.includes("MIXER") && m.type === "MIXER") return true;
+894:                           if (activeModes.includes("VIBRATOR") && m.type?.includes("VIBRATOR")) return true;
+895:                           if (activeModes.includes("TROLLY") && m.type?.includes("TROLLY")) return true;
+896:                           if (activeModes.length === 1 && activeModes.includes("LABOR")) return false;
+897:                           return activeModes.includes(m.type);
+898:                         })
+899:                         .map((m) => {
+900:                           const isSel = selectedMachineIds.includes(m.id);
+901:                           return (
+902:                             <button
+903:                               key={m.id}
+904:                               type="button"
+905:                               onClick={() => handleToggleMachine(m.id)}
+906:                               className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all ${
+907:                                 isSel ? "bg-amber-500 text-slate-950 border-amber-400 shadow-md scale-105" : "bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700"
+908:                               }`}
+909:                             >
+910:                               <Truck className="w-3.5 h-3.5" />
+911:                               {m.machineId} ({m.type})
+912:                             </button>
+913:                           );
+914:                         })}
+915:                     </div>
+916:                   </div>
+917:                 </div>
+918:               )}
+919: 
+920:               {/* V15.0 LABOR CREW & CALLER MODEL (`Main Helper + Helper Count`) */}
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

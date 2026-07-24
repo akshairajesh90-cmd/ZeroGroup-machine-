@@ -1,0 +1,68 @@
+Created At: 2026-07-12T07:04:35Z
+Completed At: 2026-07-12T07:04:35Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 926
+Total Bytes: 43785
+Showing lines 371 to 480
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+371:                     </span>
+372:                     <span className="font-bold text-white">{d.customer?.name}</span>
+373:                   </div>
+374: 
+375:                   <div className="flex items-center justify-between">
+376:                     <span className="text-slate-400 flex items-center gap-1">
+377:                       <MapPin className="w-3.5 h-3.5 text-blue-400" /> Location:
+378:                     </span>
+379:                     <span className="font-medium text-slate-200 truncate max-w-[180px]">{d.location}</span>
+380:                   </div>
+381: 
+382:                   <div className="flex items-center justify-between">
+383:                     <span className="text-slate-400 flex items-center gap-1">
+384:                       <Calendar className="w-3.5 h-3.5 text-emerald-400" /> Date:
+385:                     </span>
+386:                     <span>{new Date(d.dateOfService).toISOString().split("T")[0]}</span>
+387:                   </div>
+388:                 </div>
+389: 
+390:                 {/* Assigned Crew (Driver, Primary Operator, Multi Operators & Multi Helpers) */}
+391:                 <div className="mt-4 pt-3 border-t border-slate-800/80 space-y-2 text-xs">
+392:                   <div className="grid grid-cols-2 gap-2">
+393:                     <div className="bg-slate-950 p-2 rounded-lg border border-slate-800/60">
+394:                       <span className="text-[10px] uppercase tracking-wider text-slate-500 block font-bold">Driver</span>
+395:                       <span className="font-bold text
+<truncated 3705 bytes>
+span>
+448:                     ))}
+449:                   </div>
+450:                 )}
+451: 
+452:                 {/* Post-Work Scope Finalized notes */}
+453:                 {d.isScopeFinalized && (
+454:                   <div className="mt-3 p-2.5 bg-emerald-950/40 border border-emerald-500/40 rounded-xl space-y-1">
+455:                     <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-bold uppercase">
+456:                       <FileText className="w-3.5 h-3.5" /> Post-Work Scope Finalized
+457:                     </div>
+458:                     <p className="text-xs text-slate-300 font-mono italic">{d.closingWorkNotes}</p>
+459:                   </div>
+460:                 )}
+461:               </div>
+462: 
+463:               {/* Action transitions & Post-Work Scope Discovery button */}
+464:               <div className="mt-5 pt-3 border-t border-slate-800 space-y-2">
+465:                 <div className="flex items-center gap-2">
+466:                   {d.status === "PENDING" && (
+467:                     <button
+468:                       disabled={isPending}
+469:                       onClick={() => handleStatusChange(d.id, "DELIVERED")}
+470:                       className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow transition-all"
+471:                     >
+472:                       {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
+473:                       Mark Delivered on Site
+474:                     </button>
+475:                   )}
+476: 
+477:                   {d.status === "DELIVERED" && (
+478:                     <button
+479:                       disabled={isPending}
+480:                       onClick={() => handleStatusChange(d.id, "COMPLETED")}
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -1,0 +1,77 @@
+Created At: 2026-07-12T07:06:22Z
+Completed At: 2026-07-12T07:06:22Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1052
+Total Bytes: 51921
+Showing lines 980 to 1052
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+980:               <div>
+981:                 <label className="text-xs font-bold text-slate-400 block mb-1">Final Verified Work Type</label>
+982:                 <select
+983:                   value={finalWorkType}
+984:                   onChange={(e) => setFinalWorkType(e.target.value)}
+985:                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white outline-none"
+986:                 >
+987:                   <option value="NORMAL">NORMAL (Standard Day)</option>
+988:                   <option value="TROLLY">TROLLY (Overhead Lift / Trolly Rate)</option>
+989:                   <option value="LATE">LATE (Extended Evening Shift)</option>
+990:                 </select>
+991:               </div>
+992: 
+993:               <div className="grid grid-cols-2 gap-3">
+994:                 <div>
+995:                   <label className="text-xs font-bold text-slate-400 block mb-1">Adjusted Operator Pay (₹)</label>
+996:                   <input
+997:                     type="number"
+998:                     value={adjustedOperatorRate}
+999:                     onChange={(e) => setAdjustedOperatorRate(e.target.value)}
+1000:                     placeholder="e.g. 850"
+1001:                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white outline-none"
+1002:                   />
+1003:                 </div>
+1004: 
+1005:                 <div>
+1006:                   <label className="text-xs font-bold text-slate-400 block mb-1">Adjusted Customer Charge (₹)</labe
+<truncated 354 bytes>
+d-xl p-2.5 text-sm text-white outline-none"
+1013:                   />
+1014:                 </div>
+1015:               </div>
+1016: 
+1017:               <div>
+1018:                 <label className="text-xs font-bold text-slate-400 block mb-1">Closing Actuals Notes (Mandatory)</label>
+1019:                 <textarea
+1020:                   value={closingNotes}
+1021:                   onChange={(e) => setClosingNotes(e.target.value)}
+1022:                   placeholder="e.g. Concrete pour finished at 8:30 PM due to customer cement delay. Extra 3 hours logged. Customer verified."
+1023:                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white outline-none h-24"
+1024:                   required
+1025:                 />
+1026:               </div>
+1027: 
+1028:               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+1029:                 <button
+1030:                   type="button"
+1031:                   onClick={() => setFinalizingDispatch(null)}
+1032:                   className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold"
+1033:                 >
+1034:                   Cancel
+1035:                 </button>
+1036:                 <button
+1037:                   type="submit"
+1038:                   disabled={isPending}
+1039:                   className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black flex items-center gap-1.5 shadow"
+1040:                 >
+1041:                   {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+1042:                   Lock Final Scope for Payroll
+1043:                 </button>
+1044:               </div>
+1045:             </form>
+1046:           </div>
+1047:         </div>
+1048:       )}
+1049:     </div>
+1050:   );
+1051: }
+1052: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

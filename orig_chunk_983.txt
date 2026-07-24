@@ -1,0 +1,75 @@
+Created At: 2026-07-12T07:04:28Z
+Completed At: 2026-07-12T07:04:28Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 926
+Total Bytes: 43785
+Showing lines 280 to 370
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+280:         </div>
+281: 
+282:         <button
+283:           onClick={() => setShowNewModal(true)}
+284:           className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-amber-500/20 transition-all text-sm"
+285:         >
+286:           <PlusCircle className="w-4 h-4" />
+287:           Create New Dispatch / Site Bundle
+288:         </button>
+289:       </div>
+290: 
+291:       {errorMsg && (
+292:         <div className="p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-xs font-bold">
+293:           {errorMsg}
+294:         </div>
+295:       )}
+296: 
+297:       {successMsg && (
+298:         <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-bold">
+299:           {successMsg}
+300:         </div>
+301:       )}
+302: 
+303:       {/* Dispatches Grid */}
+304:       {dispatches.length === 0 ? (
+305:         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-12 text-center text-slate-400">
+306:           <Truck className="w-12 h-12 text-slate-600 mx-auto mb-3 opacity-50" />
+307:           <h3 className="text-base font-bold text-white">No dispatches recorded yet today</h3>
+308:           <p className="text-xs mt-1 max-w-sm mx-auto text-slate-500">
+309:             Click &quot;Create New Dispatch / Site Bundle&quot; to dispatch equipment, bulk tools (Shawal/Kotta), and Pani teams.
+310:           </p>
+311:         </div>
+312:       ) : (
+313:         <div className="grid grid-cols-1 
+<truncated 1662 bytes>
+0/20 text-emerald-400 border border-emerald-500/30" :
+340:                     d.status === "DELIVERED" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" :
+341:                     "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+342:                   }`}>
+343:                     {d.status}
+344:                   </span>
+345:                 </div>
+346: 
+347:                 {/* Flagged Incident Banner */}
+348:                 {d.isFlagged && (
+349:                   <div className="mt-3 p-3 bg-red-950/60 border border-red-500/50 rounded-xl space-y-1">
+350:                     <div className="flex items-center gap-1.5 text-red-400 font-bold text-xs uppercase">
+351:                       <ShieldAlert className="w-4 h-4 animate-bounce text-red-500" />
+352:                       Field Dispute Flagged
+353:                     </div>
+354:                     <p className="text-xs text-slate-300 font-mono italic">{d.conflictReport}</p>
+355:                     {userRole === "OWNER" && (
+356:                       <button
+357:                         onClick={() => setResolvingDispatchId(d.id)}
+358:                         className="mt-2 w-full bg-red-600 hover:bg-red-500 text-white text-xs font-bold py-1.5 rounded-lg shadow transition-all"
+359:                       >
+360:                         Owner: Resolve Conflict
+361:                       </button>
+362:                     )}
+363:                   </div>
+364:                 )}
+365: 
+366:                 {/* Site & Customer details */}
+367:                 <div className="mt-4 space-y-2 text-xs text-slate-300">
+368:                   <div className="flex items-center justify-between">
+369:                     <span className="text-slate-400 flex items-center gap-1">
+370:                       <UserCheck className="w-3.5 h-3.5 text-amber-400" /> Customer:
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

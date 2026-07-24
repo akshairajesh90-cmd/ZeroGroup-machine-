@@ -1,0 +1,69 @@
+Created At: 2026-07-12T07:05:22Z
+Completed At: 2026-07-12T07:05:22Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 960
+Total Bytes: 45905
+Showing lines 555 to 730
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+555:                 <Truck className="w-5 h-5 text-amber-400" />
+556:                 Create New Daily Dispatch / Site Bundle
+557:               </h3>
+558:               <button onClick={() => setShowNewModal(false)} className="text-slate-400 hover:text-white p-1">
+559:                 <X className="w-5 h-5" />
+560:               </button>
+561:             </div>
+562: 
+563:             <form onSubmit={handleCreateDispatch} className="mt-6 space-y-5">
+564:               {/* Work Category & Site Bundle ID */}
+565:               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+566:                 <div>
+567:                   <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-2">Work Category</label>
+568:                   <div className="grid grid-cols-2 gap-2">
+569:                     <button
+570:                       type="button"
+571:                       onClick={() => setWorkCategory("MACHINE")}
+572:                       className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+573:                         workCategory === "MACHINE" ? "bg-amber-500/20 border-amber-500 text-amber-400 shadow-lg" : "bg-slate-950 border-slate-800 text-slate-400"
+574:                       }`}
+575:                     >
+576:                       <Truck className="w-4 h-4" />
+577:                       Machine Rental Job
+578:                     </button>
+579:                     <button
+580:                       type="button"
+581:                       onClic
+<truncated 6841 bytes>
+orIds.includes(e.id) ? "bg-amber-500/20 border-amber-500 text-white font-bold" : "bg-slate-900 border-slate-800 text-slate-400"
+699:                         }`}
+700:                       >
+701:                         <input type="checkbox" checked={multiOperatorIds.includes(e.id)} onChange={() => {}} className="hidden" />
+702:                         <span>{e.name}</span>
+703:                       </label>
+704:                     ))}
+705:                   </div>
+706:                 </div>
+707: 
+708:                 {/* Helpers / Workers */}
+709:                 <div>
+710:                   <span className="text-[11px] font-bold text-slate-400 block mb-2">Assigned Helpers / Pani Workers (Shawal/Kotta labor):</span>
+711:                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+712:                     {workersOnly.map((e) => (
+713:                       <label
+714:                         key={e.id}
+715:                         onClick={() => handleToggleMultiWorker(e.id)}
+716:                         className={`p-2 rounded-xl border text-xs cursor-pointer flex items-center gap-2 transition-all ${
+717:                           multiWorkerIds.includes(e.id) ? "bg-blue-500/20 border-blue-500 text-white font-bold" : "bg-slate-900 border-slate-800 text-slate-400"
+718:                         }`}
+719:                       >
+720:                         <input type="checkbox" checked={multiWorkerIds.includes(e.id)} onChange={() => {}} className="hidden" />
+721:                         <span>{e.name} ({e.role})</span>
+722:                       </label>
+723:                     ))}
+724:                   </div>
+725:                 </div>
+726:               </div>
+727: 
+728:               {/* Date & Work Type */}
+729:               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+730:                 <div>
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -1,0 +1,63 @@
+Created At: 2026-07-13T08:46:37Z
+Completed At: 2026-07-13T08:46:38Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1517
+Total Bytes: 79999
+Showing lines 860 to 960
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+860:                   </button>
+861:                   <button
+862:                     type="button"
+863:                     onClick={() => toggleMode("MIXER")}
+864:                     className={`p-3 rounded-xl border text-xs font-black flex flex-col items-center justify-center gap-1.5 transition-all ${
+865:                       activeModes.includes("MIXER")
+866:                         ? "bg-amber-500 text-slate-950 border-amber-400 shadow-lg scale-102"
+867:                         : "bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white"
+868:                     }`}
+869:                   >
+870:                     <Wrench className="w-5 h-5" />
+871:                     <span>Mixer Machine (`മിഷൻ`)</span>
+872:                   </button>
+873:                   <button
+874:                     type="button"
+875:                     onClick={() => toggleMode("VIBRATOR")}
+876:                     className={`p-3 rounded-xl border text-xs font-black flex flex-col items-center justify-center gap-1.5 transition-all ${
+877:                       activeModes.includes("VIBRATOR")
+878:                         ? "bg-amber-500 text-slate-950 border-amber-400 shadow-lg scale-102"
+879:                         : "bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white"
+880:                     }`}
+881:                   >
+882:                     <CheckCircle2 className="w-5 h-5" />
+883:                     <span>Vibrator (`വൈബ്രേറ്റർ`)</span>
+884:             
+<truncated 3286 bytes>
+t-bold text-white text-center focus:border-amber-500 outline-none"
+933:                           />
+934:                           <span className="text-xs text-slate-400 font-bold shrink-0">Floored</span>
+935:                         </div>
+936:                       </div>
+937:                     )}
+938: 
+939:                     {/* Mixer Category (ONLY shown if MIXER is checked) */}
+940:                     {activeModes.includes("MIXER") && (
+941:                       <div className="bg-slate-900/80 p-3 rounded-xl border border-amber-500/30">
+942:                         <label className="text-xs font-bold text-amber-300 block mb-1">Mixer Category</label>
+943:                         <select
+944:                           value={mixerCategory}
+945:                           onChange={(e: any) => setMixerCategory(e.target.value)}
+946:                           className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm font-bold text-white focus:border-amber-500 outline-none"
+947:                         >
+948:                           <option value="STANDARD">Standard Machine</option>
+949:                           <option value="HYDRAULIC">Hydraulic Machine</option>
+950:                         </select>
+951:                       </div>
+952:                     )}
+953: 
+954:                     {/* Vibrator Type (ONLY shown if VIBRATOR is checked) */}
+955:                     {activeModes.includes("VIBRATOR") && (
+956:                       <div className="bg-slate-900/80 p-3 rounded-xl border border-purple-500/30">
+957:                         <label className="text-xs font-bold text-purple-300 block mb-1">Vibrator Type</label>
+958:                         <select
+959:                           value={vibratorType}
+960:                           onChange={(e: any) => setVibratorType(e.target.value)}
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

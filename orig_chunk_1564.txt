@@ -1,0 +1,60 @@
+Created At: 2026-07-12T22:08:36Z
+Completed At: 2026-07-12T22:08:37Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1469
+Total Bytes: 77029
+Showing lines 850 to 950
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+850:                         : "bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white"
+851:                     }`}
+852:                   >
+853:                     <CheckCircle2 className="w-5 h-5" />
+854:                     <span>Vibrator (`വൈബ്രേറ്റർ`)</span>
+855:                   </button>
+856:                   <button
+857:                     type="button"
+858:                     onClick={() => toggleMode("TROLLY")}
+859:                     className={`p-3 rounded-xl border text-xs font-black flex flex-col items-center justify-center gap-1.5 transition-all ${
+860:                       activeModes.includes("TROLLY")
+861:                         ? "bg-amber-500 text-slate-950 border-amber-400 shadow-lg scale-102"
+862:                         : "bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white"
+863:                     }`}
+864:                   >
+865:                     <MapPin className="w-5 h-5" />
+866:                     <span>Trolly + Bench (`ട്രോളി`)</span>
+867:                   </button>
+868:                   <button
+869:                     type="button"
+870:                     onClick={() => toggleMode("LABOR")}
+871:                     className={`p-3 rounded-xl border text-xs font-black flex flex-col items-center justify-center gap-1.5 transition-all ${
+872:                       activeModes.includes("LABOR")
+873:                         ? "bg-amber-500 text-slate-950 border-amber-400 shadow-lg scale-102"
+874:          
+<truncated 3411 bytes>
+ Type (ONLY shown if VIBRATOR is checked) */}
+926:                     {activeModes.includes("VIBRATOR") && (
+927:                       <div className="bg-slate-900/80 p-3 rounded-xl border border-purple-500/30">
+928:                         <label className="text-xs font-bold text-purple-300 block mb-1">Vibrator Type</label>
+929:                         <select
+930:                           value={vibratorType}
+931:                           onChange={(e: any) => setVibratorType(e.target.value)}
+932:                           className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm font-bold text-white focus:border-amber-500 outline-none"
+933:                         >
+934:                           <option value="PETROL">Petrol (Optional Operator)</option>
+935:                           <option value="ELECTRIC">Electric (Wire only, no op)</option>
+936:                         </select>
+937:                       </div>
+938:                     )}
+939: 
+940:                     {/* Trolly + Bench (ONLY shown if TROLLY is checked) */}
+941:                     {activeModes.includes("TROLLY") && (
+942:                       <div className="bg-slate-900/80 p-3 rounded-xl border border-emerald-500/30">
+943:                         <label className="text-xs font-bold text-emerald-300 block mb-1">One-Wheel Trolly + Bench</label>
+944:                         <div className="flex items-center gap-2 pt-1.5">
+945:                           <input
+946:                             type="checkbox"
+947:                             id="trollyBenchCheck"
+948:                             checked={hasTrollyBench || activeModes.includes("TROLLY")}
+949:                             onChange={(e) => setHasTrollyBench(e.target.checked)}
+950:                             className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

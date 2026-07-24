@@ -1,0 +1,24 @@
+Created At: 2026-07-12T22:12:15Z
+Completed At: 2026-07-12T22:12:15Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1517
+Total Bytes: 80021
+Showing lines 1160 to 1175
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1160: 
+1161:                     {!publicTransportUsed && (
+1162:                       <div className="flex items-center gap-2 w-full sm:w-auto">
+1163:                         <span className="text-xs font-bold text-slate-400 shrink-0">Company Driver:</span>
+1164:                         <select
+1165:                           value={driverId}
+1166:                           onChange={(e) => setDriverId(e.target.value)}
+1167:                           className="bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs font-bold text-white focus:border-amber-500 outline-none min-w-[180px]"
+1168:                         >
+1169:                           <option value="">Select driver...</option>
+1170:                           {driversOnly.map((d) => (
+1171:                             <option key={d.id} value={d.id}>{d.name} ({d.role})</option>
+1172:                           ))}
+1173:                         </select>
+1174:                       </div>
+1175:                     )}
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

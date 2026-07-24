@@ -1,0 +1,39 @@
+Created At: 2026-07-12T22:09:03Z
+Completed At: 2026-07-12T22:09:03Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1469
+Total Bytes: 77029
+Showing lines 135 to 165
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+135:     if (qty <= 0) {
+136:       const next = { ...toolQuantities };
+137:       delete next[tId];
+138:       setToolQuantities(next);
+139:     } else {
+140:       setToolQuantities({ ...toolQuantities, [tId]: qty });
+141:     }
+142:   };
+143: 
+144:   const handleToggleMachine = (id: string) => {
+145:     if (selectedMachineIds.includes(id)) {
+146:       setSelectedMachineIds(selectedMachineIds.filter(x => x !== id));
+147:     } else {
+148:       setSelectedMachineIds([...selectedMachineIds, id]);
+149:     }
+150:   };
+151: 
+152:   const handleToggleMultiOperator = (id: string) => {
+153:     if (multiOperatorIds.includes(id)) {
+154:       setMultiOperatorIds(multiOperatorIds.filter(x => x !== id));
+155:     } else {
+156:       setMultiOperatorIds([...multiOperatorIds, id]);
+157:     }
+158:   };
+159: 
+160:   const handleToggleMultiWorker = (id: string) => {
+161:     if (multiWorkerIds.includes(id)) {
+162:       setMultiWorkerIds(multiWorkerIds.filter(x => x !== id));
+163:     } else {
+164:       setMultiWorkerIds([...multiWorkerIds, id]);
+165:     }
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

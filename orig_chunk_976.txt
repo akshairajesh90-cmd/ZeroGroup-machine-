@@ -1,0 +1,72 @@
+Created At: 2026-07-12T07:03:20Z
+Completed At: 2026-07-12T07:03:21Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 862
+Total Bytes: 41308
+Showing lines 480 to 555
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+480:                     </button>
+481:                     <button
+482:                       type="button"
+483:                       onClick={() => setWorkCategory("INDEPENDENT")}
+484:                       className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+485:                         workCategory === "INDEPENDENT" ? "bg-blue-500/20 border-blue-500 text-blue-400 shadow-lg" : "bg-slate-950 border-slate-800 text-slate-400"
+486:                       }`}
+487:                     >
+488:                       <UserCheck className="w-4 h-4" />
+489:                       Independent Crew
+490:                     </button>
+491:                   </div>
+492:                 </div>
+493: 
+494:                 <div>
+495:                   <label className="text-xs font-bold text-slate-400 block mb-1">
+496:                     Site Bundle Tag (Optional — Group Mixer + Lift + Pani)
+497:                   </label>
+498:                   <input
+499:                     type="text"
+500:                     value={siteBundleId}
+501:                     onChange={(e) => setSiteBundleId(e.target.value)}
+502:                     placeholder="e.g. BUNDLE-KAKKANAD-SITE-A"
+503:                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-amber-500 outline-none font-mono"
+504:                   />
+505:                   <span className="text-[10px] text-slate-500 block mt-1">
+506:                     Use exact same bundle tag when adding
+<truncated 717 bytes>
+                 {customers.map((c) => (
+521:                       <option key={c.id} value={c.id}>{c.name}</option>
+522:                     ))}
+523:                   </select>
+524:                 </div>
+525: 
+526:                 <div>
+527:                   <label className="text-xs font-bold text-slate-400 block mb-1">Site Location</label>
+528:                   <input
+529:                     type="text"
+530:                     value={location}
+531:                     onChange={(e) => setLocation(e.target.value)}
+532:                     placeholder="e.g. Kakkanad Metro Pillar 42"
+533:                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-amber-500 outline-none"
+534:                     required
+535:                   />
+536:                 </div>
+537:               </div>
+538: 
+539:               {/* Machine Picker (Only when MACHINE work category) */}
+540:               {workCategory === "MACHINE" && (
+541:                 <div>
+542:                   <label className="text-xs font-bold text-slate-400 block mb-1">Select Available Equipment (Mixer / Lift / Vibrator)</label>
+543:                   <select
+544:                     value={machineId}
+545:                     onChange={(e) => setMachineId(e.target.value)}
+546:                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-amber-500 outline-none"
+547:                   >
+548:                     {machines.map((m) => (
+549:                       <option key={m.id} value={m.id}>{m.machineId} ({m.type}) — Base Payout ₹{m.operatorDailyPayout}</option>
+550:                     ))}
+551:                   </select>
+552:                 </div>
+553:               )}
+554: 
+555:               {/* Strict Role Segregated Crew Pickers */}
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

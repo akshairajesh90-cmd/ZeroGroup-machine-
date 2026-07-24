@@ -1,0 +1,49 @@
+Created At: 2026-07-13T08:15:57Z
+Completed At: 2026-07-13T08:15:57Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1517
+Total Bytes: 79974
+Showing lines 390 to 430
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+390:       if (!res.success) {
+391:         alert(res.error || "Failed to finalize scope.");
+392:       } else {
+393:         setFinalizingDispatch(null);
+394:         window.location.reload();
+395:       }
+396:     });
+397:   };
+398: 
+399:   return (
+400:     <div className="space-y-6">
+401:       {/* Top action bar */}
+402:       <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-900/80 border border-slate-800 p-4 rounded-2xl shadow-xl gap-4">
+403:         <div>
+404:           <h2 className="text-lg font-bold text-white flex items-center gap-2">
+405:             <Truck className="w-5 h-5 text-amber-400" />
+406:             Active Daily Dispatches & Setup Ledger ({dispatches.length})
+407:           </h2>
+408:           <p className="text-xs text-slate-400">
+409:             V15.0 Field Ledger — Tracks Caller/Main Helper + Count, Lift Storeys, Hydraulic vs Standard, and Setup Tools (No Cement Bags).
+410:           </p>
+411:         </div>
+412: 
+413:         <div className="flex items-center gap-3">
+414:           {/* View Mode Switcher */}
+415:           <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center gap-1">
+416:             <button
+417:               onClick={() => setViewMode("TABLE")}
+418:               className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+419:                 viewMode === "TABLE" ? "bg-amber-500 text-slate-950 shadow" : "text-slate-400 hover:text-white"
+420:               }`}
+421:             >
+422:               <Table className="w-3.5 h-3.5" />
+423:               Ledger Grid (3-Col)
+424:             </button>
+425:             <button
+426:               onClick={() => setViewMode("GRID")}
+427:               className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+428:                 viewMode === "GRID" ? "bg-amber-500 text-slate-950 shadow" : "text-slate-400 hover:text-white"
+429:               }`}
+430:             >
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

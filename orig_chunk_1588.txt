@@ -1,0 +1,58 @@
+Created At: 2026-07-12T22:10:19Z
+Completed At: 2026-07-12T22:10:19Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1469
+Total Bytes: 77029
+Showing lines 221 to 270
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+221:     const activeLeaders = leaderAllocations.filter(l => l.helperCount > 0 || l.leaderId || l.leaderName);
+222:     if (activeLeaders.length > 0) {
+223:       finalHelperCount = activeLeaders.reduce((sum, l) => sum + Number(l.helperCount || 0), 0);
+224:       const first = activeLeaders[0];
+225:       if (first.leaderId) {
+226:         finalMainLeaderId = first.leaderId;
+227:         const emp = employees.find(x => x.id === first.leaderId);
+228:         finalMainLeaderName = emp ? `${emp.name} (${first.helperCount} helpers)` : `${first.leaderName} (${first.helperCount} helpers)`;
+229:       } else if (first.leaderName) {
+230:         finalMainLeaderName = `${first.leaderName} (${first.helperCount} helpers)`;
+231:       }
+232:       activeLeaders.forEach((l, i) => {
+233:         const name = l.leaderId ? (employees.find(x => x.id === l.leaderId)?.name || "Leader") : (l.leaderName || "Leader");
+234:         breakdownNotes.push(`${name}: ${l.helperCount} helpers`);
+235:         if (i > 0 && l.leaderId && !finalMultiWorkerIds.includes(l.leaderId)) {
+236:           finalMultiWorkerIds.push(l.leaderId);
+237:         }
+238:       });
+239:     } else if (mainHelperId) {
+240:       const empRow = employees.find(x => x.id === mainHelperId);
+241:       if (empRow) finalMainLeaderName = empRow.name;
+242:     }
+243: 
+244:     // Process Structured Operator Slots (`0 for no operator needed by default`)
+245:     let finalOperatorId = operatorId || undefined;
+246:     let finalMultiOpIds = [...multiOperatorIds];
+247: 
+248:     if (operatorCountNeeded === 0 && !activeModes.includes("LABOR")) {
+249:       finalOperatorId = undefined;
+250:       finalMultiOpIds = [];
+251:     } else if (operatorCountNeeded > 0) {
+252:       const filledSlots = operatorSlots.filter(Boolean);
+253:       if (filledSlots.length > 0) {
+254:         finalOperatorId = filledSlots[0];
+255:         filledSlots.slice(1).forEach(opId => {
+256:           if (!finalMultiOpIds.includes(opId)) finalMultiOpIds.push(opId);
+257:         });
+258:       }
+259:     }
+260: 
+261:     const combinedNotes = [breakdownNotes.length > 0 ? `[Leaders Breakdown: ${breakdownNotes.join(", ")}]` : "", notes].filter(Boolean).join(" | ");
+262: 
+263:     startTransition(async () => {
+264:       const payload: any = {
+265:         customerId,
+266:         machineId: chosenMachineIds[0] || "INDEPENDENT",
+267:         machineIds: chosenMachineIds.length > 0 ? chosenMachineIds : ["INDEPENDENT"],
+268:         driverId: publicTransportUsed ? undefined : (driverId || undefined),
+269:         operatorId: finalOperatorId,
+270:         mainHelperId: finalMainLeaderId,
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

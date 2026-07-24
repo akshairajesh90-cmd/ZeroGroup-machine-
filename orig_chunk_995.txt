@@ -1,0 +1,78 @@
+Created At: 2026-07-12T07:05:34Z
+Completed At: 2026-07-12T07:05:34Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 960
+Total Bytes: 45905
+Showing lines 791 to 860
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+791:                         </div>
+792:                       </div>
+793:                     );
+794:                   })}
+795:                 </div>
+796:               </div>
+797: 
+798:               {/* Notes */}
+799:               <div>
+800:                 <label className="text-xs font-bold text-slate-400 block mb-1">Site Notes / Special Instructions</label>
+801:                 <textarea
+802:                   value={notes}
+803:                   onChange={(e) => setNotes(e.target.value)}
+804:                   placeholder="e.g. Ensure petrol vibrator has full fuel before dispatch"
+805:                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white outline-none h-16"
+806:                 />
+807:               </div>
+808: 
+809:               {/* Submit buttons */}
+810:               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+811:                 <button
+812:                   type="button"
+813:                   onClick={() => setShowNewModal(false)}
+814:                   className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold transition-all"
+815:                 >
+816:                   Cancel
+817:                 </button>
+818:                 <button
+819:                   type="submit"
+820:                   disabled={isPending}
+821:                   className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-black transition-all flex items-center gap-2 shadow-lg sh
+<truncated 103 bytes>
+h-4 animate-spin" />}
+824:                   Confirm & Dispatch Crew / Tools
+825:                 </button>
+826:               </div>
+827:             </form>
+828:           </div>
+829:         </div>
+830:       )}
+831: 
+832:       {/* RESOLVE CONFLICT MODAL */}
+833:       {resolvingDispatchId && (
+834:         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+835:           <div className="bg-slate-900 border border-red-500/60 rounded-3xl max-w-md w-full p-6 shadow-2xl">
+836:             <h3 className="text-lg font-bold text-white flex items-center gap-2 text-red-400">
+837:               <ShieldAlert className="w-5 h-5" />
+838:               Owner Conflict Resolution
+839:             </h3>
+840:             <p className="text-xs text-slate-400 mt-1">
+841:               Log your resolution details. This clears the Critical Alert on the dashboard.
+842:             </p>
+843: 
+844:             <form onSubmit={handleResolveConflict} className="mt-4 space-y-4">
+845:               <textarea
+846:                 value={resolutionNotes}
+847:                 onChange={(e) => setResolutionNotes(e.target.value)}
+848:                 placeholder="e.g. Customer agreed to pay 50% for damaged hose. Worker paid ₹300 bonus."
+849:                 className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white outline-none h-24"
+850:                 required
+851:               />
+852: 
+853:               <div className="flex items-center justify-end gap-3">
+854:                 <button
+855:                   type="button"
+856:                   onClick={() => setResolvingDispatchId(null)}
+857:                   className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold"
+858:                 >
+859:                   Cancel
+860:                 </button>
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

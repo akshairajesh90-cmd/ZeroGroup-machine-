@@ -1,0 +1,24 @@
+Created At: 2026-07-12T21:41:07Z
+Completed At: 2026-07-12T21:41:07Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/src/app/admin/dispatch/DispatchBoardClient.tsx`
+Total Lines: 1287
+Total Bytes: 65776
+Showing lines 60 to 75
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+60:   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+61:   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+62: 
+63:   // Form state for creating dispatch
+64:   const [workCategory, setWorkCategory] = useState<"MACHINE" | "INDEPENDENT">("MACHINE");
+65:   const [activeModes, setActiveModes] = useState<string[]>(["LIFT"]);
+66:   const toggleMode = (mode: string) => {
+67:     if (activeModes.includes(mode)) {
+68:       if (activeModes.length > 1) {
+69:         setActiveModes(activeModes.filter(m => m !== mode));
+70:       }
+71:     } else {
+72:       setActiveModes([...activeModes, mode]);
+73:     }
+74:   };
+75:   const [siteBundleId, setSiteBundleId] = useState("");
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.
