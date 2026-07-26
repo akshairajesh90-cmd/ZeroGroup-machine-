@@ -1,189 +1,217 @@
-// ZERO GROUP — Driver / Operator PWA Home Page
-import React from "react";
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { IOSInstallPrompt } from "@/components/driver/IOSInstallPrompt";
-import { 
-  Truck, 
-  Clock, 
-  DollarSign, 
-  Wrench,
-  ShieldCheck,
-  ChevronRight
+import Link from "next/link";
+import { startOfDay, endOfDay, startOfWeek, format } from "date-fns";
+import {
+  Truck, Wallet, MapPin, Phone, ChevronRight,
+  ClipboardList, Fuel, Wrench, Clock, CheckCircle2,
+  AlertCircle, CalendarDays, Zap
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
+const STATUS_STYLE: Record<string, { label: string; cls: string; dot: string }> = {
+  PENDING:     { label: "Pending",     cls: "bg-amber-500/15 text-amber-400 border-amber-500/30",   dot: "bg-amber-400" },
+  ACCEPTED:    { label: "Accepted",    cls: "bg-blue-500/15 text-blue-400 border-blue-500/30",     dot: "bg-blue-400" },
+  IN_PROGRESS: { label: "In Progress", cls: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",     dot: "bg-cyan-400 animate-pulse" },
+  COMPLETED:   { label: "Completed",   cls: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-400" },
+  CANCELLED:   { label: "Cancelled",   cls: "bg-red-500/15 text-red-400 border-red-500/30",       dot: "bg-red-400" },
+};
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good Morning";
+  if (h < 17) return "Good Afternoon";
+  return "Good Evening";
+}
+
 export default async function DriverHomePage() {
   const session = await auth();
-  if (!session?.user || !session.user.employeeId) {
-    // If logged in as OWNER or STAFF testing driver route without employee profile tied or fallback
-    if (!session?.user) redirect("/");
-  }
+  if (!session?.user) redirect("/");
 
-  // Fetch active dispatches assigned to this operator/driver today
-  const myDispatches = await prisma.dailyDispatch.findMany({
-    where: {
-      OR: [
-        { operatorId: session.user.employeeId ?? undefined },
-        { workerId: session.user.employeeId ?? undefined },
-      ],
-      status: { in: ["PENDING", "DELIVERED"] }
-    },
-    include: {
-      machine: true,
-      operator: true,
-      worker: true
-    },
-    orderBy: { createdAt: "desc" }
+  const empId = session.user.employeeId;
+  if (!empId) redirect("/");
+
+  const employee = await prisma.employee.findUnique({
+    where: { id: empId },
+    select: { name: true, role: true },
   });
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-24">
-      {/* PWA iOS Safari Install Banner */}
-      <IOSInstallPrompt />
+  const todayStart = startOfDay(new Date());
+  const todayEnd   = endOfDay(new Date());
+  const weekStart  = startOfWeek(new Date(), { weekStartsOn: 1 });
 
-      {/* Mobile Top App Bar */}
-      <div className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-lg sticky top-0 z-30 px-5 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-black text-sm shadow-inner">
-            ZG
+  const [todayDispatches, weekDispatches, recentDispatches] = await Promise.all([
+    prisma.dailyDispatch.findMany({
+      where: {
+        OR: [{ operatorId: empId }, { driverId: empId }],
+        dateOfService: { gte: todayStart, lte: todayEnd },
+      },
+      include: {
+        customer: { select: { name: true, phone: true } },
+        machine:  { select: { machineId: true, type: true, notes: true } },
+        lift:     { select: { machineId: true, type: true } },
+        vibrator: { select: { machineId: true, type: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.dailyDispatch.findMany({
+      where: {
+        OR: [{ operatorId: empId }, { driverId: empId }],
+        status: "COMPLETED",
+        dateOfService: { gte: weekStart },
+      },
+      select: { operatorDailyRate: true },
+    }),
+    prisma.dailyDispatch.findMany({
+      where: { OR: [{ operatorId: empId }, { driverId: empId }] },
+      orderBy: { dateOfService: "desc" },
+      take: 5,
+      select: { id: true, location: true, dateOfService: true, status: true, machine: { select: { machineId: true } } },
+    }),
+  ]);
+
+  const firstName     = employee?.name?.split(" ")[0] ?? "Operator";
+  const todayJob      = todayDispatches[0] ?? null;
+  const todayFormatted = format(new Date(), "EEEE, d MMMM yyyy");
+
+  return (
+    <div className="space-y-5 pb-6">
+      {/* ── Greeting ─────────────────────────────────── */}
+      <div className="pt-2">
+        <p className="text-xs font-bold text-cyan-400 uppercase tracking-widest">{getGreeting()}</p>
+        <h1 className="text-2xl font-black text-white mt-0.5">{firstName} 👋</h1>
+        <p className="text-xs text-slate-500 mt-0.5">{todayFormatted}</p>
+      </div>
+
+      {/* ── Today's Job ──────────────────────────────── */}
+      {todayJob ? (
+        <div className="relative bg-gradient-to-br from-amber-500/10 via-slate-900 to-slate-900 border border-amber-500/30 rounded-2xl p-5 overflow-hidden shadow-xl shadow-amber-500/5">
+          <div className="absolute -top-8 -right-8 w-28 h-28 bg-amber-500/10 rounded-full blur-2xl" />
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-1.5">
+              <Zap className="w-3 h-3" /> Today&apos;s Job
+            </span>
+            {(() => {
+              const s = STATUS_STYLE[todayJob.status] ?? STATUS_STYLE.PENDING;
+              return (
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${s.cls}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                  {s.label}
+                </span>
+              );
+            })()}
           </div>
-          <div>
-            <h1 className="text-sm font-black text-white leading-none">ZERO GROUP</h1>
-            <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider mt-0.5 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Field {session.user.role} App
-            </p>
+
+          <h2 className="text-xl font-black text-white leading-tight mt-1">
+            {todayJob.machine?.machineId ?? "Independent Work"}
+            {todayJob.lift ? <span className="text-[12px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md ml-2 align-middle">+ {todayJob.lift.machineId}</span> : null}
+            {todayJob.vibrator ? <span className="text-[12px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md ml-2 align-middle">+ {todayJob.vibrator.machineId}</span> : null}
+          </h2>
+          <p className="text-sm text-amber-300 font-semibold mt-0.5">
+            {todayJob.machine?.type ?? "LABOUR"} · {todayJob.machine?.notes?.split("(")[0].trim() ?? ""}
+          </p>
+
+          <div className="flex items-center gap-2 mt-3">
+            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <span className="text-sm font-bold text-white">{todayJob.location}</span>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <span className="text-sm text-slate-300">{todayJob.customer?.name}</span>
+          </div>
+
+          <Link
+            href={`/driver/orders/${todayJob.id}`}
+            className="mt-4 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm transition-all active:scale-[0.98] shadow-lg shadow-amber-500/20"
+          >
+            View Full Details <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+      ) : (
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center mx-auto mb-3">
+            <Clock className="w-6 h-6 text-slate-500" />
+          </div>
+          <h2 className="text-base font-black text-white">On Standby Today</h2>
+          <p className="text-xs text-slate-500 mt-1">No dispatch assigned yet. Office will call when ready.</p>
+          <div className="mt-4 bg-slate-800/60 rounded-xl px-4 py-2 inline-flex items-center gap-2">
+            <Phone className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="text-xs font-bold text-cyan-400">Contact Office Staff</span>
           </div>
         </div>
+      )}
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-300 bg-slate-800 px-3 py-1 rounded-full border border-slate-700/60">
-            {session.user.name?.split(" ")[0]}
-          </span>
+      {/* ── Week Stats ─────────────────────────────── */}
+      <div className="bg-slate-900/70 border border-cyan-500/20 rounded-2xl p-4 flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <CheckCircle2 className="w-4 h-4 text-cyan-400" />
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Jobs Done</span>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-0.5">This week</p>
+        </div>
+        <p className="text-3xl font-black text-cyan-400">{weekDispatches.length}</p>
+      </div>
+
+      {/* ── Quick Actions ─────────────────────────────── */}
+      <div>
+        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-0.5">Quick Actions</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { href: "/driver/dispatches", icon: ClipboardList, label: "My Jobs",        sub: "All dispatches",    color: "text-cyan-400",   bg: "bg-cyan-500/10 border-cyan-500/20" },
+            { href: "/driver/expenses",   icon: Fuel,          label: "Log Fuel",        sub: "Record refill",     color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
+            { href: "/driver/portal",     icon: Wrench,        label: "Breakdown",       sub: "Report issue",      color: "text-red-400",    bg: "bg-red-500/10 border-red-500/20" },
+            { href: "/driver/portal",     icon: CalendarDays,  label: "Shift Logs",      sub: "My history",        color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
+          ].map((a) => (
+            <Link key={a.label} href={a.href} className="bg-slate-900/70 border border-white/5 hover:border-white/15 rounded-2xl p-4 flex flex-col gap-3 transition-all active:scale-[0.97]">
+              <div className={`w-9 h-9 rounded-xl border flex items-center justify-center ${a.bg}`}>
+                <a.icon className={`w-4.5 h-4.5 ${a.color}`} />
+              </div>
+              <div>
+                <p className="text-sm font-black text-white">{a.label}</p>
+                <p className="text-[11px] text-slate-500">{a.sub}</p>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
 
-      {/* Main Mobile Container */}
-      <div className="p-5 max-w-lg mx-auto space-y-6">
-        {/* Active Shift / Dispatch Status Banner */}
-        <div className="bg-gradient-to-br from-slate-900 via-slate-900/90 to-slate-950 border border-amber-500/30 rounded-2xl p-5 shadow-2xl relative overflow-hidden">
-          <div className="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
-          
-          <div className="flex items-center justify-between">
-            <span className="px-2.5 py-0.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full text-[11px] font-black tracking-wider uppercase flex items-center gap-1.5">
-              <Clock className="w-3 h-3" /> Today&apos;s Shift Status
-            </span>
-            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" /> GPS Verified
-            </span>
-          </div>
-
-          <div className="mt-4">
-            <h2 className="text-xl font-black text-white">
-              {myDispatches.length > 0 ? (
-                <span>Assigned to <span className="text-amber-400">{myDispatches.length} Unit(s)</span></span>
-              ) : (
-                "On Standby / Ready for Dispatch"
-              )}
-            </h2>
-            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              {myDispatches.length > 0
-                ? "Your discrete daily work order is active. Complete safety checks before operating equipment."
-                : "No active dispatch orders assigned by office staff yet today. Check back soon."}
-            </p>
-          </div>
-
-          {myDispatches.length === 0 && (
-            <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center justify-between">
-              <span className="text-xs text-slate-500">Need immediate assignment?</span>
-              <span className="text-xs font-bold text-slate-300 bg-slate-800 px-2.5 py-1 rounded-lg">
-                Call Office Staff
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Active Dispatches List */}
-        {myDispatches.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">My Assigned Equipment</h3>
-            {myDispatches.map((d) => (
-              <div key={d.id} className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-bold">
-                      <Truck className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-white text-base leading-snug">{d.machine?.machineId ?? "INDEPENDENT CREW"}</h4>
-                      <p className="text-xs text-amber-400 font-semibold">{d.machine?.type ?? "TROLLY/LIFT"} • {d.workType}</p>
+      {/* ── Recent Activity ───────────────────────────── */}
+      {recentDispatches.length > 0 && (
+        <div>
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-0.5">Recent Activity</h3>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl divide-y divide-slate-800/80">
+            {recentDispatches.map((d) => {
+              const s = STATUS_STYLE[d.status] ?? STATUS_STYLE.PENDING;
+              return (
+                <Link key={d.id} href={`/driver/orders/${d.id}`} className="flex items-center justify-between px-4 py-3 hover:bg-white/3 transition-colors first:rounded-t-2xl last:rounded-b-2xl">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${s.dot}`} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-white truncate">{d.location}</p>
+                      <p className="text-[11px] text-slate-500">{format(new Date(d.dateOfService), "EEE, d MMM")}</p>
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[10px] font-black uppercase">
-                    ACTIVE
-                  </span>
-                </div>
-
-                <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-400">
-                  <span>Helper: <strong className="text-slate-200">{d.worker?.name ?? "Customer Provided"}</strong></span>
-                  <span className="text-emerald-400 font-bold">₹{d.machine?.operatorDailyPayout?.toString() ?? d.operatorDailyRate?.toString() ?? "800"} Payout Rate</span>
-                </div>
-
-                <div className="pt-2 flex gap-2">
-                  <Link
-                    href={`/driver/orders/${d.id}`}
-                    className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 px-3 rounded-xl text-center text-xs shadow-md shadow-amber-500/10 transition-all flex items-center justify-center gap-1.5"
-                  >
-                    Checklist & Log Work <ChevronRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Quick Driver Tools */}
-        <div className="space-y-3">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Field Quick Actions</h3>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <Link
-              href="/driver/expenses"
-              className="bg-slate-900/70 border border-slate-800/80 hover:border-amber-500/40 rounded-2xl p-4 shadow-lg transition-all group flex flex-col justify-between h-28"
-            >
-              <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 group-hover:scale-110 transition-transform">
-                <DollarSign className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white group-hover:text-amber-400 transition-colors">Log Fuel / Expense</h4>
-                <p className="text-[10px] text-slate-500 mt-0.5">Asset or General</p>
-              </div>
-            </Link>
-
-            <div className="bg-slate-900/70 border border-slate-800/80 hover:border-blue-500/40 rounded-2xl p-4 shadow-lg transition-all group flex flex-col justify-between h-28 cursor-pointer">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
-                <Wrench className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">Report Breakdown</h4>
-                <p className="text-[10px] text-slate-500 mt-0.5">Maintenance Ticket</p>
-              </div>
-            </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${s.cls}`}>{s.label}</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
+      )}
 
-        {/* Offline Cache Status & PWA Notice */}
-        <div className="bg-slate-900/40 border border-slate-800/60 rounded-xl p-3.5 flex items-center justify-between text-xs text-slate-400">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span>PWA Offline Cache Active</span>
-          </div>
-          <span className="text-[10px] font-mono text-slate-500">Service Worker v2.3</span>
+      {/* ── PWA Status ───────────────────────────────── */}
+      <div className="flex items-center justify-between bg-slate-900/40 border border-slate-800/50 rounded-xl px-4 py-2.5 text-[11px]">
+        <div className="flex items-center gap-2 text-slate-400">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          Online · Zero Group ERP
         </div>
+        <span className="font-bold text-slate-500 uppercase tracking-wider">{employee?.role}</span>
       </div>
     </div>
   );

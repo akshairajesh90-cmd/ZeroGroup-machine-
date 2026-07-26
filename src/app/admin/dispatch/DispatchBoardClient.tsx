@@ -8,7 +8,7 @@ import {
   finalizeDispatchScope,
   createQuickCustomer
 } from "@/actions/dispatch";
-import { generateBillFromBooking } from "@/actions/billing";
+// import { generateBillFromBooking } from "@/actions/billing";
 
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { enUS } from "date-fns/locale";
@@ -588,14 +588,7 @@ export default function DispatchBoardClient({
   };
 
   const handleGenerateBill = async (dId: string) => {
-    startTransition(async () => {
-      const res = await generateBillFromBooking(dId);
-      if (!res.success) {
-        alert(res.error || "Failed to generate Bill #1583.");
-      } else if (res.invoice) {
-        router.push(`/admin/billing/${res.invoice.id}`);
-      }
-    });
+    alert("Billing module has been upgraded to Bulk Invoicing. Please go to the Billing ledger to generate invoices.");
   };
 
   const handleResolveConflict = async (e: React.FormEvent) => {

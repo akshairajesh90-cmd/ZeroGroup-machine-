@@ -54,12 +54,13 @@ export const authConfig = {
       // If logged in and visiting home (/), redirect based on role
       if (pathname === "/" && isLoggedIn) {
         if (role === "OWNER" || role === "STAFF") {
-          return Response.redirect(new URL("/admin/dashboard", nextUrl));
+          return Response.redirect(new URL("/admin/fleet", nextUrl));
         }
         if (role === "DRIVER" || role === "OPERATOR") {
           return Response.redirect(new URL("/driver/home", nextUrl));
         }
       }
+
 
       return true;
     },

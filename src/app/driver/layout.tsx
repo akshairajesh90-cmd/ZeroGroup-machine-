@@ -4,7 +4,8 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { handleSignOut } from "@/actions/auth";
 import { IOSInstallPrompt } from "@/components/driver/IOSInstallPrompt";
-import { Truck, CalendarDays, Receipt, LogOut } from "lucide-react";
+import { Truck, CalendarDays, Receipt, LogOut, Wrench } from "lucide-react";
+
 
 export default async function DriverLayout({
   children,
@@ -23,10 +24,12 @@ export default async function DriverLayout({
   }
 
   const bottomNavItems = [
-    { label: "My Shift", href: "/driver/home", icon: Truck },
-    { label: "Dispatches", href: "/driver/dispatches", icon: CalendarDays },
-    { label: "Log Expense", href: "/driver/expenses", icon: Receipt },
+    { label: "My Shift",   href: "/driver/home",       icon: Truck },
+    { label: "Dispatches", href: "/driver/dispatches",  icon: CalendarDays },
+    { label: "Log Fuel",   href: "/driver/expenses",    icon: Receipt },
+    { label: "Portal",     href: "/driver/portal",      icon: Wrench },
   ];
+
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100 font-sans pb-20">

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/serverAuth";
-import { Role } from "@prisma/client";
+import { Role, DocumentStatus, MaintenanceStatus } from "@prisma/client";
 import FleetManagerClient from "./FleetManagerClient";
 
 export const dynamic = "force-dynamic";
@@ -8,43 +8,94 @@ export const dynamic = "force-dynamic";
 export default async function FleetPage() {
   await requireAuth({ allowedRoles: [Role.OWNER, Role.STAFF] });
 
-  // 1. Fetch data
-  const [allMachines, allVehicles] = await Promise.all([
+  const today = new Date();
+
+  const [rawMachines, rawVehicles] = await Promise.all([
     prisma.machine.findMany({
+      where: { status: { not: "RETIRED" } },
       orderBy: { createdAt: "desc" },
       include: {
+        maintenanceTickets: {
+          where: { status: { in: [MaintenanceStatus.OPEN, MaintenanceStatus.IN_PROGRESS] } },
+          select: { id: true, status: true, issueDescription: true },
+        },
+        // ✅ Last dispatch → gives us last known location + date
         dispatches: {
           orderBy: { dateOfService: "desc" },
           take: 1,
-        }
-      }
+          select: {
+            location: true,
+            dateOfService: true,
+            status: true,
+            customer: { select: { name: true } },
+          },
+        },
+      },
     }),
     prisma.vehicle.findMany({
+      where: { status: { not: "RETIRED" } },
       orderBy: { createdAt: "desc" },
       include: {
+        maintenanceTickets: {
+          where: { status: { in: [MaintenanceStatus.OPEN, MaintenanceStatus.IN_PROGRESS] } },
+          select: { id: true, status: true, issueDescription: true },
+        },
+        documents: {
+          where: { status: DocumentStatus.ACTIVE },
+          select: { id: true, type: true, expiryDate: true, status: true },
+        },
+        // ✅ Last shift log → gives us last known active date
         shiftLogs: {
           orderBy: { date: "desc" },
           take: 1,
-          include: { driver: true }
-        }
-      }
-    })
+          select: {
+            date: true,
+            driver: { select: { name: true } },
+          },
+        },
+      },
+    }),
   ]);
 
-  const machines = allMachines.filter(m => m.status !== "RETIRED" && m.type !== "INDEPENDENT");
-  const vehicles = allVehicles.filter(v => v.status !== "RETIRED");
+  // CRITICAL: Serialize all Prisma Decimal types → Number.
+  const machines = rawMachines.map((m) => {
+    const lastDispatch = m.dispatches[0] ?? null;
+    return {
+      id: m.id,
+      machineId: m.machineId,
+      type: m.type,
+      status: m.status,
+      notes: m.notes,
+      operatorDailyPayout: Number(m.operatorDailyPayout),
+      fuelConsumptionThreshold: Number(m.fuelConsumptionThreshold),
+      createdAt: m.createdAt.toISOString(),
+      activeTickets: m.maintenanceTickets,
+      // Last known location from latest dispatch
+      lastLocation: lastDispatch?.location ?? null,
+      lastDispatchDate: lastDispatch?.dateOfService?.toISOString() ?? null,
+      lastCustomer: lastDispatch?.customer?.name ?? null,
+    };
+  });
 
-  // 2. Serialize decimals
-  const serializedMachines = machines.map(m => ({
-    ...m,
-    operatorDailyPayout: Number(m.operatorDailyPayout),
-    fuelConsumptionThreshold: Number(m.fuelConsumptionThreshold),
-  }));
+  const vehicles = rawVehicles.map((v) => {
+    const lastShift = v.shiftLogs[0] ?? null;
+    return {
+      id: v.id,
+      licensePlate: v.licensePlate,
+      type: v.type,
+      status: v.status,
+      createdAt: v.createdAt.toISOString(),
+      activeTickets: v.maintenanceTickets,
+      hasExpiredDocs: v.documents.some((d) => new Date(d.expiryDate) < today),
+      hasExpiringDocs: v.documents.some((d) => {
+        const exp = new Date(d.expiryDate);
+        const daysLeft = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        return daysLeft >= 0 && daysLeft <= 30;
+      }),
+      lastDriver: lastShift?.driver?.name ?? null,
+      lastShiftDate: lastShift?.date?.toISOString() ?? null,
+    };
+  });
 
-  return (
-    <FleetManagerClient 
-      initialMachines={serializedMachines}
-      initialVehicles={vehicles}
-    />
-  );
+  return <FleetManagerClient initialMachines={machines} initialVehicles={vehicles} />;
 }

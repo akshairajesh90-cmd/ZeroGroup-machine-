@@ -33,13 +33,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new Error("Could not connect to database. Check if PostgreSQL is running and DATABASE_URL in .env is correct.");
         }
 
-        if (!user || !user.hashedPassword) {
-          return null;
+        if (!user) {
+          throw new Error("User not found in database for email: " + email);
+        }
+        if (!user.hashedPassword) {
+          throw new Error("User has no hashed password");
         }
 
         const isValid = await bcrypt.compare(password, user.hashedPassword);
         if (!isValid) {
-          return null;
+          throw new Error("Invalid password hash comparison");
         }
 
         return {

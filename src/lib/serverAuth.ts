@@ -1,6 +1,7 @@
 import { auth } from "./auth";
 import { prisma } from "./prisma";
 import { Role } from "@prisma/client";
+import { redirect } from "next/navigation";
 
 export interface AuthContext {
   userId: string;
@@ -12,8 +13,9 @@ export interface AuthContext {
 export async function requireAuth(options?: { allowedRoles?: Role[] }): Promise<AuthContext> {
   const session = await auth();
 
+  // No session at all → go to login
   if (!session?.user?.email) {
-    throw new Error("Unauthorized: Please log in to perform this action.");
+    redirect("/");
   }
 
   const currentUser = await prisma.user.findUnique({
@@ -21,17 +23,21 @@ export async function requireAuth(options?: { allowedRoles?: Role[] }): Promise<
     include: { employee: true },
   });
 
+  // Session email doesn't match any DB user (stale cookie after DB reset)
+  // → redirect to login. NextAuth will clear the cookie on the way.
   if (!currentUser) {
-    throw new Error("Unauthorized: User record not found.");
+    redirect("/");
   }
 
+  // User exists but has no employee profile linked
   if (!currentUser.employee) {
-    throw new Error("Unauthorized: Your user account is not linked to an employee profile.");
+    redirect("/");
   }
 
   if (options?.allowedRoles && options.allowedRoles.length > 0) {
     if (!options.allowedRoles.includes(currentUser.role)) {
-      throw new Error(`Security Guardrail: Action requires one of roles: ${options.allowedRoles.join(", ")}`);
+      // Insufficient role — send to a safe page instead of crashing
+      redirect("/admin/dashboard");
     }
   }
 

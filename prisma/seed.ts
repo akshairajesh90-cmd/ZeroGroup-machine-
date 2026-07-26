@@ -47,7 +47,7 @@ async function main() {
     const user = await prisma.user.create({
       data: {
         email,
-        hashedPassword: "dummy_hash_for_seed",
+        hashedPassword: "$2b$10$Q76.qD9D3aFy0L95Wp/NoOeWA3kiyAOSXkdXjBpJAVK1Q4w0VyLDC", // password123
         role
       }
     });

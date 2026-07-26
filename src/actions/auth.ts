@@ -19,14 +19,14 @@ export async function authenticate(
       email,
       password,
       redirect: true,
-      redirectTo: "/", // Middleware intercepts and redirects to /admin/dashboard or /driver/home based on role
+      redirectTo: "/admin/fleet",
     });
   } catch (error) {
     if (error instanceof AuthError) {
       console.error("AuthError caught:", error.type, error.cause);
       switch (error.type) {
         case "CredentialsSignin":
-          return "Invalid email or password. Please try again.";
+          return `Invalid email or password. Debug: ${error.cause?.err?.message || error.message}`;
         default:
           return `Authentication failed (${error.type}). Make sure your database is running and migrated.`;
       }
