@@ -58,16 +58,18 @@ export async function updateDispatchStatus(
       // Write a strict Zero Group AuditLog for the change
       await tx.auditLog.create({
         data: {
+          actionType: "STATUS_UPDATE",
           entity: "DAILY_DISPATCH",
-          entityId: dispatchId,
-          action: "STATUS_UPDATE",
-          actorId: employeeId,
-          // Capture the exact delta payload as JSON for debugging and conflict resolution
-          delta: {
-            newStatus,
-            latitude,
-            longitude,
+          actorRole: "ADMIN",
+          newPayload: { 
+            id: dispatchId,
+            delta: {
+              newStatus,
+              latitude,
+              longitude,
+            } as any
           },
+          actorId: employeeId,
         },
       });
     });

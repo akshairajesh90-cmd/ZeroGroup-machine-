@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">IronRentERP</string>
+    <string name="title_activity_main">IronRentERP</string>
+    <string name="package_name">com.zerogroup.ironrent</string>
+    <string name="custom_url_scheme">com.zerogroup.ironrent</string>
+</resources>

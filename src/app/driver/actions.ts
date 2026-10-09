@@ -19,17 +19,33 @@ export async function logFuelAction(formData: FormData) {
 
   if (!liters || !totalCost || !dateStr) throw new Error("Missing required fields");
 
-  await prisma.fuelLog.create({
-    data: {
-      driverId: empId,
-      machineId: machineId || null,
-      vehicleId: vehicleId || null,
-      liters,
-      totalCost,
-      odometerReading: odometer,
-      receiptUrl: "physical-receipt",
-      date: new Date(dateStr),
-    },
+  await prisma.$transaction(async (tx) => {
+    // 1. Log the Fuel
+    await tx.fuelLog.create({
+      data: {
+        driverId: empId,
+        machineId: machineId || null,
+        vehicleId: vehicleId || null,
+        liters,
+        totalCost,
+        odometerReading: odometer,
+        receiptUrl: "physical-receipt",
+        date: new Date(dateStr),
+      },
+    });
+
+    // 2. Automatically sync to the Global Expenses Tab
+    await tx.expense.create({
+      data: {
+        loggerId: empId, // Driver who logged it
+        amount: totalCost,
+        category: "DIESEL",
+        description: `Diesel filled: ${liters}L${odometer ? ` (Odo: ${odometer})` : ""}`,
+        date: new Date(dateStr),
+        machineId: machineId || null,
+        vehicleId: vehicleId || null,
+      }
+    });
   });
 
   revalidatePath("/driver/expenses");
@@ -64,13 +80,17 @@ export async function reportBreakdownAction(formData: FormData) {
   revalidatePath("/driver/portal");
 }
 
-export async function updateDispatchMapLinkAction(dispatchId: string, mapLink: string) {
+export async function updateDispatchMapLinkAction(dispatchId: string, mapLink: string, lat?: number, lng?: number) {
   const session = await auth();
   if (!session?.user?.employeeId) throw new Error("Unauthorized");
 
   await prisma.dailyDispatch.update({
     where: { id: dispatchId },
-    data: { mapLink },
+    data: { 
+      mapLink,
+      latitude: lat ? Number(lat) : null,
+      longitude: lng ? Number(lng) : null
+    },
   });
 
   revalidatePath(`/driver/orders/${dispatchId}`);

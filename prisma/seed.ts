@@ -9,28 +9,38 @@ if (process.env.NODE_ENV === "production") {
   process.exit(1);
 }
 
-import { PrismaClient, Role, MachineType, VehicleStatus, MachineStatus, WorkType, DispatchStatus } from "@prisma/client";
-import { subDays, addDays, startOfDay } from "date-fns";
-
-const prisma = new PrismaClient();
+import "dotenv/config";
+import { Role, MachineType, VehicleStatus, MachineStatus, WorkType, DispatchStatus } from "@prisma/client";
+import { startOfDay } from "date-fns";
+import { prisma } from "../src/lib/prisma";
 
 async function main() {
   console.log("🧹 Wiping existing database...");
   await prisma.$transaction([
+    prisma.paymentRecord.deleteMany(),
+    prisma.invoiceItem.deleteMany(),
+    prisma.paymentReceipt.deleteMany(),
+    prisma.invoice.deleteMany(),
     prisma.cashCollection.deleteMany(),
     prisma.settlement.deleteMany(),
     prisma.manualAdjustment.deleteMany(),
+    prisma.salaryAdvance.deleteMany(),
     prisma.auditLog.deleteMany(),
     prisma.expense.deleteMany(),
     prisma.shiftLog.deleteMany(),
+    prisma.fuelLog.deleteMany(),
+    prisma.maintenanceTicket.deleteMany(),
+    prisma.employeeDocument.deleteMany(),
+    prisma.vehicleDocument.deleteMany(),
     prisma.dispatchStatusHistory.deleteMany(),
-    prisma.dispatchOperator.deleteMany(),
+    prisma.dispatchAssignment.deleteMany(),
     prisma.dispatchLabor.deleteMany(),
     prisma.dispatchTool.deleteMany(),
     prisma.dispatchAsset.deleteMany(),
     prisma.dispatchMachine.deleteMany(),
-    prisma.dispatchWorker.deleteMany(),
+    prisma.dispatchAssignment.deleteMany(),
     prisma.dailyDispatch.deleteMany(),
+    prisma.project.deleteMany(),
     prisma.workTypeRate.deleteMany(),
     prisma.vehicle.deleteMany(),
     prisma.tool.deleteMany(),
@@ -63,85 +73,153 @@ async function main() {
   const owner = await createUser("Admin Owner", "owner@ironrent.test", Role.OWNER);
   const staff = await createUser("Office Manager", "staff@ironrent.test", Role.STAFF);
   
-  const drivers = await Promise.all([
-    createUser("Ramesh Driver", "driver1@ironrent.test", Role.DRIVER),
-    createUser("Suresh Driver", "driver2@ironrent.test", Role.DRIVER),
-  ]);
+  const driver = await createUser("Ramesh Driver", "driver@ironrent.test", Role.DRIVER);
+  const operator = await createUser("Babu Operator", "operator@ironrent.test", Role.OPERATOR);
 
-  const operators = await Promise.all([
-    createUser("Babu (Mixer)", "op1@ironrent.test", Role.OPERATOR),
-    createUser("Mani (Lift)", "op2@ironrent.test", Role.OPERATOR),
-  ]);
-
-  const workers = await Promise.all([
-    createUser("Jose (Mestri)", "worker1@ironrent.test", Role.WORKER),
-    createUser("Bhai Helper 1", "worker2@ironrent.test", Role.WORKER),
-  ]);
-
-  // 2. Create Customers
-  const customer1 = await prisma.customer.create({ data: { name: "L&T Construction", phone: "8000000001", address: "City Center" } });
-  const customer2 = await prisma.customer.create({ data: { name: "Sobha Developers", phone: "8000000002", address: "North Zone" } });
-
-  // 3. Create Vehicles & Machines
-  const vehicle = await prisma.vehicle.create({ data: { licensePlate: "KL-01-AB-1234", type: "Flatbed Truck", status: VehicleStatus.AVAILABLE } });
-
-  const mixer1 = await prisma.machine.create({ data: { machineId: "MIX-001", type: MachineType.MIXER, status: MachineStatus.AVAILABLE, operatorDailyPayout: 1200, fuelConsumptionThreshold: 2000 } });
-  const lift1 = await prisma.machine.create({ data: { machineId: "LFT-001", type: MachineType.LIFT, status: MachineStatus.AVAILABLE, operatorDailyPayout: 1500, fuelConsumptionThreshold: 1500 } });
-  const vib1 = await prisma.machine.create({ data: { machineId: "VIB-001", type: MachineType.VIBRATOR, status: MachineStatus.AVAILABLE, operatorDailyPayout: 1000, fuelConsumptionThreshold: 500 } });
-
-  // 4. Timezone-Safe Date Generation (Past 30 Days to Tomorrow)
-  const today = startOfDay(new Date());
-  const dispatchesToCreate = [];
-
-  for (let i = -30; i <= 1; i++) {
-    const targetDate = i === 0 ? today : (i < 0 ? subDays(today, Math.abs(i)) : addDays(today, i));
-    const isPast = i < 0;
-    const isFuture = i > 0;
-
-    const numDispatches = Math.floor(Math.random() * 3) + 1;
-
-    for (let j = 0; j < numDispatches; j++) {
-      let status: DispatchStatus = DispatchStatus.COMPLETED;
-      if (isFuture) status = DispatchStatus.PENDING;
-      if (!isPast && !isFuture && j === 0) status = DispatchStatus.DELIVERED;
-
-      dispatchesToCreate.push({
-        customerId: j % 2 === 0 ? customer1.id : customer2.id,
-        machineId: j % 2 === 0 ? mixer1.id : lift1.id,
-        driverId: drivers[j % 2].id,
-        operatorId: operators[j % 2].id,
-        mainHelperId: workers[0].id,
-        location: `Site ${i}-${j}`,
-        dateOfService: targetDate, 
-        status: status,
-        workType: WorkType.NORMAL,
-        customerCharge: 5500.00,
-        operatorDailyRate: 1200.00,
-        helperCount: 5,
-        version: 1,
-      });
+  // 2. Create Project
+  const project = await prisma.project.create({
+    data: {
+      name: "Pala Highway Roadwork",
+      location: "Pala, Kerala",
+      startDate: new Date("2026-08-01"),
+      status: "ACTIVE"
     }
-  }
+  });
 
-  console.log(`Generating ${dispatchesToCreate.length} dispatches...`);
-  await prisma.dailyDispatch.createMany({ data: dispatchesToCreate });
+  // 3. Create Tools
+  const shovel = await prisma.tool.create({
+    data: {
+      toolId: "SHAWAL-001",
+      name: "Shawal (Shovel)",
+      toolType: "SHAWAL",
+      totalInventory: 15,
+      status: "AVAILABLE"
+    }
+  });
 
-  // 5. Generate Revenue / Cash Collections for past COMPLETED dispatches
-  const completedDispatches = await prisma.dailyDispatch.findMany({ where: { status: DispatchStatus.COMPLETED } });
-  
-  const cashData = completedDispatches.map(d => ({
-    operatorId: d.operatorId!,
-    dispatchId: d.id,
-    amountCollected: d.customerCharge || 5500,
-    date: d.dateOfService,
-    status: "DEPOSITED" as any, 
-    confirmedById: owner.id,
-    confirmedAt: d.dateOfService
-  }));
+  const basket = await prisma.tool.create({
+    data: {
+      toolId: "KOTTA-001",
+      name: "Kotta (Basket)",
+      toolType: "KOTTA",
+      totalInventory: 20,
+      status: "AVAILABLE"
+    }
+  });
 
-  if (cashData.length > 0) {
-    await prisma.cashCollection.createMany({ data: cashData });
-  }
+  // 4. Create Vehicle
+  const vehicle = await prisma.vehicle.create({
+    data: {
+      licensePlate: "KL-01-AB-1234",
+      type: "Flatbed Truck",
+      status: VehicleStatus.AVAILABLE
+    }
+  });
+
+  // 5. Create Vehicle Documents
+  await prisma.vehicleDocument.create({
+    data: {
+      vehicleId: vehicle.id,
+      type: "RC",
+      documentNumber: "RC-KL01-99999",
+      issueDate: new Date("2025-08-16"),
+      expiryDate: new Date("2028-08-16"), // Valid
+      attachmentUrl: "https://example.com/rc.pdf",
+      status: "ACTIVE"
+    }
+  });
+
+  await prisma.vehicleDocument.create({
+    data: {
+      vehicleId: vehicle.id,
+      type: "INSURANCE",
+      documentNumber: "INS-KL01-88888",
+      issueDate: new Date("2024-07-01"),
+      expiryDate: new Date("2026-07-01"), // Expired
+      attachmentUrl: "https://example.com/insurance.pdf",
+      status: "EXPIRED"
+    }
+  });
+
+  // 6. Create Employee Documents
+  await prisma.employeeDocument.create({
+    data: {
+      employeeId: driver.id,
+      type: "LICENSE",
+      documentNumber: "DL-9876543210",
+      issueDate: new Date("2020-01-01"),
+      expiryDate: new Date("2030-01-01"), // Valid
+      attachmentUrl: "https://example.com/license.pdf",
+      status: "ACTIVE"
+    }
+  });
+
+  await prisma.employeeDocument.create({
+    data: {
+      employeeId: operator.id,
+      type: "ID_PROOF",
+      documentNumber: "AADHAAR-11112222",
+      issueDate: new Date("2015-01-01"),
+      expiryDate: new Date("2025-01-01"), // Expired
+      attachmentUrl: "https://example.com/id.pdf",
+      status: "EXPIRED"
+    }
+  });
+
+  // 7. Create Customer
+  const customer = await prisma.customer.create({
+    data: {
+      name: "Sobha Developers",
+      phone: "8000000002",
+      address: "North Zone"
+    }
+  });
+
+  // 8. Create Daily Dispatch linking everything together
+  const dispatch = await prisma.dailyDispatch.create({
+    data: {
+      customerId: customer.id,
+      projectId: project.id,
+      driverId: driver.id,
+      operatorId: operator.id,
+      location: "Pala Highway Roadwork Site",
+      dateOfService: new Date("2026-08-16"),
+      status: DispatchStatus.COMPLETED,
+      workType: WorkType.NORMAL,
+      customerCharge: 6000.00,
+      operatorDailyRate: 1200.00,
+      helperCount: 3,
+      version: 1,
+    }
+  });
+
+  // 9. Link Tools to Dispatch
+  await prisma.dispatchTool.create({
+    data: {
+      dispatchId: dispatch.id,
+      toolId: shovel.id,
+      quantity: 5
+    }
+  });
+
+  await prisma.dispatchTool.create({
+    data: {
+      dispatchId: dispatch.id,
+      toolId: basket.id,
+      quantity: 8
+    }
+  });
+
+  // 10. Create Driver Shift Log linking Employee and Vehicle
+  await prisma.shiftLog.create({
+    data: {
+      driverId: driver.id,
+      vehicleId: vehicle.id,
+      date: new Date("2026-08-16"),
+      startTime: new Date("2026-08-16T08:00:00Z"),
+      endTime: new Date("2026-08-16T17:00:00Z")
+    }
+  });
 
   console.log("✅ Seed completed successfully.");
 }

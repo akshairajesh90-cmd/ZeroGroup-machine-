@@ -1,10 +1,3 @@
-// ============================================================
-// ZERO GROUP — Enterprise Management System
-// Prisma Schema v6.0 (Field-Hardened Directive)
-// ⚠️  DO NOT RUN: npx prisma migrate dev
-// ⚠️  This file is pending user review and approval.
-// ============================================================
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,17 +6,762 @@ datasource db {
   provider = "postgresql"
 }
 
-// ============================================================
-// ENUMS
-// ============================================================
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  hashedPassword      String
+  role                Role      @default(DRIVER)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  sessionTokenVersion Int       @default(1)
+  employee            Employee?
+
+  @@index([email])
+  @@map("users")
+}
+
+model Customer {
+  id                String           @id @default(cuid())
+  name              String
+  address           String
+  phone             String
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  isPendingDelete   Boolean          @default(false)
+  markedForDeleteBy String?
+  dispatches        DailyDispatch[]
+  invoices          Invoice[]
+  PaymentReceipt    PaymentReceipt[]
+
+  @@index([name])
+  @@map("customers")
+}
+
+model Invoice {
+  id                String           @id @default(cuid())
+  invoiceNumber     String           @unique
+  customerId        String
+  totalAmount       Decimal          @db.Decimal(12, 2)
+  advanceDeducted   Decimal          @default(0) @db.Decimal(10, 2)
+  paidCash          Decimal          @default(0) @db.Decimal(10, 2)
+  paidUpi           Decimal          @default(0) @db.Decimal(10, 2)
+  paidBank          Decimal          @default(0) @db.Decimal(10, 2)
+  paidCheque        Decimal          @default(0) @db.Decimal(10, 2)
+  discountAmount    Decimal          @default(0) @db.Decimal(10, 2)
+  paymentMethod     PaymentMethod?
+  paidAt            DateTime?
+  notes             String?
+  siteLocation      String?
+  status            InvoiceStatus    @default(DRAFT)
+  issuedDate        DateTime         @db.Date
+  dueDate           DateTime         @db.Date
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  isPendingDelete   Boolean          @default(false)
+  markedForDeleteBy String?
+  dispatches        DailyDispatch[]
+  items             InvoiceItem[]    @relation("InvoiceLineItems")
+  customer          Customer         @relation(fields: [customerId], references: [id])
+  payments          PaymentReceipt[]
+
+  @@index([customerId])
+  @@index([status])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id            String  @id @default(cuid())
+  invoiceId     String
+  itemKey       String
+  malayalamName String?
+  description   String
+  quantity      Int     @default(1)
+  rate          Decimal @db.Decimal(10, 2)
+  total         Decimal @db.Decimal(10, 2)
+  invoice       Invoice @relation("InvoiceLineItems", fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+model Machine {
+  id                       String              @id @default(cuid())
+  machineId                String              @unique
+  type                     MachineType
+  status                   MachineStatus       @default(AVAILABLE)
+  operatorDailyPayout      Decimal             @db.Decimal(10, 2)
+  fuelConsumptionThreshold Decimal             @default(2000) @db.Decimal(10, 2)
+  notes                    String?
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+  isPendingDelete          Boolean             @default(false)
+  markedForDeleteBy        String?
+  liftDispatches           DailyDispatch[]     @relation("SecondaryLift")
+  dispatches               DailyDispatch[]     @relation("PrimaryMachine")
+  vibratorDispatches       DailyDispatch[]     @relation("SecondaryVibrator")
+  dispatchAssets           DispatchAsset[]
+  dispatchMachines         DispatchMachine[]
+  expenses                 Expense[]
+  fuelLogs                 FuelLog[]
+  maintenanceTickets       MaintenanceTicket[]
+
+  @@index([status])
+  @@map("machines")
+}
+
+model Tool {
+  id                String         @id @default(cuid())
+  toolId            String         @unique
+  name              String
+  toolType          String?
+  totalInventory    Int            @default(10)
+  status            ToolStatus     @default(AVAILABLE)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  isPendingDelete   Boolean        @default(false)
+  markedForDeleteBy String?
+  dispatchTools     DispatchTool[]
+  expenses          Expense[]
+
+  @@index([status])
+  @@map("tools")
+}
+
+model Employee {
+  id                         String                  @id @default(cuid())
+  name                       String
+  role                       Role
+  fixedSalary                Decimal?                @db.Decimal(10, 2)
+  userId                     String                  @unique
+  lastSeenAt                 DateTime?
+  lastLatitude               Decimal?                @db.Decimal(10, 7)
+  lastLongitude              Decimal?                @db.Decimal(10, 7)
+  lastLocationUpdate         DateTime?
+  lastSyncStatus             String?                 @default("ONLINE")
+  offlineQueueCount          Int                     @default(0)
+  createdAt                  DateTime                @default(now())
+  updatedAt                  DateTime                @updatedAt
+  isOwner_ExcludeFromPayroll Boolean                 @default(false)
+  isPendingDelete            Boolean                 @default(false)
+  markedForDeleteBy          String?
+  baseDailyWage              Decimal?                @db.Decimal(10, 2)
+  dailyBataRate              Decimal?                @db.Decimal(10, 2)
+  hourlyRate                 Decimal?                @db.Decimal(10, 2)
+  phone                      String?
+  gpayNumber                 String?
+  upiId                      String?
+  isCrewLeader               Boolean                 @default(false)
+  operatorType               OperatorType            @default(INTERNAL)
+  profilePhotoUrl            String?
+  defaultCrewRole            CrewRole?
+  capableRoles               CrewRole[] // Explicitly tagged roles they can perform
+  paymentRecords             PaymentRecord[]
+  auditLogs                  AuditLog[]              @relation("EmployeeAuditLogs")
+  confirmedDeposits          CashCollection[]        @relation("DepositConfirmer")
+  cashCollections            CashCollection[]
+  chatMessages               ChatMessage[]
+  driverDispatches           DailyDispatch[]         @relation("DriverDispatches")
+  mainHelperDispatches       DailyDispatch[]         @relation("MainHelperDispatches")
+  operatorDispatches         DailyDispatch[]         @relation("OperatorDispatches")
+  workerDispatches           DailyDispatch[]         @relation("WorkerDispatches")
+  dispatchLaborCrews         DispatchLabor[]
+  dispatchAssignments        DispatchAssignment[]
+  changedDispatchStatuses    DispatchStatusHistory[] @relation("StatusChanger")
+  documents                  EmployeeDocument[]
+  user                       User                    @relation(fields: [userId], references: [id])
+  loggedExpenses             Expense[]               @relation("ExpenseLogger")
+  advanceExpenses            Expense[]               @relation("ExpenseEmployee")
+  fuelLogs                   FuelLog[]
+  approvedAdjustments        ManualAdjustment[]      @relation("AdjustmentApprover")
+  createdAdjustments         ManualAdjustment[]      @relation("AdjustmentCreator")
+  manualAdjustments          ManualAdjustment[]      @relation("AdjustmentRecipient")
+  paymentReceipts            PaymentReceipt[]        @relation("ReceiptCollector")
+  settlements                Settlement[]            @relation("EmployeeSettlements")
+  shiftLogs                  ShiftLog[]
+  siteLaborDisbursements     SiteLaborDisbursement[]
+  // IronRent field relations
+  siteLeaderDispatches       DailyDispatch[]         @relation("SiteLeaderDispatches")
+  locationPings              LocationPing[]
+  fieldDiaryLogs             FieldDiaryLog[]         @relation("LoggedByLeader")
+  staffDiaryOverrides        FieldDiaryLog[]         @relation("StaffDiaryOverrides")
+  attendanceLogs             AttendanceLog[]
+  uploadedPhotos             DispatchPhoto[]
+  salaryAdvances             SalaryAdvance[]
+  roleRates                  EmployeeRoleRate[]
+
+  @@index([role])
+  @@map("employees")
+}
+
+// Per-employee per-job wage rate card
+// e.g. Ramesh earns â‚¹700 as Helper but â‚¹1100 as Mixer Operator
+model EmployeeRoleRate {
+  id         String   @id @default(cuid())
+  employeeId String
+  crewRole   CrewRole
+  wagePerDay Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, crewRole])
+  @@map("employee_role_rates")
+}
+
+model Vehicle {
+  id                 String              @id @default(cuid())
+  licensePlate       String              @unique
+  type               String
+  status             VehicleStatus       @default(AVAILABLE)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  isPendingDelete    Boolean             @default(false)
+  markedForDeleteBy  String?
+  expenses           Expense[]
+  fuelLogs           FuelLog[]
+  maintenanceTickets MaintenanceTicket[]
+  shiftLogs          ShiftLog[]
+  documents          VehicleDocument[]
+
+  @@index([status])
+  @@map("vehicles")
+}
+
+model WorkTypeRate {
+  id             String      @id @default(cuid())
+  machineType    MachineType
+  workType       WorkType
+  payoutRate     Decimal     @db.Decimal(10, 2)
+  customerCharge Decimal?    @db.Decimal(10, 2)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([machineType, workType])
+  @@map("work_type_rates")
+}
+
+model DailyDispatch {
+  id                    String                  @id @default(cuid())
+  customerId            String
+  machineId             String?
+  liftId                String?
+  vibratorId            String?
+  driverId              String?
+  operatorId            String?
+  workerId              String?
+  mainHelperId          String?
+  location              String
+  mapLink               String?
+  latitude              Decimal?                @db.Decimal(10, 7)
+  longitude             Decimal?                @db.Decimal(10, 7)
+  dateOfService         DateTime                @db.Date
+  workType              WorkType                @default(NORMAL)
+  status                DispatchStatus          @default(PENDING)
+  operatorDailyRate     Decimal?                @db.Decimal(10, 2)
+  customerCharge        Decimal?                @db.Decimal(10, 2)
+  notes                 String?
+  liftFloors            Int?                    @default(1)
+  mixerCategory         MixerCategory?          @default(STANDARD)
+  vibratorType          VibratorType?
+  hasTrollyBench        Boolean                 @default(false)
+  cementBags            Int?                    @default(0)
+  mainHelperName        String?
+  helperCount           Int                     @default(0)
+  trollyWorkerCount     Int                     @default(0)
+  customOperatorWage    Decimal?                @db.Decimal(10, 2)
+  actualWagePaid        Decimal?                @default(0) @db.Decimal(10, 2)
+  machineNumberTag      String?
+  publicTransportUsed   Boolean                 @default(false)
+  siteBundleId          String?
+  isScopeFinalized      Boolean                 @default(false)
+  closingWorkNotes      String?
+  invoiceId             String?
+  version               Int                     @default(1)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  projectId             String?
+  siteLeaderEmployeeId  String?
+  project               Project?                @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  conflictReport        String?
+  isFlagged             Boolean                 @default(false)
+  isPendingDelete       Boolean                 @default(false)
+  markedForDeleteBy     String?
+  cashCollected         Decimal                 @default(0) @db.Decimal(10, 2)
+  paymentStatus         String                  @default("PENDING")
+  jobGroupId            String?
+  externalSubLeaderName String?
+  arrivedOperatorIds    String[]
+  deliveredAt           DateTime?
+  deliveredByDriverId   String?
+  deliveredToolIds      String[]
+  returnedToolIds       String[]
+  isPrimaryBillingRow   Boolean                 @default(false)
+  toolRent              Decimal?                @default(0) @db.Decimal(10, 2)
+  paymentRecords        PaymentRecord[]
+  cashCollections       CashCollection[]
+  customer              Customer                @relation(fields: [customerId], references: [id])
+  driver                Employee?               @relation("DriverDispatches", fields: [driverId], references: [id], onDelete: Restrict)
+  invoice               Invoice?                @relation(fields: [invoiceId], references: [id])
+  lift                  Machine?                @relation("SecondaryLift", fields: [liftId], references: [id], onDelete: Restrict)
+  machine               Machine?                @relation("PrimaryMachine", fields: [machineId], references: [id], onDelete: Restrict)
+  mainHelper            Employee?               @relation("MainHelperDispatches", fields: [mainHelperId], references: [id])
+  operator              Employee?               @relation("OperatorDispatches", fields: [operatorId], references: [id], onDelete: Restrict)
+  vibrator              Machine?                @relation("SecondaryVibrator", fields: [vibratorId], references: [id], onDelete: Restrict)
+  worker                Employee?               @relation("WorkerDispatches", fields: [workerId], references: [id], onDelete: Restrict)
+  dispatchAssets        DispatchAsset[]
+  dispatchLabor         DispatchLabor[]
+  dispatchMachines      DispatchMachine[]
+  crewAssignments       DispatchAssignment[]
+  siteDisbursements     SiteLaborDisbursement[]
+  statusHistory         DispatchStatusHistory[]
+  dispatchTools         DispatchTool[]
+  siteLeader            Employee?               @relation("SiteLeaderDispatches", fields: [siteLeaderEmployeeId], references: [id], onDelete: SetNull)
+  locationPings         LocationPing[]
+  fieldDiaryLogs        FieldDiaryLog[]
+  dispatchPhotos        DispatchPhoto[]
+  expenses              Expense[]
+
+  @@unique([dateOfService, customerId, siteBundleId])
+  @@index([status])
+  @@index([operatorId])
+  @@index([driverId])
+  @@index([dateOfService])
+  @@index([invoiceId])
+  @@index([siteBundleId])
+  @@index([siteLeaderEmployeeId])
+  @@map("daily_dispatches")
+}
+
+model DispatchMachine {
+  id         String        @id @default(cuid())
+  dispatchId String
+  machineId  String
+  dispatch   DailyDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  machine    Machine       @relation(fields: [machineId], references: [id])
+
+  @@unique([dispatchId, machineId])
+  @@map("dispatch_machines")
+}
+
+model DispatchAsset {
+  id         String        @id @default(cuid())
+  dispatchId String
+  machineId  String
+  dispatch   DailyDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  machine    Machine       @relation(fields: [machineId], references: [id])
+
+  @@unique([dispatchId, machineId])
+  @@map("dispatch_assets")
+}
+
+model DispatchTool {
+  id                     String                     @id @default(cuid())
+  dispatchId             String
+  toolId                 String
+  quantity               Int                        @default(1)
+  variant                String?
+  returnStatus           ToolReturnStatus           @default(PENDING)
+  returnNote             String?
+  returnedAt             DateTime?
+  dispatch               DailyDispatch              @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  tool                   Tool                       @relation(fields: [toolId], references: [id])
+  equipmentVerifications EquipmentVerificationLog[]
+
+  @@unique([dispatchId, toolId, variant])
+  @@map("dispatch_tools")
+}
+
+model DispatchLabor {
+  id                  String        @id @default(cuid())
+  dispatchId          String
+  internalEmployeeId  String?
+  externalWorkerName  String?
+  headCount           Int           @default(1)
+  helperCount         Int           @default(0)
+  lumpSumWage         Decimal       @default(0) @db.Decimal(10, 2)
+  actualWagePaid      Decimal?      @default(0) @db.Decimal(10, 2)
+  internalHeadCount   Int           @default(0)
+  externalHeadCount   Int           @default(0)
+  outsideWagePaid     Decimal       @default(0) @db.Decimal(10, 2)
+  isExternalLiability Boolean       @default(false)
+  notes               String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  dispatch            DailyDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  employee            Employee?     @relation(fields: [internalEmployeeId], references: [id])
+
+  @@map("dispatch_labor_crews")
+}
+
+model DispatchAssignment {
+  id             String   @id @default(cuid())
+  dispatchId     String
+  employeeId     String?
+  contractorId   String?
+  assignedRole   CrewRole
+  lockedWageRate Decimal  @db.Decimal(10, 2)
+  headcount      Int      @default(1)
+  settlementId   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  dispatch   DailyDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  employee   Employee?     @relation(fields: [employeeId], references: [id])
+  contractor Contractor?   @relation(fields: [contractorId], references: [id])
+  settlement Settlement?   @relation(fields: [settlementId], references: [id])
+
+  @@unique([dispatchId, employeeId])
+  @@unique([dispatchId, contractorId])
+  @@map("dispatch_assignments")
+}
+
+model DispatchStatusHistory {
+  id          String         @id @default(cuid())
+  dispatchId  String
+  oldStatus   DispatchStatus
+  newStatus   DispatchStatus
+  changedById String
+  reason      String
+  createdAt   DateTime       @default(now())
+  changedBy   Employee       @relation("StatusChanger", fields: [changedById], references: [id])
+  dispatch    DailyDispatch  @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+
+  @@index([dispatchId])
+  @@index([changedById])
+  @@map("dispatch_status_history")
+}
+
+model ShiftLog {
+  id                String    @id @default(cuid())
+  driverId          String
+  vehicleId         String
+  date              DateTime  @db.Date
+  startTime         DateTime
+  endTime           DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  isPendingDelete   Boolean   @default(false)
+  markedForDeleteBy String?
+  driver            Employee  @relation(fields: [driverId], references: [id])
+  vehicle           Vehicle   @relation(fields: [vehicleId], references: [id])
+
+  @@index([driverId])
+  @@index([date])
+  @@map("shift_logs")
+}
+
+model Expense {
+  id                String          @id @default(cuid())
+  loggerId          String
+  amount            Decimal         @db.Decimal(10, 2)
+  category          ExpenseCategory
+  description       String?
+  date              DateTime        @db.Date
+  vehicleId         String?
+  machineId         String?
+  dispatchId        String?
+  employeeId        String?
+  contractorId      String?
+  toolId            String?
+  settlementId      String?
+  notes             String?
+  isAlertTriggered  Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  isPendingDelete   Boolean         @default(false)
+  markedForDeleteBy String?
+  logger            Employee        @relation("ExpenseLogger", fields: [loggerId], references: [id])
+  machine           Machine?        @relation(fields: [machineId], references: [id], onDelete: Restrict)
+  vehicle           Vehicle?        @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  dispatch          DailyDispatch?  @relation(fields: [dispatchId], references: [id], onDelete: SetNull)
+  employee          Employee?       @relation("ExpenseEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
+  contractor        Contractor?     @relation(fields: [contractorId], references: [id], onDelete: SetNull)
+  tool              Tool?           @relation(fields: [toolId], references: [id], onDelete: SetNull)
+  settlement        Settlement?     @relation(fields: [settlementId], references: [id], onDelete: SetNull)
+
+  @@index([loggerId])
+  @@index([date])
+  @@index([vehicleId])
+  @@index([machineId])
+  @@index([settlementId])
+  @@map("expenses")
+}
+
+model CashCollection {
+  id                String            @id @default(cuid())
+  operatorId        String
+  dispatchId        String
+  amountCollected   Decimal           @db.Decimal(10, 2)
+  date              DateTime          @db.Date
+  status            CashDepositStatus @default(PENDING_DEPOSIT)
+  confirmedById     String?
+  confirmedAt       DateTime?
+  notes             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  isPendingDelete   Boolean           @default(false)
+  markedForDeleteBy String?
+  confirmedBy       Employee?         @relation("DepositConfirmer", fields: [confirmedById], references: [id], onDelete: Restrict)
+  dispatch          DailyDispatch     @relation(fields: [dispatchId], references: [id])
+  operator          Employee          @relation(fields: [operatorId], references: [id])
+
+  @@index([operatorId])
+  @@index([status])
+  @@index([date])
+  @@map("cash_collections")
+}
+
+model ManualAdjustment {
+  id                String                 @id @default(cuid())
+  employeeId        String
+  amount            Decimal                @db.Decimal(10, 2)
+  type              AdjustmentType
+  reason            String
+  date              DateTime               @db.Date
+  settlementStatus  AdjustmentStatus       @default(PENDING)
+  status            ManualAdjustmentStatus @default(PENDING)
+  createdById       String
+  approvedById      String?
+  approvedAt        DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  approvalStatus    String                 @default("APPROVED")
+  isPendingDelete   Boolean                @default(false)
+  markedForDeleteBy String?
+  approvedBy        Employee?              @relation("AdjustmentApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+  createdBy         Employee               @relation("AdjustmentCreator", fields: [createdById], references: [id])
+  employee          Employee               @relation("AdjustmentRecipient", fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+  @@index([createdById])
+  @@index([approvedById])
+  @@index([settlementStatus])
+  @@index([status])
+  @@map("manual_adjustments")
+}
+
+model Settlement {
+  id           String           @id @default(cuid())
+  employeeId   String?
+  contractorId String?
+  weekEnding   DateTime         @db.Date
+  finalPayout  Decimal          @db.Decimal(12, 2)
+  amountPaid   Decimal          @default(0) @db.Decimal(12, 2)
+  notes        String?
+  status       SettlementStatus @default(PENDING)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  employee            Employee?            @relation("EmployeeSettlements", fields: [employeeId], references: [id])
+  contractor          Contractor?          @relation("ContractorSettlements", fields: [contractorId], references: [id])
+  dispatchAssignments DispatchAssignment[]
+  expenses            Expense[]
+
+  @@index([employeeId])
+  @@index([contractorId])
+  @@index([weekEnding])
+  @@index([status])
+  @@map("settlements")
+}
+
+model Contractor {
+  id          String   @id @default(cuid())
+  name        String
+  companyName String?
+  phone       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  dispatchAssignments DispatchAssignment[]
+  expenses            Expense[]
+  settlements         Settlement[]         @relation("ContractorSettlements")
+
+  @@map("contractors")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actionType String
+  actorRole  Role
+  modelName  String?
+  newPayload Json?
+  oldPayload Json?
+  timestamp  DateTime @default(now())
+  entity     String?
+  actor      Employee @relation("EmployeeAuditLogs", fields: [actorId], references: [id])
+
+  @@index([actorId])
+  @@index([actionType])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
+
+model VehicleDocument {
+  id                String         @id @default(cuid())
+  vehicleId         String
+  type              DocumentType
+  documentNumber    String
+  issueDate         DateTime       @db.Date
+  expiryDate        DateTime       @db.Date
+  attachmentUrl     String
+  status            DocumentStatus @default(ACTIVE)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  isPendingDelete   Boolean        @default(false)
+  markedForDeleteBy String?
+  vehicle           Vehicle        @relation(fields: [vehicleId], references: [id])
+
+  @@index([vehicleId])
+  @@index([status])
+  @@index([type])
+  @@map("vehicle_documents")
+}
+
+model EmployeeDocument {
+  id                String         @id @default(cuid())
+  employeeId        String
+  type              DocumentType
+  documentNumber    String
+  issueDate         DateTime       @db.Date
+  expiryDate        DateTime       @db.Date
+  attachmentUrl     String
+  status            DocumentStatus @default(ACTIVE)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  isPendingDelete   Boolean        @default(false)
+  markedForDeleteBy String?
+  employee          Employee       @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([type])
+  @@map("employee_documents")
+}
+
+model MaintenanceTicket {
+  id                String            @id @default(cuid())
+  machineId         String?
+  vehicleId         String?
+  issueDescription  String
+  mechanicName      String?
+  partsCost         Decimal           @default(0) @db.Decimal(12, 2)
+  laborCost         Decimal           @default(0) @db.Decimal(12, 2)
+  status            MaintenanceStatus @default(OPEN)
+  resolvedAt        DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  isPendingDelete   Boolean           @default(false)
+  markedForDeleteBy String?
+  machine           Machine?          @relation(fields: [machineId], references: [id], onDelete: Restrict)
+  vehicle           Vehicle?          @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+
+  @@index([status])
+  @@index([machineId])
+  @@index([vehicleId])
+  @@map("maintenance_tickets")
+}
+
+model FuelLog {
+  id                String   @id @default(cuid())
+  machineId         String?
+  vehicleId         String?
+  driverId          String
+  liters            Decimal  @db.Decimal(8, 2)
+  totalCost         Decimal  @db.Decimal(12, 2)
+  odometerReading   Int?
+  receiptUrl        String
+  date              DateTime @db.Date
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  approvalStatus    String   @default("APPROVED")
+  isPendingDelete   Boolean  @default(false)
+  markedForDeleteBy String?
+  driver            Employee @relation(fields: [driverId], references: [id])
+  machine           Machine? @relation(fields: [machineId], references: [id], onDelete: Restrict)
+  vehicle           Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+
+  @@index([date])
+  @@index([machineId])
+  @@index([vehicleId])
+  @@index([driverId])
+  @@map("fuel_logs")
+}
+
+model PaymentReceipt {
+  id                    String        @id @default(cuid())
+  receiptNumber         String        @unique
+  customerId            String
+  invoiceId             String?
+  amount                Decimal       @db.Decimal(12, 2)
+  paymentMethod         PaymentMethod
+  paymentDate           DateTime      @db.Date
+  notes                 String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  depositStatus         String?       @default("PENDING_DEPOSIT")
+  collectedByEmployeeId String?
+  dispatchId            String?
+  isPendingDelete       Boolean       @default(false)
+  markedForDeleteBy     String?
+  collector             Employee?     @relation("ReceiptCollector", fields: [collectedByEmployeeId], references: [id], onDelete: Restrict)
+  customer              Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  invoice               Invoice?      @relation(fields: [invoiceId], references: [id])
+
+  @@index([customerId])
+  @@index([invoiceId])
+  @@index([paymentDate])
+  @@index([depositStatus])
+  @@map("payment_receipts")
+}
+
+model PaymentRecord {
+  id              String        @id @default(cuid())
+  dispatchId      String
+  amount          Decimal       @db.Decimal(10, 2)
+  method          String
+  collectedById   String
+  verifiedByStaff Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  collectedBy     Employee      @relation(fields: [collectedById], references: [id])
+  dispatch        DailyDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+
+  @@index([collectedById])
+  @@index([dispatchId])
+}
+
+model ChatMessage {
+  id                String   @id @default(cuid())
+  text              String?
+  mediaUrl          String?
+  mediaType         String?
+  senderId          String
+  createdAt         DateTime @default(now())
+  isPendingDelete   Boolean  @default(false)
+  markedForDeleteBy String?
+  sender            Employee @relation(fields: [senderId], references: [id])
+
+  @@index([createdAt])
+  @@index([senderId])
+  @@map("chat_messages")
+}
+
+model SystemSettings {
+  id              String   @id @default(cuid())
+  maintenanceMode Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+
+  @@map("system_settings")
+}
 
 enum Role {
-  OWNER // Admin — full system access, pricing, approvals, and settlements
-  ADMIN // Added for higher-tier compliance operations
-  STAFF // Office staff — dispatch creation, cash intake, expenses, cancellation window
-  DRIVER // Field driver — shift logs and delivery checks
-  OPERATOR // Equipment operator — field operation and rate calculations
-  WORKER // On-site helper — paid by customer, record-keeping only, excluded from settlement
+  OWNER
+  ADMIN
+  STAFF
+  DRIVER
+  OPERATOR
+  WORKER
 }
 
 enum PaymentMethod {
@@ -49,6 +787,7 @@ enum InvoiceStatus {
   PARTIAL
   PAID
   CANCELLED
+  UNPAID
 }
 
 enum DocumentType {
@@ -77,8 +816,8 @@ enum MachineType {
   MIXER
   LIFT
   VIBRATOR
-  PANI // Water/pump machine
-  INDEPENDENT // Independent / Non-Machine labor work (e.g., Trolly-only work)
+  PANI
+  INDEPENDENT
 }
 
 enum MachineStatus {
@@ -101,11 +840,10 @@ enum VehicleStatus {
   RETIRED
 }
 
-// WorkType determines operator payout via the WorkTypeRate lookup table
 enum WorkType {
-  NORMAL // Standard Pani
-  TROLLY // Trolly work
-  LATE // Late/Extra work
+  NORMAL
+  TROLLY
+  LATE
 }
 
 enum DispatchStatus {
@@ -125,762 +863,256 @@ enum ExpenseCategory {
   DIESEL
   REPAIR
   TRAVEL
-  OTHER // General store / misc — no asset link required
+  OTHER
+  STAFF_ADVANCE
+  CONTRACTOR_ADVANCE
+  OUTSIDE_HELPER_WAGE
+  TOOL_PARTS
+  WORKSHOP
+  RENT
+  PETTY_CASH
 }
 
-enum AdvanceStatus {
-  PENDING // Not yet deducted from settlement
-  SETTLED // Deducted in a weekend settlement run
+enum ToolReturnStatus {
+  PENDING
+  RETURNED
+  LEFT_ON_SITE
+  MISSING
 }
 
-// Type of manual financial adjustment applied to an operator's settlement
 enum AdjustmentType {
-  BONUS // Extra pay (e.g., exceptional work, festival bonus)
-  PENALTY // Deduction (e.g., damage, misconduct)
+  BONUS
+  PENALTY
 }
 
-// Whether this adjustment has been processed in a settlement run
 enum AdjustmentStatus {
-  PENDING // Not yet factored into a settlement
-  SETTLED // Included in a completed settlement
+  PENDING
+  SETTLED
 }
 
-// Security approval status for a manual adjustment (> ₹500 requires APPROVED by OWNER)
 enum ManualAdjustmentStatus {
   PENDING
   APPROVED
   REJECTED
 }
 
-// Settlement Finalization status
 enum SettlementStatus {
   DRAFT
   FINALIZED
+  PENDING
+  PARTIAL
+  PAID
 }
 
-// Two-Step Cash Verification: Operator logs cash -> Admin clicks Confirm Deposit -> Ledger clears
 enum CashDepositStatus {
-  PENDING_DEPOSIT // Logged by operator in field PWA
-  DEPOSITED // Confirmed by Admin/Staff -> Ledger clears
+  PENDING_DEPOSIT
+  DEPOSITED
 }
 
-// ============================================================
-// AUTHENTICATION
-// ============================================================
-
-model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  hashedPassword String
-  role           Role     @default(DRIVER)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  employee Employee?
-
-  @@index([email])
-  @@map("users")
+enum OperatorType {
+  INTERNAL
+  SUBCONTRACTOR
 }
 
-// ============================================================
-// CORE ENTITIES
-// ============================================================
-
-model Customer {
-  id        String   @id @default(cuid())
-  name      String
-  address   String
-  phone     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  dispatches     DailyDispatch[]
-  invoices       Invoice[]
-  PaymentReceipt PaymentReceipt[]
-
-  @@index([name])
-  @@map("customers")
+enum CrewRole {
+  MIXER_OPERATOR
+  HYDRAULIC_OPERATOR
+  VIBRATOR_OPERATOR
+  LIFT_OPERATOR
+  WORKER_LEADER
+  HELPER
+  DRIVER
+  // IronRent field crew roles
+  SUB_LEADER
+  PANI_HELPER
+  TROLLY_1_WHEEL
+  TROLLY_2_WHEEL
+  P_VIBRATOR
 }
 
-// Bill #1583 supporting Combined Split Payments (CASH + UPI) & Advance Reductions
-model Invoice {
-  id            String  @id @default(cuid())
-  invoiceNumber String  @unique // e.g. "INV-2026-001"
-  customerId    String
-  totalAmount   Decimal @db.Decimal(12, 2)
-
-  // Backward compatibility fields for now
-  advanceDeducted Decimal        @default(0) @db.Decimal(10, 2)
-  paidCash        Decimal        @default(0) @db.Decimal(10, 2)
-  paidUpi         Decimal        @default(0) @db.Decimal(10, 2)
-  paidBank        Decimal        @default(0) @db.Decimal(10, 2)
-  paymentMethod   PaymentMethod?
-  paidAt          DateTime?
-  notes           String?
-  siteLocation    String?
-
-  status     InvoiceStatus @default(DRAFT)
-  issuedDate DateTime      @db.Date
-  dueDate    DateTime      @db.Date
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-
-  customer   Customer         @relation(fields: [customerId], references: [id], onDelete: Restrict)
+model Project {
+  id         String          @id @default(cuid())
+  name       String
+  location   String
+  status     String          @default("ACTIVE")
+  startDate  DateTime        @db.Date
+  endDate    DateTime?       @db.Date
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
   dispatches DailyDispatch[]
-  payments   PaymentReceipt[]
-  items      InvoiceItem[]    @relation("InvoiceLineItems")
 
-  @@index([customerId])
-  @@index([status])
-  @@map("invoices")
+  @@map("projects")
 }
 
-model InvoiceItem {
-  id            String  @id @default(cuid())
-  invoiceId     String
-  itemKey       String // e.g. "LIFT", "MIXER", "VIBRATOR", "PANIKKOOLI", "VANDIKKOOLI", "PADUTHA"
-  malayalamName String? // e.g. "ലിഫ്റ്റ്", "വണ്ടിക്കൂലി"
-  description   String // e.g. "3 Floored used", "12 Helpers only"
-  quantity      Int     @default(1)
-  rate          Decimal @db.Decimal(10, 2)
-  total         Decimal @db.Decimal(10, 2)
+model ExternalSubLeader {
+  id    String @id @default(cuid())
+  name  String
+  phone String
+  defaultWorkerRate Decimal? @db.Decimal(10, 2)
 
-  invoice Invoice @relation("InvoiceLineItems", fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  @@index([invoiceId])
-  @@map("invoice_items")
-}
-
-model Machine {
-  id                       String        @id @default(cuid())
-  machineId                String        @unique // Human-readable ID e.g. "MIX-001", "LIFT-002"
-  type                     MachineType
-  status                   MachineStatus @default(AVAILABLE)
-  // Base daily operator payout for this specific machine.
-  operatorDailyPayout      Decimal       @db.Decimal(10, 2)
-  // Threshold for high-fuel consumption alerts (e.g. ₹2000 for Mixer, ₹1500 for Lift)
-  fuelConsumptionThreshold Decimal       @default(2000) @db.Decimal(10, 2)
-  notes                    String?
-  createdAt                DateTime      @default(now())
-  updatedAt                DateTime      @updatedAt
-
-  dispatches         DailyDispatch[] @relation("PrimaryMachine")
-  liftDispatches     DailyDispatch[] @relation("SecondaryLift")
-  vibratorDispatches DailyDispatch[] @relation("SecondaryVibrator")
-  dispatchMachines   DispatchMachine[]
-  dispatchAssets     DispatchAsset[]
-  expenses           Expense[]
-  maintenanceTickets MaintenanceTicket[]
-  fuelLogs           FuelLog[]
-
-  @@index([status])
-  @@map("machines")
-}
-
-model Tool {
-  id             String     @id @default(cuid())
-  toolId         String     @unique // Human-readable ID e.g. "VIB-PETROL-1", "SHAWAL-BULK"
-  name           String // e.g. "Shawal (Shovel)", "Kotta (Basket)", "Vibrator (Petrol)"
-  toolType       String? // VIBRATOR_PETROL | VIBRATOR_ELECTRIC | SHAWAL | KOTTA | MIXING_SHEET | GENERAL
-  totalInventory Int        @default(10)
-  status         ToolStatus @default(AVAILABLE)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-
-  dispatchTools DispatchTool[]
-
-  @@index([status])
-  @@map("tools")
-}
-
-model Employee {
-  id          String   @id @default(cuid())
-  name        String
-  role        Role
-  // fixedSalary: only for OWNER / STAFF (office staff).
-  fixedSalary Decimal? @db.Decimal(10, 2)
-  userId      String   @unique
-
-  // Offline-first field device sync tracking for Admin Dashboard visibility
-  lastSeenAt        DateTime?
-  lastSyncStatus    String?   @default("ONLINE") // "ONLINE" | "OFFLINE" | "SYNCING"
-  offlineQueueCount Int       @default(0)
+  disbursements SiteLaborDisbursement[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
-
-  // As Driver
-  driverDispatches DailyDispatch[] @relation("DriverDispatches")
-  shiftLogs        ShiftLog[]
-  loggedExpenses   Expense[]       @relation("ExpenseLogger")
-
-  // As Operator
-  operatorDispatches   DailyDispatch[]    @relation("OperatorDispatches")
-  assignedOperatorsV11 DispatchOperator[] @relation("OperatorAssignments")
-  dispatchLaborCrews   DispatchLabor[]
-  cashCollections      CashCollection[]
-  settlements          Settlement[]
-
-  // As Worker — paid directly by customer on-site, NOT part of settlement
-  workerDispatches      DailyDispatch[]  @relation("WorkerDispatches")
-  multiWorkerDispatches DispatchWorker[]
-  mainHelperDispatches  DailyDispatch[]  @relation("MainHelperDispatches")
-
-  // Salary advances (any role can take an advance)
-  salaryAdvances SalaryAdvance[]
-
-  // Manual bonuses or penalties applied to this employee (operators only)
-  manualAdjustments ManualAdjustment[] @relation("AdjustmentRecipient")
-
-  // Audit trails
-  createdAdjustments      ManualAdjustment[]      @relation("AdjustmentCreator")
-  approvedAdjustments     ManualAdjustment[]      @relation("AdjustmentApprover")
-  finalizedSettlements    Settlement[]            @relation("SettlementFinalizer")
-  changedDispatchStatuses DispatchStatusHistory[] @relation("StatusChanger")
-  confirmedDeposits       CashCollection[]        @relation("DepositConfirmer")
-  auditLogs               AuditLog[]              @relation("EmployeeAuditLogs")
-
-  fuelLogs  FuelLog[]
-  documents EmployeeDocument[]
-
-  @@index([role])
-  @@map("employees")
+  @@map("external_sub_leaders")
 }
 
-model Vehicle {
-  id           String        @id @default(cuid())
-  licensePlate String        @unique
-  type         String // e.g. "Truck", "Flatbed", "Van"
-  status       VehicleStatus @default(AVAILABLE)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-
-  shiftLogs          ShiftLog[]
-  expenses           Expense[]
-  maintenanceTickets MaintenanceTicket[]
-  fuelLogs           FuelLog[]
-  documents          VehicleDocument[]
-
-  @@index([status])
-  @@map("vehicles")
-}
-
-// ============================================================
-// PAY RATE LOOKUP TABLE
-// ============================================================
-
-model WorkTypeRate {
-  id             String      @id @default(cuid())
-  machineType    MachineType
-  workType       WorkType
-  payoutRate     Decimal     @db.Decimal(10, 2)
-  customerCharge Decimal?    @db.Decimal(10, 2)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-
-  @@unique([machineType, workType])
-  @@map("work_type_rates")
-}
-
-// ============================================================
-// DAILY DISPATCH (Site-Job Model V6.0)
-// 1 DailyDispatch = 1 Site Job.
-// Contains MULTIPLE Assets, MULTIPLE Tools (+Variants), MULTIPLE Labor logs.
-// Staff cancellation/postponement window: ONLY until 2:00 PM the day AFTER scheduled dateOfService.
-// ============================================================
-
-model DailyDispatch {
-  id                String         @id @default(cuid())
-  customerId        String
-  machineId         String? // Primary machine (e.g. Mixer)
-  liftId            String? // Secondary major machine (e.g. Lift)
-  vibratorId        String? // Accessory machine (e.g. Vibrator)
-  driverId          String? // Nullable if public transport or outside conveyance
-  operatorId        String? // Nullable if Electric Vibrator (no op) or optional
-  workerId          String?
-  mainHelperId      String? // Main Helper profile who led the group
-  location          String
-  mapLink           String? // Driver GPS Map Pin link for return drivers / forgotten tools
-  latitude          Decimal?       @db.Decimal(10, 7) // GPS Latitude from driver drop-off
-  longitude         Decimal?       @db.Decimal(10, 7) // GPS Longitude from driver drop-off
-  dateOfService     DateTime       @db.Date
-  workType          WorkType       @default(NORMAL)
-  status            DispatchStatus @default(PENDING)
-  operatorDailyRate Decimal?       @db.Decimal(10, 2)
-  customerCharge    Decimal?       @db.Decimal(10, 2)
-  notes             String?
-
-  // V15.0 Equipment & Labor Guardrails
-  liftFloors     Int?           @default(1) // e.g. 3 Floored used
-  mixerCategory  MixerCategory? @default(STANDARD) // Machine vs Hydraulic Machine
-  vibratorType   VibratorType? // Petrol (optional op) vs Electric (no op + wire)
-  hasTrollyBench Boolean        @default(false) // Trolly ONLY goes with Bench
-  cementBags     Int?           @default(0) // Optional job volume
-
-  mainHelperName      String? // Or typed Main Helper name
-  helperCount         Int      @default(0) // Numeric helper count only (for Bill #1583)
-  trollyWorkerCount   Int      @default(0) // Workers for one-wheel trolly
-  customOperatorWage  Decimal? @db.Decimal(10, 2) // Custom Panikkooli if Trolly/Heavy work
-  actualWagePaid      Decimal? @default(0) @db.Decimal(10, 2) // Immutable financial snapshot for primary op
-  machineNumberTag    String? // Tagged AFTER setup e.g. "MIX-001, LIFT-002"
-  publicTransportUsed Boolean  @default(false) // Company vehicle OR Public transport / bus / auto
-
-  // Dispute/conflict reporting from driver PWA
-  conflictReport String?
-  isFlagged      Boolean @default(false)
-
-  // Site Bundle Tag (Booking / Job Title e.g. "Mathamangalam - Nedhil")
-  siteBundleId String?
-
-  // Post-work scope discovery
-  isScopeFinalized Boolean  @default(false)
-  closingWorkNotes String?
-  invoiceId        String?
-  version          Int      @default(1)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  machine    Machine?  @relation("PrimaryMachine", fields: [machineId], references: [id], onDelete: Restrict)
-  lift       Machine?  @relation("SecondaryLift", fields: [liftId], references: [id], onDelete: Restrict)
-  vibrator   Machine?  @relation("SecondaryVibrator", fields: [vibratorId], references: [id], onDelete: Restrict)
-  driver     Employee? @relation("DriverDispatches", fields: [driverId], references: [id], onDelete: Restrict)
-  operator   Employee? @relation("OperatorDispatches", fields: [operatorId], references: [id], onDelete: Restrict)
-  worker     Employee? @relation("WorkerDispatches", fields: [workerId], references: [id], onDelete: Restrict)
-  mainHelper Employee? @relation("MainHelperDispatches", fields: [mainHelperId], references: [id], onDelete: SetNull)
-  invoice    Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-
-  // Schema V11/V15.0: Multiple Assets, Tools, Mestri Labor Crew & Flexible Operators
-  dispatchMachines DispatchMachine[] // Backwards compatible alias
-  dispatchAssets   DispatchAsset[]
-  dispatchTools    DispatchTool[]
-  dispatchLabor    DispatchLabor[]
-  multiOperators   DispatchOperator[]
-  multiWorkers     DispatchWorker[]
-  statusHistory    DispatchStatusHistory[]
-  cashCollections  CashCollection[]
-
-  @@unique([dateOfService, customerId, siteBundleId])
-  @@index([status])
-  @@index([operatorId])
-  @@index([driverId])
-  @@index([dateOfService])
-  @@index([invoiceId])
-  @@index([siteBundleId])
-  @@map("daily_dispatches")
-}
-
-// Join table: Multiple Assets for 1 Site Job (e.g. 1 Mixer + 1 Lift + 1 Vibrator) (Backwards compatible)
-model DispatchMachine {
-  id         String @id @default(cuid())
-  dispatchId String
-  machineId  String
-
-  dispatch DailyDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
-  machine  Machine       @relation(fields: [machineId], references: [id], onDelete: Restrict)
-
-  @@unique([dispatchId, machineId])
-  @@map("dispatch_machines")
-}
-
-// V11.0: Links 1+ Machines to 1 Dispatch
-model DispatchAsset {
-  id         String @id @default(cuid())
-  dispatchId String
-  machineId  String
-
-  dispatch DailyDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
-  machine  Machine       @relation(fields: [machineId], references: [id], onDelete: Restrict)
-
-  @@unique([dispatchId, machineId])
-  @@map("dispatch_assets")
-}
-
-// V11.0: ToolId + Quantity + Variant (e.g. 4 Shawal, 1 Petrol Vibrator, 87 Cement Bags, 1 Cable)
-model DispatchTool {
-  id         String  @id @default(cuid())
-  dispatchId String
-  toolId     String
-  quantity   Int     @default(1)
-  variant    String? // e.g. "PETROL", "ELECTRIC", "CABLE"
-
-  dispatch DailyDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
-  tool     Tool          @relation(fields: [toolId], references: [id], onDelete: Restrict)
-
-  @@unique([dispatchId, toolId, variant])
-  @@map("dispatch_tools")
-}
-
-// V11.0: Mestri Model ("12+1" Crew Model: Main Worker + HeadCount + HelperCount + LumpSumWage)
-model DispatchLabor {
+model SiteLaborDisbursement {
   id                  String   @id @default(cuid())
   dispatchId          String
-  internalEmployeeId  String? // Nullable if external Mestri
-  externalWorkerName  String? // e.g. "Jose Mesthiri"
-  headCount           Int      @default(1) // +1 Main Worker
-  helperCount         Int      @default(0) // Pani helpers count e.g. 12
-  lumpSumWage         Decimal  @default(0) @db.Decimal(10, 2)
-  actualWagePaid      Decimal? @default(0) @db.Decimal(10, 2) // Immutable snapshot
-  internalHeadCount   Int      @default(0) // Internal company workers (liability owed)
-  externalHeadCount   Int      @default(0) // Outside / external laborers (paid on spot / external)
-  outsideWagePaid     Decimal  @default(0) @db.Decimal(10, 2) // Paid directly on site to outside workers
-  isExternalLiability Boolean  @default(false)
-  notes               String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  dispatch DailyDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
-  employee Employee?     @relation(fields: [internalEmployeeId], references: [id], onDelete: SetNull)
-
-  @@map("dispatch_labor_crews")
-}
-
-// V11.0: Flexible Operator (Internal Employee OR External Name + Day Wage)
-model DispatchOperator {
-  id                 String   @id @default(cuid())
-  dispatchId         String
-  internalEmployeeId String? // Nullable if external operator
-  externalName       String? // e.g. "Mahesh (Outside)"
-  dayWage            Decimal? @db.Decimal(10, 2)
-  actualWagePaid     Decimal? @default(0) @db.Decimal(10, 2) // Immutable snapshot
-
-  dispatch DailyDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
-  employee Employee?     @relation("OperatorAssignments", fields: [internalEmployeeId], references: [id], onDelete: SetNull)
-
-  @@map("dispatch_operators_v11")
-}
-
-// Backwards compatible helper join
-model DispatchWorker {
-  id         String @id @default(cuid())
-  dispatchId String
-  employeeId String
-
-  dispatch DailyDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
-  employee Employee      @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-
-  @@unique([dispatchId, employeeId])
-  @@map("dispatch_workers")
-}
-
-// ============================================================
-// AUDIT-LOCKED CANCELLATION & STATUS HISTORY (V6.0)
-// Tracks who cancelled/postponed a job and mandatory audit reason.
-// Staff can only cancel/postpone until 2:00 PM the day after dateOfService.
-// ============================================================
-
-model DispatchStatusHistory {
-  id          String         @id @default(cuid())
-  dispatchId  String
-  oldStatus   DispatchStatus
-  newStatus   DispatchStatus
-  changedById String
-  reason      String // Mandatory reason string
-  createdAt   DateTime       @default(now())
-
-  dispatch  DailyDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
-  changedBy Employee      @relation("StatusChanger", fields: [changedById], references: [id], onDelete: Restrict)
-
-  @@index([dispatchId])
-  @@index([changedById])
-  @@map("dispatch_status_history")
-}
-
-// ============================================================
-// DRIVER OPERATIONS
-// ============================================================
-
-model ShiftLog {
-  id        String    @id @default(cuid())
-  driverId  String
-  vehicleId String
-  date      DateTime  @db.Date
-  startTime DateTime
-  endTime   DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  driver  Employee @relation(fields: [driverId], references: [id], onDelete: Restrict)
-  vehicle Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
-
-  @@index([driverId])
-  @@index([date])
-  @@map("shift_logs")
-}
-
-// ============================================================
-// EXPENSES (Unified — asset-linked OR general store)
-// ============================================================
-
-model Expense {
-  id               String          @id @default(cuid())
-  loggerId         String // The employee who logged this expense
-  amount           Decimal         @db.Decimal(10, 2)
-  category         ExpenseCategory
-  description      String? // Required for OTHER; optional for asset expenses
-  date             DateTime        @db.Date
-  vehicleId        String?
-  machineId        String?
-  notes            String?
-  isAlertTriggered Boolean         @default(false)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-
-  logger  Employee @relation("ExpenseLogger", fields: [loggerId], references: [id], onDelete: Restrict)
-  vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
-  machine Machine? @relation(fields: [machineId], references: [id], onDelete: Restrict)
-
-  @@index([loggerId])
-  @@index([date])
-  @@index([vehicleId])
-  @@index([machineId])
-  @@map("expenses")
-}
-
-// ============================================================
-// CASH & SETTLEMENTS (Two-Step Cash Verification V6.0)
-// Operator logs cash -> Admin clicks Confirm Deposit -> Ledger clears
-// ============================================================
-
-model CashCollection {
-  id              String            @id @default(cuid())
-  operatorId      String
-  dispatchId      String // Which day's dispatch this cash relates to
-  amountCollected Decimal           @db.Decimal(10, 2)
-  date            DateTime          @db.Date
-  status          CashDepositStatus @default(PENDING_DEPOSIT)
-  confirmedById   String?
-  confirmedAt     DateTime?
-  notes           String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  operator    Employee      @relation(fields: [operatorId], references: [id], onDelete: Restrict)
-  dispatch    DailyDispatch @relation(fields: [dispatchId], references: [id], onDelete: Restrict)
-  confirmedBy Employee?     @relation("DepositConfirmer", fields: [confirmedById], references: [id], onDelete: Restrict)
-
-  @@index([operatorId])
-  @@index([status])
-  @@index([date])
-  @@map("cash_collections")
-}
-
-model SalaryAdvance {
-  id         String        @id @default(cuid())
-  employeeId String
-  amount     Decimal       @db.Decimal(10, 2)
-  date       DateTime      @db.Date
-  status     AdvanceStatus @default(PENDING)
-  notes      String?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-
-  @@index([employeeId])
-  @@index([status])
-  @@map("salary_advances")
-}
-
-// ============================================================
-// MANUAL ADJUSTMENTS (Bonus / Penalty)
-// Delegated Authority: > ₹500 requires OWNER approval (status: PENDING).
-// Every adjustment requires a mandatory 'reason' for audit trail.
-// ============================================================
-
-model ManualAdjustment {
-  id               String                 @id @default(cuid())
-  employeeId       String
-  amount           Decimal                @db.Decimal(10, 2)
-  type             AdjustmentType // BONUS adds to payout, PENALTY deducts
-  reason           String // Mandatory reason string
-  date             DateTime               @db.Date
-  settlementStatus AdjustmentStatus       @default(PENDING)
-  status           ManualAdjustmentStatus @default(PENDING)
-  createdById      String // Tied to Staff/Owner ID
-  approvedById     String? // Which OWNER explicitly approved this
-  approvedAt       DateTime?
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
-
-  employee   Employee  @relation("AdjustmentRecipient", fields: [employeeId], references: [id], onDelete: Restrict)
-  createdBy  Employee  @relation("AdjustmentCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  approvedBy Employee? @relation("AdjustmentApprover", fields: [approvedById], references: [id], onDelete: Restrict)
-
-  @@index([employeeId])
-  @@index([createdById])
-  @@index([approvedById])
-  @@index([settlementStatus])
-  @@index([status])
-  @@map("manual_adjustments")
-}
-
-// ============================================================
-// SETTLEMENT (Weekly Payroll Hub with Immutable Lock V6.0)
-// Formula: Payout = (Earned + Approved Bonuses) - (Penalties + Cash Deposited + Advances)
-// Once isFinalized=true by OWNER, settlement is IMMUTABLE.
-// ============================================================
-
-model Settlement {
-  id               String   @id @default(cuid())
-  operatorId       String
-  weekEnding       DateTime @db.Date // Always a Saturday
-  totalLaborEarned Decimal  @db.Decimal(12, 2)
-  totalCashHeld    Decimal  @db.Decimal(12, 2) // SUM(CashCollection WHERE status=DEPOSITED or PENDING_DEPOSIT)
-  totalAdvances    Decimal  @db.Decimal(12, 2) // SUM(SalaryAdvance WHERE status=PENDING)
-  totalAdjustments Decimal  @db.Decimal(12, 2) // SUM(APPROVED BONUS) - SUM(APPROVED PENALTY)
-  finalPayout      Decimal  @db.Decimal(12, 2)
-  notes            String?
-
-  // Optimistic Concurrency Control
-  version Int @default(1)
-
-  // Immutable lock: once finalized by OWNER, this calculation cannot be modified
-  status        SettlementStatus @default(DRAFT)
-  finalizedById String?
-  finalizedAt   DateTime?
+  internalOperatorId  String
+  subLeaderId         String
+  date                DateTime @db.Date
+  totalCashHandedOut  Decimal  @db.Decimal(10, 2)
+  externalWorkerNames String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  operator    Employee  @relation(fields: [operatorId], references: [id], onDelete: Restrict)
-  finalizedBy Employee? @relation("SettlementFinalizer", fields: [finalizedById], references: [id], onDelete: Restrict)
+  dispatch         DailyDispatch     @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  internalOperator Employee          @relation(fields: [internalOperatorId], references: [id], onDelete: Restrict)
+  subLeader        ExternalSubLeader @relation(fields: [subLeaderId], references: [id], onDelete: Restrict)
 
-  @@unique([operatorId, weekEnding])
-  @@index([operatorId])
-  @@index([weekEnding])
-  @@index([status])
-  @@map("settlements")
+  @@map("site_labor_disbursements")
 }
 
-// ============================================================
-// AUDIT LOGGING (Strict Financial Trails)
-// ============================================================
-model AuditLog {
-  id        String   @id @default(cuid())
-  entity    String // e.g., "SETTLEMENT", "MANUAL_ADJUSTMENT"
-  entityId  String // The ID of the modified record
-  action    String // e.g., "UPDATE", "FINALIZE"
-  delta     Json // Strict JSON snapshot of exact changes
-  actorId   String // The Employee ID who made the change
-  createdAt DateTime @default(now())
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// IronRent ERP: Field Operations Extension
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  actor Employee @relation("EmployeeAuditLogs", fields: [actorId], references: [id], onDelete: Restrict)
+model LocationPing {
+  id         String   @id @default(cuid())
+  employeeId String
+  dispatchId String?
+  latitude   Decimal  @db.Decimal(10, 7)
+  longitude  Decimal  @db.Decimal(10, 7)
+  accuracy   Float?
+  altitude   Float?
+  speed      Float?
+  timestamp  DateTime @default(now())
+  source     String   @default("CAPACITOR") // CAPACITOR | BROWSER
 
-  @@index([entityId])
-  @@index([actorId])
-  @@map("audit_logs")
-}
-
-// ============================================================
-// NEW ENGINES (DOCUMENTS, EXPENSE, BILLING)
-// ============================================================
-
-model VehicleDocument {
-  id             String         @id @default(cuid())
-  vehicleId      String
-  type           DocumentType
-  documentNumber String
-  issueDate      DateTime       @db.Date
-  expiryDate     DateTime       @db.Date
-  attachmentUrl  String
-  status         DocumentStatus @default(ACTIVE)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-
-  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
-
-  @@index([vehicleId])
-  @@index([status])
-  @@index([type])
-  @@map("vehicle_documents")
-}
-
-model EmployeeDocument {
-  id             String         @id @default(cuid())
-  employeeId     String
-  type           DocumentType
-  documentNumber String
-  issueDate      DateTime       @db.Date
-  expiryDate     DateTime       @db.Date
-  attachmentUrl  String
-  status         DocumentStatus @default(ACTIVE)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  employee Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  dispatch DailyDispatch? @relation(fields: [dispatchId], references: [id], onDelete: SetNull)
 
   @@index([employeeId])
-  @@index([status])
-  @@index([type])
-  @@map("employee_documents")
+  @@index([dispatchId])
+  @@index([timestamp])
+  @@map("location_pings")
 }
 
-model MaintenanceTicket {
-  id               String            @id @default(cuid())
-  machineId        String?
-  vehicleId        String?
-  issueDescription String
-  mechanicName     String?
-  partsCost        Decimal           @default(0) @db.Decimal(12, 2)
-  laborCost        Decimal           @default(0) @db.Decimal(12, 2)
-  status           MaintenanceStatus @default(OPEN)
-  resolvedAt       DateTime?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+model FieldDiaryLog {
+  id                  String    @id @default(cuid())
+  dispatchId          String
+  loggedByLeaderId    String?
+  date                DateTime  @db.Date
+  siteStatus          String    @default("IN_PROGRESS")
+  arrivalTime         DateTime?
+  departureTime       DateTime?
+  internalHelperCount Int       @default(0)
+  notes               String?
+  isSubmitted         Boolean   @default(false)
+  submittedAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  machine Machine? @relation(fields: [machineId], references: [id], onDelete: Restrict)
-  vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  // Staff Override Metadata
+  isStaffOverridden Boolean   @default(false)
+  overriddenById    String?
+  overriddenAt      DateTime?
 
-  @@index([status])
-  @@index([machineId])
-  @@index([vehicleId])
-  @@map("maintenance_tickets")
+  dispatch               DailyDispatch              @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  loggedByLeader         Employee?                  @relation("LoggedByLeader", fields: [loggedByLeaderId], references: [id])
+  overriddenBy           Employee?                  @relation("StaffDiaryOverrides", fields: [overriddenById], references: [id])
+  attendanceLogs         AttendanceLog[]
+  externalLabor          ExternalLaborLog[]
+  equipmentVerifications EquipmentVerificationLog[]
+  photos                 DispatchPhoto[]
+
+  @@unique([dispatchId, date])
+  @@index([dispatchId])
+  @@index([loggedByLeaderId])
+  @@map("field_diary_logs")
 }
 
-model FuelLog {
+model AttendanceLog {
   id              String   @id @default(cuid())
-  machineId       String?
-  vehicleId       String?
-  driverId        String
-  liters          Decimal  @db.Decimal(8, 2)
-  totalCost       Decimal  @db.Decimal(12, 2)
-  odometerReading Int?
-  receiptUrl      String
-  date            DateTime @db.Date
+  fieldDiaryLogId String
+  employeeId      String
+  isPresent       Boolean  @default(true)
+  markedAt        DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  fieldDiaryLog FieldDiaryLog @relation(fields: [fieldDiaryLogId], references: [id], onDelete: Cascade)
+  employee      Employee      @relation(fields: [employeeId], references: [id])
+
+  @@unique([fieldDiaryLogId, employeeId])
+  @@index([fieldDiaryLogId])
+  @@map("attendance_logs")
+}
+
+model ExternalLaborLog {
+  id              String   @id @default(cuid())
+  fieldDiaryLogId String
+  subLeaderName   String
+  workerCount     Int
+  cashPaid        Decimal  @db.Decimal(10, 2)
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  fieldDiaryLog FieldDiaryLog @relation(fields: [fieldDiaryLogId], references: [id], onDelete: Cascade)
+
+  @@index([fieldDiaryLogId])
+  @@map("external_labor_logs")
+}
+
+model EquipmentVerificationLog {
+  id              String   @id @default(cuid())
+  fieldDiaryLogId String
+  dispatchToolId  String
+  isReturned      Boolean  @default(true)
+  condition       String   @default("OK") // "OK" | "DAMAGED" | "MISSING"
+  notes           String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  machine Machine? @relation(fields: [machineId], references: [id], onDelete: Restrict)
-  vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
-  driver  Employee @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  fieldDiaryLog FieldDiaryLog @relation(fields: [fieldDiaryLogId], references: [id], onDelete: Cascade)
+  dispatchTool  DispatchTool  @relation(fields: [dispatchToolId], references: [id], onDelete: Cascade)
 
-  @@index([date])
-  @@index([machineId])
-  @@index([vehicleId])
-  @@index([driverId])
-  @@map("fuel_logs")
+  @@unique([fieldDiaryLogId, dispatchToolId])
+  @@index([fieldDiaryLogId])
+  @@map("equipment_verification_logs")
 }
 
-model PaymentReceipt {
-  id            String        @id @default(cuid())
-  receiptNumber String        @unique // e.g. "RCPT-2026-001"
-  customerId    String
-  invoiceId     String?
-  amount        Decimal       @db.Decimal(12, 2)
-  paymentMethod PaymentMethod
-  paymentDate   DateTime      @db.Date
-  notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+model DispatchPhoto {
+  id              String   @id @default(cuid())
+  dispatchId      String
+  fieldDiaryLogId String?
+  uploadedById    String
+  photoUrl        String
+  caption         String?
+  uploadedAt      DateTime @default(now())
 
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  invoice  Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  dispatch      DailyDispatch  @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  fieldDiaryLog FieldDiaryLog? @relation(fields: [fieldDiaryLogId], references: [id], onDelete: SetNull)
+  uploadedBy    Employee       @relation(fields: [uploadedById], references: [id])
 
-  @@index([customerId])
-  @@index([invoiceId])
-  @@index([paymentDate])
-  @@map("payment_receipts")
+  @@index([dispatchId])
+  @@index([fieldDiaryLogId])
+  @@map("dispatch_photos")
 }
+
+model SalaryAdvance {
+  id           String     @id @default(cuid())
+  employeeId   String
+  amount       Decimal    @db.Decimal(10, 2)
+  date         DateTime   @db.Date
+  notes        String?
+  status       String     @default("PENDING") // PENDING, SETTLED
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  employee     Employee   @relation(fields: [employeeId], references: [id])
+}
+

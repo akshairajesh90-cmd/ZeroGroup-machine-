@@ -24,7 +24,7 @@ export default function SaveLocationButton({ dispatchId }: { dispatchId: string 
         const gmapLink = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
         
         try {
-          await updateDispatchMapLinkAction(dispatchId, gmapLink);
+          await updateDispatchMapLinkAction(dispatchId, gmapLink, latitude, longitude);
           setSuccess(true);
           setTimeout(() => setSuccess(false), 3000);
         } catch (err) {

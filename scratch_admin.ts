@@ -8,7 +8,7 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  await prisma.user.upsert({
+  const adminUser = await prisma.user.upsert({
     where: { email: 'admin@zerogroup.in' },
     update: {
       hashedPassword: "$2b$10$Q76.qD9D3aFy0L95Wp/NoOeWA3kiyAOSXkdXjBpJAVK1Q4w0VyLDC",
@@ -20,7 +20,20 @@ async function main() {
       role: 'OWNER'
     }
   });
-  console.log('Admin account created!');
+
+  const emp = await prisma.employee.findFirst({ where: { userId: adminUser.id } });
+  if (!emp) {
+    await prisma.employee.create({
+      data: {
+        name: "Zero Group Admin",
+        role: "OWNER",
+        userId: adminUser.id,
+        phone: "9876543210",
+      }
+    });
+    console.log("Employee profile created for admin!");
+  }
+  console.log('Admin account created/updated with hashed password!');
 }
 
 main().finally(() => prisma.$disconnect());

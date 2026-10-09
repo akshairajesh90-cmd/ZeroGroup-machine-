@@ -6,6 +6,8 @@ declare module "next-auth" {
     id: string;
     role: Role;
     employeeId: string | null;
+    operatorType?: "INTERNAL" | "SUBCONTRACTOR";
+    isCrewLeader?: boolean;
   }
 
   interface Session {
@@ -13,6 +15,8 @@ declare module "next-auth" {
       id: string;
       role: Role;
       employeeId: string | null;
+      operatorType?: "INTERNAL" | "SUBCONTRACTOR";
+      isCrewLeader?: boolean;
     } & DefaultSession["user"];
   }
 }
@@ -22,5 +26,7 @@ declare module "next-auth/jwt" {
     id: string;
     role: Role;
     employeeId: string | null;
+    operatorType?: "INTERNAL" | "SUBCONTRACTOR";
+    isCrewLeader?: boolean;
   }
 }

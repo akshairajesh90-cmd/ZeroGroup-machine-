@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { MapPin, User, Settings2 } from "lucide-react";
+import { MapPin, User, Truck, Settings2 } from "lucide-react";
 
 // Fix Leaflet's default icon path issues in Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -14,83 +14,161 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-interface MapDispatchProps {
+// Color-coded icons per role
+const driverIcon = new L.Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const operatorIcon = new L.Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+interface PinProps {
   id: string;
-  location: string;
+  name: string;
+  role: string;
   latitude: number;
   longitude: number;
-  status: string;
-  machineId: string;
-  machineType: string;
-  operatorName: string;
+  lastUpdate: string | null;
+  machineId?: string | null;
+  machineType?: string | null;
+  customerName?: string | null;
+  dispatchLocation?: string | null;
+  dispatchStatus?: string | null;
 }
 
-export default function LiveMapClient({ dispatches }: { dispatches: MapDispatchProps[] }) {
+export default function LiveMapClient({ pins }: { pins: PinProps[] }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!mounted) return null;
+  if (!mounted) {
+    return (
+      <div className="w-full h-full bg-slate-900 animate-pulse flex items-center justify-center">
+        <span className="text-slate-500 font-medium">Loading GPS Map...</span>
+      </div>
+    );
+  }
 
-  // Default to Kuttanad, Kerala if no active pins exist
-  const defaultCenter: [number, number] = dispatches.length > 0 
-    ? [dispatches[0].latitude, dispatches[0].longitude] 
-    : [9.4246, 76.4357]; 
+  const defaultCenter: [number, number] =
+    pins.length > 0 ? [pins[0].latitude, pins[0].longitude] : [28.6139, 77.209];
 
   return (
-    <div className="w-full h-[600px] z-0">
-      <MapContainer 
-        center={defaultCenter} 
-        zoom={11} 
-        scrollWheelZoom={true} 
+    <div className="w-full h-full relative isolate">
+      <MapContainer
+        center={defaultCenter}
+        zoom={12}
+        scrollWheelZoom={true}
         className="w-full h-full z-0"
+        style={{ height: "100%", width: "100%" }}
       >
-        {/* OpenStreetMap Free Tiles (No API Key Required) */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {dispatches.map((dispatch) => (
-          <Marker 
-            key={dispatch.id} 
-            position={[dispatch.latitude, dispatch.longitude]}
+        {pins.map((pin) => (
+          <Marker
+            key={pin.id}
+            position={[pin.latitude, pin.longitude]}
+            icon={pin.role === "DRIVER" ? driverIcon : operatorIcon}
           >
-            <Popup className="custom-popup">
-              <div className="p-1 min-w-[200px]">
+            <Popup className="custom-popup" minWidth={220}>
+              <div className="p-1">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2 mb-2">
-                  <h3 className="font-bold text-slate-900 text-sm">{dispatch.location}</h3>
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded ${dispatch.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                    {dispatch.status === 'PENDING' ? 'EN ROUTE' : 'IN PROGRESS'}
+                  <div className="flex items-center gap-1.5">
+                    {pin.role === "DRIVER" ? (
+                      <Truck className="w-4 h-4 text-blue-500" />
+                    ) : (
+                      <Settings2 className="w-4 h-4 text-orange-500" />
+                    )}
+                    <h3 className="font-black text-slate-900 text-sm">{pin.name}</h3>
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      pin.role === "DRIVER"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-orange-100 text-orange-700"
+                    }`}
+                  >
+                    {pin.role}
                   </span>
                 </div>
-                
+
                 {/* Body */}
-                <div className="space-y-2 text-sm text-slate-700">
-                  <div className="flex items-center gap-2">
-                    <Settings2 className="w-4 h-4 text-slate-400" />
-                    <span className="font-semibold text-indigo-700">{dispatch.machineId}</span> 
-                    <span className="text-xs text-slate-500">({dispatch.machineType})</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-slate-400" />
-                    Opr: <span className="font-medium text-slate-900">{dispatch.operatorName}</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-100">
-                    <MapPin className="w-4 h-4 text-slate-400" />
-                    <span className="text-xs font-mono text-slate-500">
-                      {dispatch.latitude.toFixed(4)}, {dispatch.longitude.toFixed(4)}
+                <div className="space-y-1.5 text-xs text-slate-600">
+                  {pin.machineId && (
+                    <div className="flex items-center gap-1.5">
+                      <Settings2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="font-semibold text-indigo-700">{pin.machineId}</span>
+                      {pin.machineType && <span className="text-slate-400">({pin.machineType})</span>}
+                    </div>
+                  )}
+                  {pin.customerName && (
+                    <div className="flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>{pin.customerName}</span>
+                      {pin.dispatchLocation && <span className="text-slate-400">– {pin.dispatchLocation}</span>}
+                    </div>
+                  )}
+                  {pin.dispatchStatus && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-slate-500">Status:</span>
+                      <span
+                        className={`font-bold ${
+                          pin.dispatchStatus === "COMPLETED"
+                            ? "text-emerald-600"
+                            : pin.dispatchStatus === "CANCELLED"
+                            ? "text-red-500"
+                            : "text-amber-600"
+                        }`}
+                      >
+                        {pin.dispatchStatus}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5 border-t border-slate-100 pt-1.5 mt-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="font-mono text-[10px] text-slate-400">
+                      {pin.latitude.toFixed(5)}, {pin.longitude.toFixed(5)}
                     </span>
                   </div>
+                  {pin.lastUpdate && (
+                    <div className="text-[10px] text-slate-400 font-mono text-right">
+                      Last ping: {new Date(pin.lastUpdate).toLocaleString("en-IN")}
+                    </div>
+                  )}
                 </div>
               </div>
             </Popup>
           </Marker>
         ))}
       </MapContainer>
+
+      {/* Legend overlay */}
+      <div className="absolute bottom-4 left-4 z-[1000] bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-xl px-3 py-2 flex items-center gap-3 text-xs font-bold">
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-full bg-blue-500 inline-block" />
+          <span className="text-slate-300">Driver</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-full bg-orange-500 inline-block" />
+          <span className="text-slate-300">Operator</span>
+        </div>
+      </div>
     </div>
   );
 }

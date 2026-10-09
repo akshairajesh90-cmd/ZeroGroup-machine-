@@ -6,8 +6,10 @@ import { startOfDay, endOfDay, startOfWeek, format } from "date-fns";
 import {
   Truck, Wallet, MapPin, Phone, ChevronRight,
   ClipboardList, Fuel, Wrench, Clock, CheckCircle2,
-  AlertCircle, CalendarDays, Zap
+  AlertCircle, CalendarDays, Zap, Hammer
 } from "lucide-react";
+import ShiftTracker from "./ShiftTracker";
+import { CollectPaymentButton } from "@/components/shared/CollectPaymentButton";
 
 export const dynamic = "force-dynamic";
 
@@ -42,42 +44,77 @@ export default async function DriverHomePage() {
   const todayEnd   = endOfDay(new Date());
   const weekStart  = startOfWeek(new Date(), { weekStartsOn: 1 });
 
-  const [todayDispatches, weekDispatches, recentDispatches] = await Promise.all([
+  const isGodMode = ["ADMIN", "OWNER"].includes(employee?.role ?? session?.user?.role ?? "");
+
+  const [todayDispatches, weekDispatches, recentDispatches, activeShift, availableVehicles] = await Promise.all([
     prisma.dailyDispatch.findMany({
       where: {
-        OR: [{ operatorId: empId }, { driverId: empId }],
+        ...(isGodMode ? {} : { OR: [{ operatorId: empId }, { driverId: empId }] }),
         dateOfService: { gte: todayStart, lte: todayEnd },
+        isPendingDelete: false
       },
       include: {
         customer: { select: { name: true, phone: true } },
         machine:  { select: { machineId: true, type: true, notes: true } },
-        lift:     { select: { machineId: true, type: true } },
-        vibrator: { select: { machineId: true, type: true } },
+        dispatchAssets: { include: { machine: true } },
+        dispatchTools: { include: { tool: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
     prisma.dailyDispatch.findMany({
       where: {
-        OR: [{ operatorId: empId }, { driverId: empId }],
+        ...(isGodMode ? {} : { OR: [{ operatorId: empId }, { driverId: empId }] }),
         status: "COMPLETED",
         dateOfService: { gte: weekStart },
+        isPendingDelete: false
       },
       select: { operatorDailyRate: true },
     }),
     prisma.dailyDispatch.findMany({
-      where: { OR: [{ operatorId: empId }, { driverId: empId }] },
+      where: { 
+        ...(isGodMode ? {} : { OR: [{ operatorId: empId }, { driverId: empId }] }),
+        isPendingDelete: false 
+      },
       orderBy: { dateOfService: "desc" },
       take: 5,
       select: { id: true, location: true, dateOfService: true, status: true, machine: { select: { machineId: true } } },
     }),
+    prisma.shiftLog.findFirst({
+      where: { driverId: empId, endTime: null },
+      orderBy: { date: "desc" },
+      select: { 
+        id: true, 
+        startTime: true,
+        vehicle: { select: { type: true, licensePlate: true } }
+      }
+    }),
+    prisma.vehicle.findMany({
+      where: { status: "AVAILABLE", isPendingDelete: false },
+      select: { id: true, type: true, licensePlate: true }
+    })
   ]);
 
   const firstName     = employee?.name?.split(" ")[0] ?? "Operator";
   const todayJob      = todayDispatches[0] ?? null;
   const todayFormatted = format(new Date(), "EEEE, d MMMM yyyy");
 
+  // Format activeShift for Client Component
+  const formattedActiveShift = activeShift ? {
+    id: activeShift.id,
+    startTime: activeShift.startTime.toISOString(),
+    vehicleName: `${activeShift.vehicle.licensePlate} (${activeShift.vehicle.type})`
+  } : null;
+
   return (
     <div className="space-y-5 pb-6">
+      {/* ── Shift Tracker (Clock-In) ──────────────────── */}
+      {["DRIVER", "OWNER", "ADMIN"].includes(employee?.role ?? "") && (
+        <ShiftTracker 
+          activeShift={formattedActiveShift} 
+          availableVehicles={availableVehicles} 
+        />
+      )}
+
       {/* ── Greeting ─────────────────────────────────── */}
       <div className="pt-2">
         <p className="text-xs font-bold text-cyan-400 uppercase tracking-widest">{getGreeting()}</p>
@@ -106,8 +143,11 @@ export default async function DriverHomePage() {
 
           <h2 className="text-xl font-black text-white leading-tight mt-1">
             {todayJob.machine?.machineId ?? "Independent Work"}
-            {todayJob.lift ? <span className="text-[12px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md ml-2 align-middle">+ {todayJob.lift.machineId}</span> : null}
-            {todayJob.vibrator ? <span className="text-[12px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md ml-2 align-middle">+ {todayJob.vibrator.machineId}</span> : null}
+            {todayJob.dispatchAssets?.map((da: any) => (
+              <span key={da.id} className="text-[12px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md ml-2 align-middle">
+                + {da.machine.machineId}
+              </span>
+            ))}
           </h2>
           <p className="text-sm text-amber-300 font-semibold mt-0.5">
             {todayJob.machine?.type ?? "LABOUR"} · {todayJob.machine?.notes?.split("(")[0].trim() ?? ""}
@@ -122,12 +162,32 @@ export default async function DriverHomePage() {
             <span className="text-sm text-slate-300">{todayJob.customer?.name}</span>
           </div>
 
+          {/* Cargo Manifest */}
+          {todayJob.dispatchTools?.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-amber-500/20">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-2 flex items-center gap-1.5">
+                <Hammer className="w-3.5 h-3.5" /> Cargo Manifest (Tools)
+              </h3>
+              <div className="space-y-1.5">
+                {todayJob.dispatchTools.map((dt: any) => (
+                  <div key={dt.id} className="flex items-center gap-2 text-sm text-slate-300">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="font-bold text-white">{dt.quantity}x</span> {dt.tool.name} {dt.variant ? `(${dt.variant})` : ""}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <Link
             href={`/driver/orders/${todayJob.id}`}
-            className="mt-4 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm transition-all active:scale-[0.98] shadow-lg shadow-amber-500/20"
+            className="mt-5 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm transition-all active:scale-[0.98] shadow-lg shadow-amber-500/20"
           >
             View Full Details <ChevronRight className="w-4 h-4" />
           </Link>
+
+          {/* Quick Action: Collect Payment */}
+          <CollectPaymentButton dispatchId={todayJob.id} />
         </div>
       ) : (
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 text-center">
@@ -160,10 +220,11 @@ export default async function DriverHomePage() {
         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-0.5">Quick Actions</h3>
         <div className="grid grid-cols-2 gap-3">
           {[
+            { href: "/driver/pool",       icon: ClipboardList, label: "Job Pool",        sub: "Claim & Swap jobs", color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20" },
             { href: "/driver/dispatches", icon: ClipboardList, label: "My Jobs",        sub: "All dispatches",    color: "text-cyan-400",   bg: "bg-cyan-500/10 border-cyan-500/20" },
             { href: "/driver/expenses",   icon: Fuel,          label: "Log Fuel",        sub: "Record refill",     color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
             { href: "/driver/portal",     icon: Wrench,        label: "Breakdown",       sub: "Report issue",      color: "text-red-400",    bg: "bg-red-500/10 border-red-500/20" },
-            { href: "/driver/portal",     icon: CalendarDays,  label: "Shift Logs",      sub: "My history",        color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
+            { href: "/driver/map",        icon: MapPin,        label: "Live Map",        sub: "Crew Tracking",     color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
           ].map((a) => (
             <Link key={a.label} href={a.href} className="bg-slate-900/70 border border-white/5 hover:border-white/15 rounded-2xl p-4 flex flex-col gap-3 transition-all active:scale-[0.97]">
               <div className={`w-9 h-9 rounded-xl border flex items-center justify-center ${a.bg}`}>

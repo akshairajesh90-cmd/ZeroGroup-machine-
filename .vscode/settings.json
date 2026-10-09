@@ -1,0 +1,11 @@
+{
+    "roo-cline.newTaskRequireTodos": false,
+    "roo-cline.vsCodeLmModelSelector": {},
+    "java.contentProvider.preferred": "Ollama",
+    "task.quickOpen.showAll": false,
+    "twinny.p2pPort": 11434,
+    "roo-cline.debugProxy.serverUrl": "http://localhost:11434",
+    "roo-cline.debugProxy.enabled": true,
+    "roo-cline.debug": true,
+    "roo-cline.debugProxy.tlsInsecure": true
+}

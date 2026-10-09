@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useTransition } from "react";
 import { updateDispatchStatus, reportDriverIncident } from "@/actions/dispatch";
+import { updateDispatchMapLinkAction } from "../../actions";
 import { queueOfflineAction, getPendingOfflineActions, syncOfflineQueue } from "@/lib/offlineQueue";
 import { 
   Truck, 
@@ -23,15 +24,26 @@ import Link from "next/link";
 interface DriverOrderClientProps {
   dispatch: any;
   userRole: string;
+  groupAggregate?: {
+    operators: { id: string; name: string }[];
+    tools: { id: string; name: string; variant?: string; quantity: number }[];
+  };
 }
 
-export default function DriverOrderClient({ dispatch: initialDispatch, userRole }: DriverOrderClientProps) {
+export default function DriverOrderClient({ dispatch: initialDispatch, userRole, groupAggregate }: DriverOrderClientProps) {
   const [dispatch, setDispatch] = useState(initialDispatch);
   const [isPending, startTransition] = useTransition();
   const [isOnline, setIsOnline] = useState(true);
   const [queuedItemsCount, setQueuedItemsCount] = useState(0);
 
-  // Checklist state
+  // Phase 1 (Drop-Off) verification states
+  const [arrivedOperatorIds, setArrivedOperatorIds] = useState<string[]>(dispatch.arrivedOperatorIds || []);
+  const [deliveredToolIds, setDeliveredToolIds] = useState<string[]>(dispatch.deliveredToolIds || []);
+  
+  // Phase 2 (Pick-Up) verification states
+  const [returnedToolIds, setReturnedToolIds] = useState<string[]>(dispatch.returnedToolIds || []);
+
+  // Standard checks (for single machine)
   const [checks, setChecks] = useState({
     oilCoolant: false,
     tireBrakes: false,
@@ -83,28 +95,78 @@ export default function DriverOrderClient({ dispatch: initialDispatch, userRole 
 
   const allChecked = checks.oilCoolant && checks.tireBrakes && checks.auxTools && checks.customerVerbal;
 
+  // For Phase 1 (DELIVERED), we optionally require operators/tools to be confirmed (if any exist)
+  // Actually, they don't HAVE to all be checked (what if someone is missing?), but they must explicitly submit the array of who IS there.
+  // The original prompt said: "The driver MUST check what is physically present. Save these to arrivedOperatorIds."
+  // So allChecked just gates the generic checks. 
+
   const handleTransitionStatus = (newStatus: string) => {
     setMsg(null);
     startTransition(async () => {
+      const payload: any = { 
+        dispatchId: dispatch.id, 
+        status: newStatus 
+      };
+
+      if (newStatus === "DELIVERED") {
+        payload.arrivedOperatorIds = arrivedOperatorIds;
+        payload.deliveredToolIds = deliveredToolIds;
+      } else if (newStatus === "COMPLETED") {
+        payload.returnedToolIds = returnedToolIds;
+      }
+
       if (isOnline) {
-        const res = await updateDispatchStatus({ dispatchId: dispatch.id, status: newStatus });
+        const res = await updateDispatchStatus(payload);
         if (res.success) {
-          setDispatch({ ...dispatch, status: newStatus });
+          setDispatch({ 
+            ...dispatch, 
+            status: newStatus,
+            arrivedOperatorIds: newStatus === "DELIVERED" ? arrivedOperatorIds : dispatch.arrivedOperatorIds,
+            deliveredToolIds: newStatus === "DELIVERED" ? deliveredToolIds : dispatch.deliveredToolIds,
+            returnedToolIds: newStatus === "COMPLETED" ? returnedToolIds : dispatch.returnedToolIds,
+          });
           setMsg({ type: "success", text: `Status updated to ${newStatus}!` });
         } else {
-          // If server fails (e.g. timeout on site), fall back to offline queue
-          await queueOfflineAction("UPDATE_DISPATCH_STATUS", { dispatchId: dispatch.id, status: newStatus });
+          await queueOfflineAction("UPDATE_DISPATCH_STATUS", payload);
           setDispatch({ ...dispatch, status: newStatus });
           setQueuedItemsCount(c => c + 1);
-          setMsg({ type: "warning", text: `Offline/Timeout: Status ${newStatus} queued locally in IndexedDB.` });
+          setMsg({ type: "warning", text: `Offline/Timeout: Status ${newStatus} queued locally.` });
         }
       } else {
-        // Offline: save to IndexedDB immediately
-        await queueOfflineAction("UPDATE_DISPATCH_STATUS", { dispatchId: dispatch.id, status: newStatus });
+        await queueOfflineAction("UPDATE_DISPATCH_STATUS", payload);
         setDispatch({ ...dispatch, status: newStatus });
         setQueuedItemsCount(c => c + 1);
-        setMsg({ type: "warning", text: `Offline: Status ${newStatus} queued locally. Will auto-sync when signal returns.` });
+        setMsg({ type: "warning", text: `Offline: Status ${newStatus} queued locally.` });
       }
+    });
+  };
+
+  const handleStartJourney = () => {
+    setMsg(null);
+    if (!navigator.geolocation) {
+      handleTransitionStatus("EN_ROUTE");
+      return;
+    }
+    
+    // Will show loading state on the button
+    startTransition(() => {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          const gmapLink = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+          try {
+            await updateDispatchMapLinkAction(dispatch.id, gmapLink, latitude, longitude);
+          } catch (e) {
+            // ignore error
+          }
+          handleTransitionStatus("EN_ROUTE");
+        },
+        (error) => {
+          // Graceful fallback to null,null if permission denied or unavailable
+          handleTransitionStatus("EN_ROUTE");
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
     });
   };
 
@@ -215,18 +277,18 @@ export default function DriverOrderClient({ dispatch: initialDispatch, userRole 
         </div>
 
         {/* Assigned Multi-Crew (Pani team) */}
-        {(dispatch.multiOperators?.length > 0 || dispatch.multiWorkers?.length > 0) && (
+        {(dispatch.crewAssignments?.length > 0 || dispatch.crewAssignments?.length > 0) && (
           <div className="pt-3 border-t border-slate-800 space-y-1">
             <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 block mb-1">
               Assigned Pani Crew & Helpers
             </span>
-            {dispatch.multiOperators?.map((mo: any) => (
+            {dispatch.crewAssignments?.map((mo: any) => (
               <div key={mo.id} className="text-xs text-slate-300 flex items-center justify-between bg-slate-950 p-2 rounded-xl border border-slate-800/80">
                 <span>Operator: <strong className="text-white font-bold">{mo.employee?.name}</strong></span>
                 <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-md font-bold">OPERATOR</span>
               </div>
             ))}
-            {dispatch.multiWorkers?.map((mw: any) => (
+            {dispatch.crewAssignments?.map((mw: any) => (
               <div key={mw.id} className="text-xs text-slate-300 flex items-center justify-between bg-slate-950 p-2 rounded-xl border border-slate-800/80">
                 <span>Helper: <strong className="text-white font-bold">{mw.employee?.name}</strong></span>
                 <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded-md font-bold">PANI HELPER</span>
@@ -268,7 +330,27 @@ export default function DriverOrderClient({ dispatch: initialDispatch, userRole 
       </div>
 
       {/* PRE-FLIGHT SAFETY CHECKLIST */}
+      {/* START JOURNEY ACTIONS */}
       {dispatch.status === "PENDING" && (
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+          <h3 className="font-bold text-white text-sm">Start Journey</h3>
+          <p className="text-xs text-slate-400">
+            Click below to start your journey. This will capture your current GPS location for the Command Center.
+          </p>
+
+          <button
+            disabled={isPending}
+            onClick={handleStartJourney}
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-3.5 rounded-2xl text-sm transition-all flex items-center justify-center gap-2 shadow-xl shadow-blue-500/20"
+          >
+            {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isPending ? "Locating & Starting..." : "Start Journey / En Route"}
+          </button>
+        </div>
+      )}
+
+      {/* PRE-FLIGHT SAFETY CHECKLIST */}
+      {dispatch.status === "EN_ROUTE" && (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="font-bold text-white text-sm flex items-center gap-2">
@@ -306,6 +388,47 @@ export default function DriverOrderClient({ dispatch: initialDispatch, userRole 
             ))}
           </div>
 
+          {/* PHASE 1: GROUP OPERATORS & TOOLS CONFIRMATION */}
+          {(groupAggregate?.operators?.length || 0) > 0 && (
+            <div className="pt-4 border-t border-slate-800 space-y-3">
+              <h4 className="text-xs font-bold text-amber-400">Confirm Operator Arrival on Site</h4>
+              {groupAggregate?.operators.map(op => (
+                <label key={op.id} className="flex items-center gap-3 p-3 rounded-xl border bg-slate-950 border-slate-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="w-5 h-5 accent-emerald-500"
+                    checked={arrivedOperatorIds.includes(op.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) setArrivedOperatorIds([...arrivedOperatorIds, op.id]);
+                      else setArrivedOperatorIds(arrivedOperatorIds.filter(id => id !== op.id));
+                    }}
+                  />
+                  <span className="text-xs text-white">Operator {op.name} is on site</span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          {(groupAggregate?.tools?.length || 0) > 0 && (
+            <div className="pt-4 border-t border-slate-800 space-y-3">
+              <h4 className="text-xs font-bold text-blue-400">Confirm Tools Dropped Off</h4>
+              {groupAggregate?.tools.map(tool => (
+                <label key={tool.id} className="flex items-center gap-3 p-3 rounded-xl border bg-slate-950 border-slate-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="w-5 h-5 accent-blue-500"
+                    checked={deliveredToolIds.includes(tool.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) setDeliveredToolIds([...deliveredToolIds, tool.id]);
+                      else setDeliveredToolIds(deliveredToolIds.filter(id => id !== tool.id));
+                    }}
+                  />
+                  <span className="text-xs text-white">{tool.quantity}x {tool.name} {tool.variant ? `(${tool.variant})` : ""}</span>
+                </label>
+              ))}
+            </div>
+          )}
+
           <button
             disabled={!allChecked || isPending}
             onClick={() => handleTransitionStatus("DELIVERED")}
@@ -329,13 +452,45 @@ export default function DriverOrderClient({ dispatch: initialDispatch, userRole 
             Once construction work is finished for the day, mark the equipment shift completed.
           </p>
 
+          {/* PHASE 2: TOOL PICK-UP VERIFICATION */}
+          {(groupAggregate?.tools?.length || 0) > 0 && (
+            <div className="pt-2 pb-4 space-y-3">
+              <h4 className="text-xs font-bold text-rose-400 border-b border-slate-800 pb-2">
+                Mandatory: Confirm tools loaded for return
+              </h4>
+              {groupAggregate?.tools.map(tool => (
+                <label key={`return-${tool.id}`} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                  returnedToolIds.includes(tool.id) 
+                    ? "bg-rose-500/10 border-rose-500/40" 
+                    : "bg-slate-950 border-slate-800"
+                }`}>
+                  <input
+                    type="checkbox"
+                    className="w-5 h-5 accent-rose-500"
+                    checked={returnedToolIds.includes(tool.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) setReturnedToolIds([...returnedToolIds, tool.id]);
+                      else setReturnedToolIds(returnedToolIds.filter(id => id !== tool.id));
+                    }}
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-xs text-white font-bold">{tool.quantity}x {tool.name}</span>
+                    {dispatch.deliveredToolIds?.includes(tool.id) && (
+                      <span className="text-[10px] text-emerald-400">Confirmed dropped off earlier</span>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
+
           <button
             disabled={isPending}
             onClick={() => handleTransitionStatus("COMPLETED")}
             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3.5 rounded-2xl text-sm transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20"
           >
             {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-            Mark Shift COMPLETED & Free Asset
+            Confirm Tools & Mark Shift COMPLETED
           </button>
         </div>
       )}

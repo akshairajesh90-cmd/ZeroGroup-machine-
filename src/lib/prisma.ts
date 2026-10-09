@@ -1,13 +1,20 @@
-// Singleton Prisma client - ZERO GROUP
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import "dotenv/config";
 
-const connectionString =
-  process.env.DATABASE_URL ||
-  "postgresql://johndoe:randompassword@localhost:5432/mydb?schema=public";
+import { parse } from "pg-connection-string";
 
-const pool = new Pool({ connectionString });
+const connectionString = process.env.DATABASE_URL || "postgresql://postgres:Akshai%402005@localhost:5432/postgres?schema=public";
+const config = typeof connectionString === 'string' ? parse(connectionString) : {};
+
+const pool = new Pool({
+  user: config.user,
+  password: config.password ? String(config.password) : undefined,
+  host: config.host,
+  port: config.port ? Number(config.port) : undefined,
+  database: config.database
+});
 const adapter = new PrismaPg(pool);
 
 const globalForPrisma = globalThis as unknown as {

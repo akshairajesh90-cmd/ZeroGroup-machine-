@@ -1,0 +1,120 @@
+﻿  const { customerId, location, dateOfService, liftFloors, mixerCategory, vibratorType, hasTrollyBench, publicTransportUsed, driverId, mapLink, siteBundleId, machineId, operatorId, mainHelperId, mainHelperName, helperCount, status, selectedTools, multiOperators, multiWorkers } = formData;
+  const setCustomerId = (v: any) => setFormData({ ...formData, customerId: v });
+  const setLocation = (v: any) => setFormData({ ...formData, location: v });
+  const setDateOfService = (v: any) => setFormData({ ...formData, dateOfService: v });
+  const setLiftFloors = (v: any) => setFormData({ ...formData, liftFloors: v });
+  const setMixerCategory = (v: any) => setFormData({ ...formData, mixerCategory: v });
+  const setVibratorType = (v: any) => setFormData({ ...formData, vibratorType: v });
+  const setHasTrollyBench = (v: any) => setFormData({ ...formData, hasTrollyBench: v });
+  const setPublicTransportUsed = (v: any) => setFormData({ ...formData, publicTransportUsed: v });
+  const setDriverId = (v: any) => setFormData({ ...formData, driverId: v });
+  const setMapLink = (v: any) => setFormData({ ...formData, mapLink: v });
+  const setMachineId = (v: any) => setFormData({ ...formData, machineId: v });
+  const setOperatorId = (v: any) => setFormData({ ...formData, operatorId: v });
+  const setMainHelperId = (v: any) => setFormData({ ...formData, mainHelperId: v });
+  const setMainHelperName = (v: any) => setFormData({ ...formData, mainHelperName: v });
+  const setHelperCount = (v: any) => setFormData({ ...formData, helperCount: v });
+  const setSiteBundleId = (v: any) => setFormData({ ...formData, siteBundleId: v });
+  const setStatus = (v: any) => setFormData({ ...formData, status: v });
+  const setSelectedTools = (v: any) => setFormData({ ...formData, selectedTools: v });
+  const setMultiOperators = (v: any) => setFormData({ ...formData, multiOperators: v });
+  const setMultiWorkers = (v: any) => setFormData({ ...formData, multiWorkers: v });
+
+  const [operatorCountNeeded, setOperatorCountNeeded] = React.useState<number>(0);
+  const [operatorSlots, setOperatorSlots] = React.useState<string[]>(["slot1", "slot2"]);
+  const [customOperators, setCustomOperators] = React.useState<{ [slotIdx: number]: { name: string; phone?: string; wage?: string | number } }>({});
+  const [customDriverDetails, setCustomDriverDetails] = React.useState<{ name: string; phone: string; vehicleNo: string }>({ name: "", phone: "", vehicleNo: "" });
+  const [customMachines, setCustomMachines] = React.useState<{ id: string; name: string; qty: number; rate?: string | number }[]>([]);
+  const [customToolsList, setCustomToolsList] = React.useState<{ id: string; name: string; malayalamName?: string; qty: number }[]>([]);
+  const [leaderAllocations, setLeaderAllocations] = React.useState<{ id: string; leaderId: string; leaderName: string; helperCount: number; skillCategory?: string; dailyWage?: string | number }[]>([]);
+  const [multiOperatorIds, setMultiOperatorIds] = React.useState<string[]>([]);
+  const [multiWorkerIds, setMultiWorkerIds] = React.useState<string[]>([]);
+  const [selectedMachineIds, setSelectedMachineIds] = React.useState<string[]>([]);
+  const [toolQuantities, setToolQuantities] = React.useState<Record<string, number>>({});
+  const [twoWheelTrollyQty, setTwoWheelTrollyQty] = React.useState<number>(0);
+  const [notes, setNotes] = React.useState("");
+
+  const handleToolQuantityChange = (tId: string, qty: number) => {
+    if (qty <= 0) {
+      const next = { ...toolQuantities };
+      delete next[tId];
+      setToolQuantities(next);
+    } else {
+      setToolQuantities({ ...toolQuantities, [tId]: qty });
+    }
+  };
+
+  const handleToolQtyChange = (tId: string, delta: number) => {
+    const current = toolQuantities[tId] || 0;
+    handleToolQuantityChange(tId, current + delta);
+  };
+
+  const handleAddLeaderRow = () => {
+    setLeaderAllocations([...leaderAllocations, { id: Date.now().toString(), leaderId: "", leaderName: "", helperCount: 0, skillCategory: "General Pani Crew", dailyWage: "" }]);
+  };
+
+  const handleRemoveLeaderRow = (index: number) => {
+    setLeaderAllocations(leaderAllocations.filter((_, i) => i !== index));
+  };
+
+  const handleLeaderRowChange = (index: number, field: string, value: any) => {
+    const next = [...leaderAllocations];
+    next[index] = { ...next[index], [field]: value };
+    if (field === "leaderId" && value) next[index].leaderName = "";
+    setLeaderAllocations(next);
+  };
+
+  const handleAddCustomMachine = () => {
+    setCustomMachines([...customMachines, { id: "custom_m_" + Date.now(), name: "", qty: 1, rate: "" }]);
+  };
+
+  const handleRemoveCustomMachine = (id: string) => {
+    setCustomMachines(customMachines.filter(m => m.id !== id));
+  };
+
+  const handleCustomMachineChange = (id: string, field: string, value: any) => {
+    setCustomMachines(customMachines.map(m => m.id === id ? { ...m, [field]: value } : m));
+  };
+
+  const handleAddCustomTool = () => {
+    setCustomToolsList([...customToolsList, { id: "custom_t_" + Date.now(), name: "", malayalamName: "", qty: 1 }]);
+  };
+
+  const handleRemoveCustomTool = (id: string) => {
+    setCustomToolsList(customToolsList.filter(t => t.id !== id));
+  };
+
+  const handleCustomToolChange = (id: string, field: string, value: any) => {
+    setCustomToolsList(customToolsList.map(t => t.id === id ? { ...t, [field]: value } : t));
+  };
+
+  const handleCustomToolQtyDelta = (id: string, delta: number) => {
+    setCustomToolsList(customToolsList.map(t => {
+      if (t.id === id) return { ...t, qty: Math.max(0, t.qty + delta) };
+      return t;
+    }));
+  };
+
+  const handleToggleMachine = (id: string) => {
+    if (selectedMachineIds.includes(id)) {
+      setSelectedMachineIds(selectedMachineIds.filter(x => x !== id));
+    } else {
+      setSelectedMachineIds([...selectedMachineIds, id]);
+    }
+  };
+
+  const handleToggleMultiOperator = (id: string) => {
+    if (multiOperatorIds.includes(id)) {
+      setMultiOperatorIds(multiOperatorIds.filter(x => x !== id));
+    } else {
+      setMultiOperatorIds([...multiOperatorIds, id]);
+    }
+  };
+
+  const handleToggleMultiWorker = (id: string) => {
+    if (multiWorkerIds.includes(id)) {
+      setMultiWorkerIds(multiWorkerIds.filter(x => x !== id));
+    } else {
+      setMultiWorkerIds([...multiWorkerIds, id]);
+    }
+  };

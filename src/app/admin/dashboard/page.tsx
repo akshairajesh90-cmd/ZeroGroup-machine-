@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   // Enforce auth (Admin/Staff only)
-  await requireAuth({ allowedRoles: [Role.OWNER, Role.STAFF] });
+  await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN, Role.STAFF] });
 
   const today = startOfDay(new Date());
   

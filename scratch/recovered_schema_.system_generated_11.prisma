@@ -1,0 +1,121 @@
+Created At: 2026-07-26T00:37:06+05:30
+Completed At: 2026-07-26T00:37:06+05:30
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/prisma/schema.prisma`
+Total Lines: 881
+Total Bytes: 30554
+Showing lines 1 to 800
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: // ============================================================
+2: // ZERO GROUP — Enterprise Management System
+3: // Prisma Schema v6.0 (Field-Hardened Directive)
+4: // ⚠️  DO NOT RUN: npx prisma migrate dev
+5: // ⚠️  This file is pending user review and approval.
+6: // ============================================================
+7: 
+8: generator client {
+9:   provider = "prisma-client-js"
+10: }
+11: 
+12: datasource db {
+13:   provider = "postgresql"
+14: }
+15: 
+16: // ============================================================
+17: // ENUMS
+18: // ============================================================
+19: 
+20: enum Role {
+21:   OWNER // Admin — full system access, pricing, approvals, and settlements
+22:   ADMIN // Added for higher-tier compliance operations
+23:   STAFF // Office staff — dispatch creation, cash intake, expenses, cancellation window
+24:   DRIVER // Field driver — shift logs and delivery checks
+25:   OPERATOR // Equipment operator — field operation and rate calculations
+26:   WORKER // On-site helper — paid by customer, record-keeping only, excluded from settlement
+27: }
+28: 
+29: enum PaymentMethod {
+30:   UPI
+31:   CASH
+32:   CHEQUE
+33:   BANK_TRANSFER
+34: }
+35: 
+36: enum VibratorType {
+37:   PETROL
+38:   ELECTRIC
+39: }
+40: 
+41: enum MixerCategory {
+42:   STANDARD
+43:   HYDRAULIC
+44: }
+45: 
+46: enum InvoiceStatus {
+47:   DRAFT
+48:   SENT
+49:   PARTIAL
+50:   PAID
+51:   CANCELLED
+52: }
+53: 
+54: enum DocumentType {
+55:   RC
+56:   INSURANCE
+57:   FITNESS
+58:   POLLUTION
+59:   LICENSE
+60:   ID_PROOF
+61:   OTHER
+62: }
+63:
+<truncated 28354 bytes>
+==========
+753: // AUDIT LOGGING (Strict Financial Trails)
+754: // ============================================================
+755: model AuditLog {
+756:   id        String   @id @default(cuid())
+757:   entity    String // e.g., "SETTLEMENT", "MANUAL_ADJUSTMENT"
+758:   entityId  String // The ID of the modified record
+759:   action    String // e.g., "UPDATE", "FINALIZE"
+760:   delta     Json // Strict JSON snapshot of exact changes
+761:   actorId   String // The Employee ID who made the change
+762:   createdAt DateTime @default(now())
+763: 
+764:   actor Employee @relation("EmployeeAuditLogs", fields: [actorId], references: [id], onDelete: Restrict)
+765: 
+766:   @@index([entityId])
+767:   @@index([actorId])
+768:   @@map("audit_logs")
+769: }
+770: 
+771: // ============================================================
+772: // NEW ENGINES (DOCUMENTS, EXPENSE, BILLING)
+773: // ============================================================
+774: 
+775: model VehicleDocument {
+776:   id             String         @id @default(cuid())
+777:   vehicleId      String
+778:   type           DocumentType
+779:   documentNumber String
+780:   issueDate      DateTime       @db.Date
+781:   expiryDate     DateTime       @db.Date
+782:   attachmentUrl  String
+783:   status         DocumentStatus @default(ACTIVE)
+784:   createdAt      DateTime       @default(now())
+785:   updatedAt      DateTime       @updatedAt
+786: 
+787:   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+788: 
+789:   @@index([vehicleId])
+790:   @@index([status])
+791:   @@index([type])
+792:   @@map("vehicle_documents")
+793: }
+794: 
+795: model EmployeeDocument {
+796:   id             String         @id @default(cuid())
+797:   employeeId     String
+798:   type           DocumentType
+799:   documentNumber String
+800:   issueDate      DateTime       @db.Date
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

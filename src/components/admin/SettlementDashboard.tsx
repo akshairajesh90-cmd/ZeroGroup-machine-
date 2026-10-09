@@ -1,2 +1,2 @@
-﻿// Weekend settlement dashboard
+// Weekend settlement dashboard
 

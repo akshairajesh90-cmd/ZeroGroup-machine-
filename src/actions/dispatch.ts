@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { DispatchStatus, WorkType, MachineType } from "@prisma/client";
+import { logAudit } from "@/lib/auditLogger";
 
 // ============================================================================
 // STRICT ZOD VALIDATION SCHEMAS
@@ -29,7 +30,7 @@ const dispatchSchema = z.object({
   mapLink: z.string().optional(), // Driver GPS Map Pin link for return drivers / forgotten tools
   dateOfService: z.string().min(1, "Service date is required"),
   workType: z.enum(["NORMAL", "TROLLY", "LATE"]).default("NORMAL"),
-  
+
   // V15.0 Equipment & Travel Guardrails
   liftFloors: z.number().min(1).default(1), // Storeys e.g., 3 Floored used
   mixerCategory: z.enum(["STANDARD", "HYDRAULIC"]).default("STANDARD"), // Machine vs Hydraulic
@@ -37,7 +38,7 @@ const dispatchSchema = z.object({
   hasTrollyBench: z.boolean().default(false), // Trolly ONLY goes with Bench
   publicTransportUsed: z.boolean().default(false), // Company vehicle OR public transport / bus / auto
   machineNumberTag: z.string().optional(), // Tagged AFTER setup anytime
-  
+
   toolIds: z.array(z.string()).default([]),
   toolItems: z.array(
     z.object({
@@ -51,7 +52,7 @@ const dispatchSchema = z.object({
 
 const updateStatusSchema = z.object({
   dispatchId: z.string().min(1, "Dispatch ID required"),
-  status: z.enum(["PENDING", "DELIVERED", "PICKED_UP", "COMPLETED", "CANCELLED", "POSTPONED"]),
+  status: z.enum(["PENDING", "EN_ROUTE", "IN_PROGRESS", "DELIVERED", "PICKED_UP", "COMPLETED", "CANCELLED", "POSTPONED"]),
   reason: z.string().optional(), // Mandatory if CANCELLED or POSTPONED
 });
 
@@ -193,7 +194,7 @@ export async function createDailyDispatch(formData: unknown) {
           operatorDailyRate: operatorDailyRate,
           customerCharge: customerCharge,
           notes: data.notes || null,
-          
+
           // V15.0 Equipment & Travel Guardrails
           liftFloors: data.liftFloors || 1,
           mixerCategory: data.mixerCategory || "STANDARD",
@@ -218,15 +219,15 @@ export async function createDailyDispatch(formData: unknown) {
 
       // Insert all multi-operators into junction table
       for (const opId of allOperatorIds) {
-        await tx.dispatchOperator.create({
-          data: { dispatchId: newDispatch.id, internalEmployeeId: opId },
+        await tx.dispatchAssignment.create({
+          data: { dispatchId: newDispatch.id, employeeId: opId, assignedRole: "MIXER_OPERATOR", lockedWageRate: operatorDailyRate || 1000 },
         });
       }
 
       // Insert all multi-workers into junction table
       for (const wId of allWorkerIds) {
-        await tx.dispatchWorker.create({
-          data: { dispatchId: newDispatch.id, employeeId: wId },
+        await tx.dispatchAssignment.create({
+          data: { dispatchId: newDispatch.id, employeeId: wId, assignedRole: "HELPER", lockedWageRate: 800 },
         });
       }
 
@@ -253,9 +254,25 @@ export async function createDailyDispatch(formData: unknown) {
       return newDispatch;
     });
 
-    revalidatePath("/admin/dispatch");
-    revalidatePath("/admin/dashboard");
-    revalidatePath("/driver/home");
+    // Audit: log actor from session
+    const actorEmp = await prisma.employee.findFirst({ where: { userId: (await import("@/lib/auth").then(m => m.auth()))?.user?.id ?? "" } }).catch(() => null);
+    await logAudit({
+      actorId: actorEmp?.id ?? "system",
+      actorRole: session.user.role,
+      actionType: "CREATE_DISPATCH",
+      modelName: "DailyDispatch",
+      newPayload: { dispatchId: dispatch.id, location: data.location, dateOfService: data.dateOfService },
+    });
+
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/admin/dispatch");
+    }
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/admin/dashboard");
+    }
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/driver/home");
+    }
     return { success: true, dispatchId: dispatch.id };
   } catch (err: any) {
     console.error("Error creating dispatch:", err);
@@ -358,9 +375,23 @@ export async function updateDispatchStatus(formData: unknown) {
       }
     });
 
-    revalidatePath("/admin/dispatch");
-    revalidatePath("/admin/dashboard");
-    revalidatePath("/driver/home");
+    await logAudit({
+      actorId: changerEmp?.id ?? "system",
+      actorRole: session.user.role,
+      actionType: "UPDATE_DISPATCH_STATUS",
+      modelName: "DailyDispatch",
+      newPayload: { dispatchId, status, reason: reason ?? null },
+    });
+
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/admin/dispatch");
+    }
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/admin/dashboard");
+    }
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/driver/home");
+    }
     return { success: true };
   } catch (err: any) {
     console.error("Error updating status:", err);
@@ -395,9 +426,24 @@ export async function reportDriverIncident(formData: unknown) {
       },
     });
 
-    revalidatePath("/admin/dispatch");
-    revalidatePath("/admin/dashboard");
-    revalidatePath("/driver/home");
+    const incidentEmp = await prisma.employee.findFirst({ where: { userId: session.user.id } }).catch(() => null);
+    await logAudit({
+      actorId: incidentEmp?.id ?? "system",
+      actorRole: session.user.role,
+      actionType: "FLAG_DISPATCH_INCIDENT",
+      modelName: "DailyDispatch",
+      newPayload: { dispatchId, conflictReport },
+    });
+
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/admin/dispatch");
+    }
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/admin/dashboard");
+    }
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/driver/home");
+    }
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to report incident." };
@@ -425,8 +471,22 @@ export async function resolveDispatchConflict(dispatchId: string, resolutionNote
       },
     });
 
-    revalidatePath("/admin/dispatch");
-    revalidatePath("/admin/dashboard");
+    const resolverEmp = await prisma.employee.findFirst({ where: { userId: session.user.id } }).catch(() => null);
+    await logAudit({
+      actorId: resolverEmp?.id ?? "system",
+      actorRole: session.user.role,
+      actionType: "RESOLVE_DISPATCH_CONFLICT",
+      modelName: "DailyDispatch",
+      oldPayload: { isFlagged: true },
+      newPayload: { isFlagged: false, resolutionNotes },
+    });
+
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/admin/dispatch");
+    }
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/admin/dashboard");
+    }
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to resolve conflict." };
@@ -472,9 +532,24 @@ export async function finalizeDispatchScope(formData: unknown) {
       data: updateData,
     });
 
-    revalidatePath("/admin/dispatch");
-    revalidatePath("/admin/dashboard");
-    revalidatePath("/driver/home");
+    const finalEmp = await prisma.employee.findFirst({ where: { userId: session.user.id } }).catch(() => null);
+    await logAudit({
+      actorId: finalEmp?.id ?? "system",
+      actorRole: session.user.role,
+      actionType: "FINALIZE_DISPATCH_SCOPE",
+      modelName: "DailyDispatch",
+      newPayload: { dispatchId, finalWorkType, adjustedOperatorRate, adjustedCustomerCharge, closingNotes },
+    });
+
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/admin/dispatch");
+    }
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/admin/dashboard");
+    }
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/driver/home");
+    }
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to finalize post-work scope." };
@@ -502,10 +577,7 @@ export async function getDispatches(filter?: { status?: DispatchStatus; isFlagge
         driver: true,
         operator: true,
         worker: true,
-        multiOperators: {
-          include: { employee: true },
-        },
-        multiWorkers: {
+        crewAssignments: {
           include: { employee: true },
         },
         dispatchTools: {
@@ -544,7 +616,9 @@ export async function createQuickCustomer(formData: { name: string; phone: strin
       },
     });
 
-    revalidatePath("/admin/dispatch");
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/admin/dispatch");
+    }
     return { success: true, customer };
   } catch (err: any) {
     console.error("Error creating quick customer:", err);
@@ -573,10 +647,7 @@ export async function fetchDispatchesByRange(startDate: string, endDate: string)
         driver: true,
         operator: true,
         worker: true,
-        multiOperators: {
-          include: { employee: true },
-        },
-        multiWorkers: {
+        crewAssignments: {
           include: { employee: true },
         },
         dispatchTools: {
@@ -615,7 +686,7 @@ export async function updateDailyDispatch(formData: unknown) {
       // 1. Fetch current to enforce business rules
       const current = await tx.dailyDispatch.findUnique({
         where: { id: dispatchId },
-        include: { invoice: true, dispatchMachines: true, dispatchTools: true, multiOperators: true, multiWorkers: true }
+        include: { invoice: true, dispatchMachines: true, dispatchTools: true, crewAssignments: true }
       });
 
       if (!current) throw new Error("Dispatch not found.");
@@ -631,8 +702,7 @@ export async function updateDailyDispatch(formData: unknown) {
 
       // Clear existing relations
       await tx.dispatchMachine.deleteMany({ where: { dispatchId } });
-      await tx.dispatchOperator.deleteMany({ where: { dispatchId } });
-      await tx.dispatchWorker.deleteMany({ where: { dispatchId } });
+      await tx.dispatchAssignment.deleteMany({ where: { dispatchId } });
       await tx.dispatchTool.deleteMany({ where: { dispatchId } });
 
       // Free up machines/tools
@@ -684,7 +754,7 @@ export async function updateDailyDispatch(formData: unknown) {
       ])).filter(Boolean);
 
       for (const opId of allOperatorIds) {
-        await tx.dispatchOperator.create({ data: { dispatchId, internalEmployeeId: opId } });
+        await tx.dispatchAssignment.create({ data: { dispatchId, employeeId: opId, assignedRole: "MIXER_OPERATOR", lockedWageRate: current.operatorDailyRate || 1000 } });
       }
 
       const allWorkerIds = Array.from(new Set([
@@ -693,7 +763,7 @@ export async function updateDailyDispatch(formData: unknown) {
       ])).filter(Boolean);
 
       for (const wId of allWorkerIds) {
-        await tx.dispatchWorker.create({ data: { dispatchId, employeeId: wId } });
+        await tx.dispatchAssignment.create({ data: { dispatchId, employeeId: wId, assignedRole: "HELPER", lockedWageRate: 800 } });
       }
 
       const itemsToLink = data.toolItems && data.toolItems.length > 0
@@ -713,11 +783,11 @@ export async function updateDailyDispatch(formData: unknown) {
       if (emp) {
         await tx.auditLog.create({
           data: {
+            actionType: "UPDATE",
             entity: "DAILY_DISPATCH",
-            entityId: dispatchId,
-            action: "UPDATE",
+            actorRole: session.user.role as any,
             actorId: emp.id,
-            delta: data as any
+            newPayload: { dispatchId, delta: data as any }
           }
         });
       }
@@ -725,12 +795,15 @@ export async function updateDailyDispatch(formData: unknown) {
       return updated;
     });
 
-    revalidatePath("/admin/dispatch");
+    if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/admin/dispatch");
+    }
     return { success: true, dispatchId: result.id };
   } catch (err: any) {
     console.error("Error updating dispatch:", err);
     return { success: false, error: err.message || "Failed to update dispatch" };
   }
 }
+
 
 

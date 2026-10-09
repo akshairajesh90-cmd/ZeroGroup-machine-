@@ -27,6 +27,7 @@ type SerializedDispatch = {
   status: DispatchStatus;
   location: string;
   customer: { name: string; phone: string; address: string };
+  driverId: string | null;
   // Add other properties if needed
 };
 
@@ -83,6 +84,64 @@ export default function DriverPortalClient({ initialDispatch }: { initialDispatc
     } catch (error) {
       console.error(error);
       toast.error("Network error. Please try again.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleManualPing = async (source: "MANUAL_CURRENT" | "MANUAL_SITE") => {
+    if (isUpdating) return;
+    setIsUpdating(true);
+    try {
+      const { lat, lng } = await captureGps();
+      if (!lat || !lng) {
+        toast.error("Could not capture GPS location.");
+        setIsUpdating(false);
+        return;
+      }
+
+      const requestBody = JSON.stringify({
+        employeeId: initialDispatch.driverId || "unknown", 
+        dispatchId: initialDispatch.id,
+        latitude: lat,
+        longitude: lng,
+        accuracy: 10,
+        source: source
+      });
+
+      if (navigator.onLine) {
+        try {
+          const res = await fetch("/api/location/ping", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: requestBody
+          });
+
+          if (res.ok) {
+            toast.success(source === "MANUAL_SITE" ? "Site Location Marked!" : "Current Location Pinged!");
+            setIsUpdating(false);
+            return;
+          }
+        } catch (e) {
+          console.warn("Network error during ping, falling back to offline queue.", e);
+        }
+      }
+
+      // Import inside function or file level
+      const { offlineDb } = await import("@/lib/offlineDb");
+      await offlineDb.queuedRequests.add({
+         url: "/api/location/ping",
+         method: "POST",
+         body: requestBody,
+         headers: { "Content-Type": "application/json" },
+         createdAt: Date.now(),
+         retries: 0,
+         tag: "location-ping"
+      });
+      toast.success("Offline: Location ping queued.");
+
+    } catch (error) {
+      toast.error("Error saving location.");
     } finally {
       setIsUpdating(false);
     }
@@ -171,6 +230,25 @@ export default function DriverPortalClient({ initialDispatch }: { initialDispatc
             <AlertTriangle className="w-7 h-7" />
             REPORT ISSUE
           </button>
+
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            <button
+              disabled={isUpdating}
+              onClick={() => handleManualPing("MANUAL_CURRENT")}
+              className="py-4 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 font-bold text-sm rounded-xl flex flex-col items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+            >
+              <Navigation className="w-5 h-5 text-blue-400" />
+              PING CURRENT
+            </button>
+            <button
+              disabled={isUpdating}
+              onClick={() => handleManualPing("MANUAL_SITE")}
+              className="py-4 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 font-bold text-sm rounded-xl flex flex-col items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+            >
+              <MapPin className="w-5 h-5 text-amber-400" />
+              MARK SITE
+            </button>
+          </div>
         </div>
       </main>
     </div>

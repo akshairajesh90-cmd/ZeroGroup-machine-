@@ -15,7 +15,7 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter, log: ["error", "warn"] });
 
 async function main() {
-  console.log("🌱 Seeding full scenario mock data up to 2026-07-25...");
+  console.log("ðŸŒ± Seeding full scenario mock data up to 2026-07-25...");
 
   // 1. Fetch masters
   const customers = await prisma.customer.findMany();
@@ -23,7 +23,7 @@ async function main() {
   const machines = await prisma.machine.findMany();
   
   if (customers.length === 0 || employees.length === 0 || machines.length === 0) {
-    console.error("❌ Run `npx tsx prisma/seed.ts` first to populate masters!");
+    console.error("âŒ Run `npx tsx prisma/seed.ts` first to populate masters!");
     process.exit(1);
   }
 
@@ -44,7 +44,7 @@ async function main() {
 
   for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
     const dateStr = d.toISOString().split("T")[0];
-    console.log(`\n📅 Generating data for ${dateStr}`);
+    console.log(`\nðŸ“… Generating data for ${dateStr}`);
 
     // Scenario 1: Mixer dispatch (Full crew)
     if (mixers.length > 0 && ops.length > 0 && drivers.length > 0 && customers.length > 0) {
@@ -73,7 +73,6 @@ async function main() {
           workType: WorkType.NORMAL,
           status: DispatchStatus.COMPLETED,
           operatorDailyRate: 1000,
-          actualWagePaid: 1000,
           customerCharge: 2500,
           notes: "Mixer full day work. Seeded scenario.",
         },
@@ -88,7 +87,6 @@ async function main() {
           headCount: 1,
           helperCount: 8,
           lumpSumWage: 10800,
-          actualWagePaid: 10800,
           internalHeadCount: 9,
           externalHeadCount: 0,
           notes: "Standard mixing crew",
@@ -121,7 +119,7 @@ async function main() {
         },
       });
       
-      console.log(`  ✅ Mixer dispatch for ${cust.name} by Op: ${op.name}`);
+      console.log(`  âœ… Mixer dispatch for ${cust.name} by Op: ${op.name}`);
     }
 
     // Scenario 2: Lift dispatch
@@ -149,7 +147,6 @@ async function main() {
           workType: WorkType.TROLLY,
           status: DispatchStatus.COMPLETED,
           operatorDailyRate: 1500,
-          actualWagePaid: 1500,
           customerCharge: 3000,
           liftFloors: 2,
           notes: "Lift 2 floors with Trolly. Seeded scenario.",
@@ -159,17 +156,17 @@ async function main() {
       // Add Multi-operators
       const secondOp = pick(ops);
       if (secondOp.id !== op.id) {
-        await prisma.dispatchOperator.deleteMany({ where: { dispatchId: dispatch.id } });
-        await prisma.dispatchOperator.create({
+        await prisma.dispatchAssignment.deleteMany({ where: { dispatchId: dispatch.id } });
+        await prisma.dispatchAssignment.create({
           data: {
             dispatchId: dispatch.id,
-            internalEmployeeId: secondOp.id,
-            dayWage: 1200,
-            actualWagePaid: 1200,
+            employeeId: secondOp.id,
+            assignedRole: "LIFT_OPERATOR",
+            lockedWageRate: 1200,
           },
         });
       }
-      console.log(`  ✅ Lift dispatch for ${cust.name} by Op: ${op.name}`);
+      console.log(`  âœ… Lift dispatch for ${cust.name} by Op: ${op.name}`);
     }
 
     // Scenario 3: Cancelled Job
@@ -195,7 +192,6 @@ async function main() {
           workType: WorkType.NORMAL,
           status: DispatchStatus.CANCELLED,
           operatorDailyRate: 0,
-          actualWagePaid: 0,
           notes: "Cancelled due to rain.",
         },
       });
@@ -212,16 +208,16 @@ async function main() {
             }
         });
       }
-      console.log(`  ✅ Cancelled dispatch for ${cust.name}`);
+      console.log(`  âœ… Cancelled dispatch for ${cust.name}`);
     }
   }
 
-  console.log("🎉 Seeding full scenario mock data completed!");
+  console.log("ðŸŽ‰ Seeding full scenario mock data completed!");
 }
 
 main()
   .catch((e) => {
-    console.error("❌ Seed error:", e);
+    console.error("âŒ Seed error:", e);
     process.exit(1);
   })
   .finally(async () => {

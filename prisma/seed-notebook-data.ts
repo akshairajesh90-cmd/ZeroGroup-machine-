@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+﻿import dotenv from "dotenv";
 import path from "path";
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
@@ -15,7 +15,7 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter, log: ["error", "warn"] });
 
 async function main() {
-  console.log("🌱 Seeding Exact Zero Group Physical Notebook Data (05/07/2026 to 11/07/2026) [V16.0 Idempotent Engine]...");
+  console.log("ðŸŒ± Seeding Exact Zero Group Physical Notebook Data (05/07/2026 to 11/07/2026) [V16.0 Idempotent Engine]...");
 
   // 1. Ensure Master Operators & Employees exist
   const operatorNames = [
@@ -59,20 +59,20 @@ async function main() {
 
   // 2. Upsert All 14 Customers & Sites from the Notebook
   const notebookCustomers = [
-    { name: "സ്വാമി നടാൽ (Swami - Nadal)", phone: "9048640535", address: "Nadakkal / Nadal" },
-    { name: "സക്കീർ വടക്കൻ (Sakeer Vadakkan)", phone: "9847340839", address: "Vadakkan Site" },
-    { name: "ഷിബിലി മാതമംഗലം (Shibili Mathamangalam)", phone: "8075883840", address: "Mathamangalam" },
-    { name: "രാജു കുന്നോനി (Raju Kunnoni)", phone: "9496412920", address: "Kunnoni" },
-    { name: "സിദ്ധീഖ് നെല്ലിക്കുന്ന് (Siddique - Nellikunnu)", phone: "9447000001", address: "Nellikunnu" },
-    { name: "അനസ് കാഞ്ഞിരപ്പള്ളി (Anas - Kanjirappally)", phone: "8848796317", address: "Kanjirappally Road Work" },
-    { name: "മുരളി ഉണിച്ചാമര (Murali - Unichamara)", phone: "9446197584", address: "Unichamara" },
+    { name: "à´¸àµà´µà´¾à´®à´¿ à´¨à´Ÿà´¾àµ½ (Swami - Nadal)", phone: "9048640535", address: "Nadakkal / Nadal" },
+    { name: "à´¸à´•àµà´•àµ€àµ¼ à´µà´Ÿà´•àµà´•àµ» (Sakeer Vadakkan)", phone: "9847340839", address: "Vadakkan Site" },
+    { name: "à´·à´¿à´¬à´¿à´²à´¿ à´®à´¾à´¤à´®à´‚à´—à´²à´‚ (Shibili Mathamangalam)", phone: "8075883840", address: "Mathamangalam" },
+    { name: "à´°à´¾à´œàµ à´•àµà´¨àµà´¨àµ‹à´¨à´¿ (Raju Kunnoni)", phone: "9496412920", address: "Kunnoni" },
+    { name: "à´¸à´¿à´¦àµà´§àµ€à´–àµ à´¨àµ†à´²àµà´²à´¿à´•àµà´•àµà´¨àµà´¨àµ (Siddique - Nellikunnu)", phone: "9447000001", address: "Nellikunnu" },
+    { name: "à´…à´¨à´¸àµ à´•à´¾à´žàµà´žà´¿à´°à´ªàµà´ªà´³àµà´³à´¿ (Anas - Kanjirappally)", phone: "8848796317", address: "Kanjirappally Road Work" },
+    { name: "à´®àµà´°à´³à´¿ à´‰à´£à´¿à´šàµà´šà´¾à´®à´° (Murali - Unichamara)", phone: "9446197584", address: "Unichamara" },
     { name: "Noble (Noble Site)", phone: "7907141698", address: "Noble Local Site" },
-    { name: "മധു ഭായി നടക്കൽ (Madhu Bhai - Nadakkal)", phone: "7012670678", address: "Nadakkal / Ullanpara" },
-    { name: "മണികണ്ഠൻ കോണിപ്പട (Manikandan - Konippada)", phone: "7306148480", address: "Konippada" },
-    { name: "ജോസ് മേസ്തിരി (Jose Mestri)", phone: "9847272234", address: "Jose Mestri Site" },
-    { name: "ഫൈസൽ ഉദയക്കര (Faisal - Odayakkal)", phone: "7907246126", address: "Odayakkal" },
-    { name: "രാജു മാതമംഗലം (Raju Mathamangalam)", phone: "9846001122", address: "Mathamangalam" },
-    { name: "മനോജ് പൂക്കോത്ത് (Manoj Pookoth)", phone: "9447112233", address: "Pookoth" },
+    { name: "à´®à´§àµ à´­à´¾à´¯à´¿ à´¨à´Ÿà´•àµà´•àµ½ (Madhu Bhai - Nadakkal)", phone: "7012670678", address: "Nadakkal / Ullanpara" },
+    { name: "à´®à´£à´¿à´•à´£àµà´ àµ» à´•àµ‹à´£à´¿à´ªàµà´ªà´Ÿ (Manikandan - Konippada)", phone: "7306148480", address: "Konippada" },
+    { name: "à´œàµ‹à´¸àµ à´®àµ‡à´¸àµà´¤à´¿à´°à´¿ (Jose Mestri)", phone: "9847272234", address: "Jose Mestri Site" },
+    { name: "à´«àµˆà´¸àµ½ à´‰à´¦à´¯à´•àµà´•à´° (Faisal - Odayakkal)", phone: "7907246126", address: "Odayakkal" },
+    { name: "à´°à´¾à´œàµ à´®à´¾à´¤à´®à´‚à´—à´²à´‚ (Raju Mathamangalam)", phone: "9846001122", address: "Mathamangalam" },
+    { name: "à´®à´¨àµ‹à´œàµ à´ªàµ‚à´•àµà´•àµ‹à´¤àµà´¤àµ (Manoj Pookoth)", phone: "9447112233", address: "Pookoth" },
     { name: "Plywood Company (Plywood)", phone: "9447223344", address: "Industrial Area" },
   ];
 
@@ -123,31 +123,31 @@ async function main() {
     // --- 05/07/2026 (Sunday) ---
     {
       date: "2026-07-05",
-      custKey: "സ്വാമി",
+      custKey: "à´¸àµà´µà´¾à´®à´¿",
       siteBundleId: "2026-07-05-SWAMI-1",
       location: "Nadakkal / Nadal (#1)",
       workType: WorkType.NORMAL,
       opKey: "rajesh",
       rate: 1800,
       actualWagePaid: 1000,
-      notes: "Machine - PKJ (`Varavu: ₹1800, Chilavu: ₹1000 — Rajesh bhai`)",
+      notes: "Machine - PKJ (`Varavu: â‚¹1800, Chilavu: â‚¹1000 â€” Rajesh bhai`)",
     },
     {
       date: "2026-07-05",
-      custKey: "രാജു",
+      custKey: "à´°à´¾à´œàµ",
       siteBundleId: "2026-07-05-RAJU-2",
       location: "Mathamangalam (#2)",
       workType: WorkType.NORMAL,
       opKey: "rajesh",
       rate: 1800,
       actualWagePaid: 1000,
-      notes: "Machine (`Varavu: ₹1800, Chilavu: ₹1000`)",
+      notes: "Machine (`Varavu: â‚¹1800, Chilavu: â‚¹1000`)",
     },
 
     // --- 06/07/2026 (Monday) ---
     {
       date: "2026-07-06",
-      custKey: "മധു",
+      custKey: "à´®à´§àµ",
       siteBundleId: "2026-07-06-MADHU-1",
       location: "Nadakkal / Ullanpara (#1)",
       workType: WorkType.TROLLY,
@@ -155,7 +155,7 @@ async function main() {
       rate: 2200,
       actualWagePaid: 2200,
       liftFloors: 1,
-      notes: "Lift (1) Nila + Vibrator + 3x Trolly (`Pokkan @ ₹2,200`)",
+      notes: "Lift (1) Nila + Vibrator + 3x Trolly (`Pokkan @ â‚¹2,200`)",
       multiOps: [
         { opKey: "tapan", name: "Tapan (Trolly)", wage: 1500 },
         { opKey: "mutta", name: "Mutta (Trolly)", wage: 1500 },
@@ -163,7 +163,7 @@ async function main() {
     },
     {
       date: "2026-07-06",
-      custKey: "മനോജ്",
+      custKey: "à´®à´¨àµ‹à´œàµ",
       siteBundleId: "2026-07-06-MANOJ-2",
       location: "Pookoth (#2)",
       workType: WorkType.NORMAL,
@@ -171,7 +171,7 @@ async function main() {
       rate: 1700,
       actualWagePaid: 1700,
       liftFloors: 1,
-      notes: "Lift 1st floor (`Rajesh @ ₹1,700`) + Hydraulic Machine (`Subil`) + Pulkith (`Pani`)",
+      notes: "Lift 1st floor (`Rajesh @ â‚¹1,700`) + Hydraulic Machine (`Subil`) + Pulkith (`Pani`)",
       multiOps: [
         { opKey: "subil", name: "Subil Kumar (Hydraulic Machine)", wage: 1100 },
         { opKey: "pulkith", name: "Pulkith (Pani / Helper)", wage: 1100 },
@@ -181,7 +181,7 @@ async function main() {
     // --- 07/07/2026 (Tuesday) ---
     {
       date: "2026-07-07",
-      custKey: "രാജു",
+      custKey: "à´°à´¾à´œàµ",
       siteBundleId: "2026-07-07-RAJU-1",
       location: "Kunnoni (#1)",
       workType: WorkType.TROLLY,
@@ -189,7 +189,7 @@ async function main() {
       rate: 2200,
       actualWagePaid: 1700,
       liftFloors: 1,
-      notes: "Lift (1) Nila - Subil (`₹1,700`) + Pulkith (`₹1,000`) + Mutta & Tapan Trolly (`₹1,800 + ₹1,800`)",
+      notes: "Lift (1) Nila - Subil (`â‚¹1,700`) + Pulkith (`â‚¹1,000`) + Mutta & Tapan Trolly (`â‚¹1,800 + â‚¹1,800`)",
       multiOps: [
         { opKey: "pulkith", name: "Pulkith (Machine)", wage: 1000 },
         { opKey: "mutta", name: "Mutta (Trolly)", wage: 1800 },
@@ -211,7 +211,7 @@ async function main() {
     // Cancelled Shift Example (Requirement 3)
     {
       date: "2026-07-07",
-      custKey: "സിദ്ധീഖ്",
+      custKey: "à´¸à´¿à´¦àµà´§àµ€à´–àµ",
       siteBundleId: "2026-07-07-SIDDIQUE-2-CANCELLED",
       location: "Nellikunnu (#2 - Cancelled)",
       workType: WorkType.NORMAL,
@@ -223,18 +223,18 @@ async function main() {
     },
     {
       date: "2026-07-07",
-      custKey: "അനസ്",
+      custKey: "à´…à´¨à´¸àµ",
       siteBundleId: "2026-07-07-ANAS-3",
       location: "Kanjirappally (#3)",
       workType: WorkType.NORMAL,
       opKey: "kailas",
       rate: 1800,
       actualWagePaid: 1000,
-      notes: "Machine - Kailas (`₹1,000`)",
+      notes: "Machine - Kailas (`â‚¹1,000`)",
     },
     {
       date: "2026-07-07",
-      custKey: "മുരളി",
+      custKey: "à´®àµà´°à´³à´¿",
       siteBundleId: "2026-07-07-MURALI-4",
       location: "Unichamara (#4)",
       workType: WorkType.NORMAL,
@@ -242,7 +242,7 @@ async function main() {
       rate: 2200,
       actualWagePaid: 2200,
       liftFloors: 2,
-      notes: "Lift (2) Nila - Rajesh (`₹2,200`) + Machine (`Manoj ₹1,000`) + P.Vibrator (`Sanjay ₹1,000`)",
+      notes: "Lift (2) Nila - Rajesh (`â‚¹2,200`) + Machine (`Manoj â‚¹1,000`) + P.Vibrator (`Sanjay â‚¹1,000`)",
       multiOps: [
         { opKey: "sanjay", name: "Sanjay (P.Vibrator)", wage: 1000 },
       ],
@@ -270,7 +270,7 @@ async function main() {
     // Cancelled Shift Example #5
     {
       date: "2026-07-07",
-      custKey: "സക്കീർ",
+      custKey: "à´¸à´•àµà´•àµ€àµ¼",
       siteBundleId: "2026-07-07-SAKEER-5-CANCELLED",
       location: "Vadakkan (#5 - Cancelled)",
       workType: WorkType.NORMAL,
@@ -289,7 +289,7 @@ async function main() {
       opKey: "rajesh",
       rate: 1800,
       actualWagePaid: 1200,
-      notes: "(6) Machine - Kaka (`₹1,200`) + Chottu (3 bhai = ₹3,600)",
+      notes: "(6) Machine - Kaka (`â‚¹1,200`) + Chottu (3 bhai = â‚¹3,600)",
       laborCrews: [
         {
           externalName: "Chottu Crew",
@@ -304,14 +304,14 @@ async function main() {
     },
     {
       date: "2026-07-07",
-      custKey: "ഷിബിലി",
+      custKey: "à´·à´¿à´¬à´¿à´²à´¿",
       siteBundleId: "2026-07-07-SHIBILI-7",
       location: "Mathamangalam (#7)",
       workType: WorkType.NORMAL,
       opKey: "tuna",
       rate: 1800,
       actualWagePaid: 1000,
-      notes: "(7) Machine - Tuna (`₹1,000`) + Panikar Chottu (5 bhai = ₹6,000)",
+      notes: "(7) Machine - Tuna (`â‚¹1,000`) + Panikar Chottu (5 bhai = â‚¹6,000)",
       laborCrews: [
         {
           externalName: "Chottu Crew",
@@ -328,7 +328,7 @@ async function main() {
     // --- 08/07/2026 (Wednesday) ---
     {
       date: "2026-07-08",
-      custKey: "സക്കീർ",
+      custKey: "à´¸à´•àµà´•àµ€àµ¼",
       siteBundleId: "2026-07-08-SAKEER-1",
       location: "Vadakkan Site (#1)",
       workType: WorkType.NORMAL,
@@ -336,7 +336,7 @@ async function main() {
       rate: 2200,
       actualWagePaid: 2200,
       liftFloors: 2,
-      notes: "Lift - 2 Nila (`Pokkan @ ₹2,200`) + Machine/Mixer (`Subil @ ₹1,000`) + Chottu (11 bhai = ₹13,200)",
+      notes: "Lift - 2 Nila (`Pokkan @ â‚¹2,200`) + Machine/Mixer (`Subil @ â‚¹1,000`) + Chottu (11 bhai = â‚¹13,200)",
       multiOps: [
         { opKey: "subil", name: "Subil Kumar (Mixer)", wage: 1000 },
       ],
@@ -354,7 +354,7 @@ async function main() {
     },
     {
       date: "2026-07-08",
-      custKey: "ഷിബിലി",
+      custKey: "à´·à´¿à´¬à´¿à´²à´¿",
       siteBundleId: "2026-07-08-SHIBILI-2",
       location: "Mathamangalam (#2)",
       workType: WorkType.NORMAL,
@@ -362,7 +362,7 @@ async function main() {
       rate: 2200,
       actualWagePaid: 2200,
       liftFloors: 2,
-      notes: "Lift - 2 Nila (`Rajesh @ ₹2,200`) + Machine (`Tapan ₹1,000`) + Kaka Crew (9 bhai @ ₹10,800)",
+      notes: "Lift - 2 Nila (`Rajesh @ â‚¹2,200`) + Machine (`Tapan â‚¹1,000`) + Kaka Crew (9 bhai @ â‚¹10,800)",
       multiOps: [
         { opKey: "tapan", name: "Tapan (Machine)", wage: 1000 },
       ],
@@ -389,19 +389,19 @@ async function main() {
     },
     {
       date: "2026-07-08",
-      custKey: "രാജു",
+      custKey: "à´°à´¾à´œàµ",
       siteBundleId: "2026-07-08-RAJU-3",
       location: "Kunnoni (#3)",
       workType: WorkType.NORMAL,
       opKey: "kailas",
       rate: 1800,
       actualWagePaid: 1000,
-      notes: "(3) Machine - Kailas (`₹1,000`)",
+      notes: "(3) Machine - Kailas (`â‚¹1,000`)",
     },
     // Requirement 3: Vijay No Op / Cancelled
     {
       date: "2026-07-08",
-      custKey: "മുരളി",
+      custKey: "à´®àµà´°à´³à´¿",
       siteBundleId: "2026-07-08-VIJAY-4-NOOP",
       location: "Unichamara (#4 - No op)",
       workType: WorkType.NORMAL,
@@ -409,7 +409,7 @@ async function main() {
       opKey: "vijay",
       rate: 0,
       actualWagePaid: 0,
-      notes: "(4) Vijay - No op (`₹0`)",
+      notes: "(4) Vijay - No op (`â‚¹0`)",
     },
     // Requirement 5: Split Crew Attributions (Plywood Company)
     {
@@ -421,14 +421,14 @@ async function main() {
       opKey: "rajesh",
       rate: 4800,
       actualWagePaid: 0, // Master op is 0 since laborCrews track the exact split
-      notes: "Plywood Company — 4 bhai (3 our ron bhai Mutta, Pulkith, Amith + 1 outside — already paid)",
+      notes: "Plywood Company â€” 4 bhai (3 our ron bhai Mutta, Pulkith, Amith + 1 outside â€” already paid)",
       laborCrews: [
         {
           externalName: "Plywood Company Laborers (4 bhai)",
           headCount: 1,
           helperCount: 3,
           lumpSumWage: 4800, // Total value of work
-          actualWagePaid: 3600, // Internal liability ONLY (3 x ₹1,200)
+          actualWagePaid: 3600, // Internal liability ONLY (3 x â‚¹1,200)
           internalHeadCount: 3,
           externalHeadCount: 1,
           outsideWagePaid: 1200,
@@ -440,18 +440,18 @@ async function main() {
     // --- 09/07/2026 (Thursday) ---
     {
       date: "2026-07-09",
-      custKey: "മണികണ്ഠൻ",
+      custKey: "à´®à´£à´¿à´•à´£àµà´ àµ»",
       siteBundleId: "2026-07-09-MANIKANDAN-1",
       location: "Konippada (#1)",
       workType: WorkType.NORMAL,
       opKey: "rajesh",
       rate: 1800,
       actualWagePaid: 1000,
-      notes: "(1) Machine - Rajesh bhai (`₹1,000`)",
+      notes: "(1) Machine - Rajesh bhai (`â‚¹1,000`)",
     },
     {
       date: "2026-07-09",
-      custKey: "ജോസ്",
+      custKey: "à´œàµ‹à´¸àµ",
       siteBundleId: "2026-07-09-JOSE-2",
       location: "Jose Mestri Site (#2)",
       workType: WorkType.TROLLY,
@@ -459,35 +459,35 @@ async function main() {
       rate: 2200,
       actualWagePaid: 2200,
       liftFloors: 2,
-      notes: "(2) Lift (2) Nila - Pokkan (`₹2,200`)",
+      notes: "(2) Lift (2) Nila - Pokkan (`â‚¹2,200`)",
     },
     {
       date: "2026-07-09",
-      custKey: "അനസ്",
+      custKey: "à´…à´¨à´¸àµ",
       siteBundleId: "2026-07-09-ANAS-3",
       location: "Kanjirappally (#3)",
       workType: WorkType.NORMAL,
       opKey: "mutta",
       rate: 1800,
       actualWagePaid: 1000,
-      notes: "(3) Machine - Mutta (`₹1,000`)",
+      notes: "(3) Machine - Mutta (`â‚¹1,000`)",
     },
     {
       date: "2026-07-09",
-      custKey: "ഫൈസൽ",
+      custKey: "à´«àµˆà´¸àµ½",
       siteBundleId: "2026-07-09-FAISAL-4",
       location: "Odayakkal (#4)",
       workType: WorkType.NORMAL,
       opKey: "tapan",
       rate: 1800,
       actualWagePaid: 1000,
-      notes: "(4) Machine - Tapan (`₹1,000`)",
+      notes: "(4) Machine - Tapan (`â‚¹1,000`)",
     },
 
     // --- 10/07/2026 (Friday) ---
     {
       date: "2026-07-10",
-      custKey: "മനോജ്",
+      custKey: "à´®à´¨àµ‹à´œàµ",
       siteBundleId: "2026-07-10-MANOJ-1",
       location: "Pookoth (#1)",
       workType: WorkType.NORMAL,
@@ -495,14 +495,14 @@ async function main() {
       rate: 1700,
       actualWagePaid: 1700,
       liftFloors: 1,
-      notes: "(1) Lift (1) Nila - Pokkan (`₹1,700`) + Petrol Vibrator (`Tapan ₹1,000`)",
+      notes: "(1) Lift (1) Nila - Pokkan (`â‚¹1,700`) + Petrol Vibrator (`Tapan â‚¹1,000`)",
       multiOps: [
         { opKey: "tapan", name: "Tapan (Petrol Vibrator)", wage: 1000 },
       ],
     },
     {
       date: "2026-07-10",
-      custKey: "ഷിബിലി",
+      custKey: "à´·à´¿à´¬à´¿à´²à´¿",
       siteBundleId: "2026-07-10-SHIBILI-2",
       location: "Mathamangalam (#2)",
       workType: WorkType.NORMAL,
@@ -510,7 +510,7 @@ async function main() {
       rate: 1700,
       actualWagePaid: 1700,
       liftFloors: 1,
-      notes: "(2) Lift (1) Nila - Rajesh bhai (`₹1,700`) + Mixer (`Subil ₹1,000`)",
+      notes: "(2) Lift (1) Nila - Rajesh bhai (`â‚¹1,700`) + Mixer (`Subil â‚¹1,000`)",
       multiOps: [
         { opKey: "subil", name: "Subil Kumar (Mixer)", wage: 1000 },
       ],
@@ -519,7 +519,7 @@ async function main() {
     // --- 11/07/2026 (Saturday) ---
     {
       date: "2026-07-11",
-      custKey: "മനോജ്",
+      custKey: "à´®à´¨àµ‹à´œàµ",
       siteBundleId: "2026-07-11-MANOJ-3",
       location: "Pookoth (#3)",
       workType: WorkType.NORMAL,
@@ -527,7 +527,7 @@ async function main() {
       rate: 1700,
       actualWagePaid: 1700,
       liftFloors: 1,
-      notes: "(3) Lift (1) Nila - Rajesh (`₹1,700`) + Machine (`Pulkith ₹1,000`) + P.Vibrator (`Sanjay ₹1,000`) + Trolly (`Mutta & Tapan ₹1,500 + ₹1,500`)",
+      notes: "(3) Lift (1) Nila - Rajesh (`â‚¹1,700`) + Machine (`Pulkith â‚¹1,000`) + P.Vibrator (`Sanjay â‚¹1,000`) + Trolly (`Mutta & Tapan â‚¹1,500 + â‚¹1,500`)",
       multiOps: [
         { opKey: "pulkith", name: "Pulkith (Machine)", wage: 1000 },
         { opKey: "sanjay", name: "Sanjay (P.Vibrator)", wage: 1000 },
@@ -537,14 +537,14 @@ async function main() {
     },
     {
       date: "2026-07-11",
-      custKey: "ഷിബിലി",
+      custKey: "à´·à´¿à´¬à´¿à´²à´¿",
       siteBundleId: "2026-07-11-SHIBILI-4",
       location: "Mathamangalam (#4)",
       workType: WorkType.NORMAL,
       opKey: "tuna",
       rate: 1800,
       actualWagePaid: 1000,
-      notes: "(4) Machine - Tuna (`₹1,000`) + Panikane (13) = Sharaf (1 @ ₹1,200) + Panikar (12 @ ₹14,400)",
+      notes: "(4) Machine - Tuna (`â‚¹1,000`) + Panikane (13) = Sharaf (1 @ â‚¹1,200) + Panikar (12 @ â‚¹14,400)",
       laborCrews: [
         {
           externalName: "Sharaf Bhai",
@@ -568,25 +568,25 @@ async function main() {
     },
     {
       date: "2026-07-11",
-      custKey: "സക്കീർ",
+      custKey: "à´¸à´•àµà´•àµ€àµ¼",
       siteBundleId: "2026-07-11-SAKEER-5",
       location: "Vadakkan Site (#5)",
       workType: WorkType.NORMAL,
       opKey: "subil",
       rate: 1800,
       actualWagePaid: 1000,
-      notes: "(5) Machine - Subil (`₹1,000`)",
+      notes: "(5) Machine - Subil (`â‚¹1,000`)",
     },
     {
       date: "2026-07-11",
-      custKey: "രാജു",
+      custKey: "à´°à´¾à´œàµ",
       siteBundleId: "2026-07-11-RAJU-6",
       location: "Kunnoni (#6)",
       workType: WorkType.NORMAL,
       opKey: "pulkith",
       rate: 1800,
       actualWagePaid: 1000,
-      notes: "(6) Dileep machine - Pulkith (`₹1,000`)",
+      notes: "(6) Dileep machine - Pulkith (`â‚¹1,000`)",
     },
   ];
 
@@ -646,21 +646,8 @@ async function main() {
     });
 
     // Clear and re-upsert multiOps for this exact dispatch to maintain idempotency
-    await prisma.dispatchOperator.deleteMany({ where: { dispatchId: dispatch.id } });
-    if (b.multiOps && b.multiOps.length > 0) {
-      for (const mOp of b.multiOps) {
-        const mEmpId = empMap.get(mOp.opKey);
-        await prisma.dispatchOperator.create({
-          data: {
-            dispatchId: dispatch.id,
-            internalEmployeeId: mEmpId || null,
-            externalName: mEmpId ? null : mOp.name,
-            dayWage: mOp.wage,
-            actualWagePaid: mOp.wage,
-          },
-        });
-      }
-    }
+    await prisma.dispatchAssignment.deleteMany({ where: { dispatchId: dispatch.id } });
+    
 
     // Clear and re-upsert laborCrews for this exact dispatch to maintain idempotency
     await prisma.dispatchLabor.deleteMany({ where: { dispatchId: dispatch.id } });
@@ -678,20 +665,20 @@ async function main() {
             externalHeadCount: crew.externalHeadCount ?? 0,
             outsideWagePaid: crew.outsideWagePaid ?? 0,
             isExternalLiability: crew.isExternalLiability ?? false,
-            notes: `${crew.headCount + crew.helperCount} total headcount @ ₹1,200 (${crew.internalHeadCount ?? (crew.headCount + crew.helperCount)} internal, ${crew.externalHeadCount ?? 0} outside)`,
+            notes: `${crew.headCount + crew.helperCount} total headcount @ â‚¹1,200 (${crew.internalHeadCount ?? (crew.headCount + crew.helperCount)} internal, ${crew.externalHeadCount ?? 0} outside)`,
           },
         });
       }
     }
-    console.log(`✅ Upserted Dispatch [${b.date}] at ${b.location} -> Status: ${b.status || "COMPLETED"} | ActualWage: ₹${b.actualWagePaid}`);
+    console.log(`âœ… Upserted Dispatch [${b.date}] at ${b.location} -> Status: ${b.status || "COMPLETED"} | ActualWage: â‚¹${b.actualWagePaid}`);
   }
 
-  console.log("🎉 V16.0 Idempotent Engine: All exact physical notebook data successfully seeded & reconciled!");
+  console.log("ðŸŽ‰ V16.0 Idempotent Engine: All exact physical notebook data successfully seeded & reconciled!");
 }
 
 main()
   .catch((e) => {
-    console.error("❌ Seed error:", e);
+    console.error("âŒ Seed error:", e);
     process.exit(1);
   })
   .finally(async () => {

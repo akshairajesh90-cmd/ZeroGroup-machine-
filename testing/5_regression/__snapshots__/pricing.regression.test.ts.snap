@@ -1,0 +1,71 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`[REGRESSION] Dispatch Pricing — Snapshot Tests (output never silently changes) All equipment combined snapshot 1`] = `
+{
+  "breakdown": [
+    {
+      "charge": 1000,
+      "label": "Mixer (Machine)",
+    },
+    {
+      "charge": 3200,
+      "label": "Lift (3 floors above ground)",
+    },
+    {
+      "charge": 1500,
+      "label": "Trolly (1-Wheel)",
+    },
+    {
+      "charge": 1100,
+      "label": "Trolly (2-Wheel)",
+    },
+    {
+      "charge": 0,
+      "label": "Electric Vibrator",
+    },
+    {
+      "charge": 0,
+      "label": "Internal Worker Wage",
+      "wage": 1100,
+    },
+  ],
+  "customerCharge": 6800,
+  "operatorWage": 1100,
+}
+`;
+
+exports[`[REGRESSION] Dispatch Pricing — Snapshot Tests (output never silently changes) Full mixer+lift+worker scenario snapshot 1`] = `
+{
+  "breakdown": [
+    {
+      "charge": 1000,
+      "label": "Mixer (Machine)",
+    },
+    {
+      "charge": 2700,
+      "label": "Lift (2 floors above ground)",
+    },
+    {
+      "charge": 0,
+      "label": "External Worker Wage",
+      "wage": 1200,
+    },
+  ],
+  "customerCharge": 3700,
+  "operatorWage": 1200,
+}
+`;
+
+exports[`[REGRESSION] Dispatch Pricing — Snapshot Tests (output never silently changes) Petrol vibrator scenario snapshot 1`] = `
+{
+  "breakdown": [
+    {
+      "charge": 0,
+      "label": "Petrol Vibrator (Operator)",
+      "wage": 1000,
+    },
+  ],
+  "customerCharge": 0,
+  "operatorWage": 1000,
+}
+`;

@@ -4,6 +4,9 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { handleSignOut } from "@/actions/auth";
 import { IOSInstallPrompt } from "@/components/driver/IOSInstallPrompt";
+import IntervalLocationTracker from "@/components/IntervalLocationTracker";
+import AdminReturnBanner from "@/components/AdminReturnBanner";
+import DriverHeaderProfile from "@/components/driver/DriverHeaderProfile";
 import { Truck, CalendarDays, Receipt, LogOut, Wrench } from "lucide-react";
 
 
@@ -19,7 +22,7 @@ export default async function DriverLayout({
   }
 
   const role = session.user.role;
-  if (role !== "DRIVER" && role !== "OPERATOR" && role !== "OWNER" && role !== "STAFF") {
+  if (role !== "DRIVER" && role !== "OPERATOR" && role !== "OWNER" && role !== "STAFF" && role !== "ADMIN") {
     redirect("/");
   }
 
@@ -33,6 +36,8 @@ export default async function DriverLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100 font-sans pb-20">
+      <IntervalLocationTracker intervalMs={900000} />
+      <AdminReturnBanner userRole={session.user.role} />
       {/* PWA Mobile Top Header */}
       <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-800/80 bg-slate-900/90 px-4 backdrop-blur-xl">
         <div className="flex items-center gap-2.5">
@@ -49,6 +54,7 @@ export default async function DriverLayout({
           <span className="rounded-lg bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-300 border border-slate-700/50">
             {role}
           </span>
+          <DriverHeaderProfile />
           <form action={handleSignOut}>
             <button
               type="submit"
@@ -78,6 +84,7 @@ export default async function DriverLayout({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className="flex flex-col items-center gap-1 py-1 px-3 text-slate-400 hover:text-cyan-400 transition-colors"
               >
                 <Icon className="h-5 w-5" />

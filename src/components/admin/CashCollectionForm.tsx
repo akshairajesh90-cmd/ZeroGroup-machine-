@@ -1,2 +1,2 @@
-﻿// Cash collection form
+// Cash collection form
 

@@ -1,2 +1,2 @@
-﻿// Vehicle picker + shift log creation
+// Vehicle picker + shift log creation
 

@@ -1,0 +1,44 @@
+Created At: 2026-08-16T11:20:44Z
+Completed At: 2026-08-16T11:20:44Z
+File Path: `file:///c:/Users/AKSHAI%20RAJESH/project/project7/prisma/schema.prisma`
+Total Lines: 1012
+Total Bytes: 38013
+Showing lines 845 to 880
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+845: model VehicleDocument {
+846:   isPendingDelete   Boolean        @default(false)
+847:   markedForDeleteBy String?
+848:   id                String         @id @default(cuid())
+849:   vehicleId         String
+850:   type              DocumentType
+851:   documentNumber    String
+852:   issueDate         DateTime       @db.Date
+853:   expiryDate        DateTime       @db.Date
+854:   attachmentUrl     String
+855:   status            DocumentStatus @default(ACTIVE)
+856:   createdAt         DateTime       @default(now())
+857:   updatedAt         DateTime       @updatedAt
+858: 
+859:   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+860: 
+861:   @@index([vehicleId])
+862:   @@index([status])
+863:   @@index([type])
+864:   @@map("vehicle_documents")
+865: }
+866: 
+867: model EmployeeDocument {
+868:   isPendingDelete   Boolean        @default(false)
+869:   markedForDeleteBy String?
+870:   id                String         @id @default(cuid())
+871:   employeeId        String
+872:   type              DocumentType
+873:   documentNumber    String
+874:   issueDate         DateTime       @db.Date
+875:   expiryDate        DateTime       @db.Date
+876:   attachmentUrl     String
+877:   status            DocumentStatus @default(ACTIVE)
+878:   createdAt         DateTime       @default(now())
+879:   updatedAt         DateTime       @updatedAt
+880: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

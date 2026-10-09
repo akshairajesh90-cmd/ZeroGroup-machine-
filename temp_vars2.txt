@@ -1,0 +1,12 @@
+﻿  const [workCategory, setWorkCategory] = React.useState<"MACHINE" | "INDEPENDENT">("MACHINE");
+  const [activeModes, setActiveModes] = React.useState<string[]>(["LIFT"]);
+  const [showSetupTools, setShowSetupTools] = React.useState<boolean>(false);
+  const toggleMode = (mode: string) => {
+    let newModes = [];
+    if (activeModes.includes(mode)) {
+      newModes = activeModes.filter(m => m !== mode);
+    } else {
+      newModes = [...activeModes, mode];
+    }
+    setActiveModes(newModes);
+  };

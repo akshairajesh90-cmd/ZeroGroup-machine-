@@ -1,2 +1,2 @@
-﻿// Admin orders table with server-side pagination
+// Admin orders table with server-side pagination
 

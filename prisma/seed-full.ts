@@ -29,15 +29,22 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter, log: ["error"] } as any);
 
 const today = startOfDay(new Date());
-const HASH = "$2a$10$defaultHashUnused"; // not used for login — reseed-admin.ts handles real login
+const HASH = bcrypt.hashSync("password123", 10);
+const ADMIN_HASH = bcrypt.hashSync("admin123", 10);
 
 // ─── HELPERS ────────────────────────────────────────────────────────────────
 
 async function upsertUser(email: string, role: Role) {
+  const userHash = email === "akshairajesh07@gmail.com" ? ADMIN_HASH : HASH;
   let user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
     user = await prisma.user.create({
-      data: { email, hashedPassword: HASH, role },
+      data: { email, hashedPassword: userHash, role },
+    });
+  } else {
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { hashedPassword: userHash, role },
     });
   }
   return user;
@@ -147,7 +154,7 @@ async function main() {
   const vehicles = {
     truck1: await upsertVehicle("KL-10-AK-1234", "Flatbed Truck"),
     truck2: await upsertVehicle("KL-10-AK-5678", "Mini Truck"),
-    van1:   await upsertVehicle("KL-10-BK-9001", "Van"),
+    van1: await upsertVehicle("KL-10-BK-9001", "Van"),
   };
 
   console.log(`  ✅ ${Object.keys(vehicles).length} vehicles seeded.\n`);
@@ -158,22 +165,22 @@ async function main() {
   console.log("🏗️ Seeding Customers...");
 
   const custs = {
-    swami:    await upsertCustomer("സ്വാമി നടാൽ (Swami - Nadal)", "9048640535", "Nadakkal / Nadal"),
-    sakeer:   await upsertCustomer("Sakeer Vadakkan", "9847340839", "Vadakkan Site"),
-    shibili:  await upsertCustomer("Shibili Mathamangalam", "8075883840", "Mathamangalam"),
-    raju:     await upsertCustomer("Raju Kunnoni", "9496412920", "Kunnoni"),
-    anas:     await upsertCustomer("Anas Kanjirappally", "8848796317", "Kanjirappally"),
-    murali:   await upsertCustomer("Murali Unichamara", "9446197584", "Unichamara"),
-    noble:    await upsertCustomer("Noble (Noble Site)", "7907141698", "Noble Local Site"),
-    madhu:    await upsertCustomer("Madhu Bhai Nadakkal", "7012670678", "Nadakkal / Ullanpara"),
+    swami: await upsertCustomer("സ്വാമി നടാൽ (Swami - Nadal)", "9048640535", "Nadakkal / Nadal"),
+    sakeer: await upsertCustomer("Sakeer Vadakkan", "9847340839", "Vadakkan Site"),
+    shibili: await upsertCustomer("Shibili Mathamangalam", "8075883840", "Mathamangalam"),
+    raju: await upsertCustomer("Raju Kunnoni", "9496412920", "Kunnoni"),
+    anas: await upsertCustomer("Anas Kanjirappally", "8848796317", "Kanjirappally"),
+    murali: await upsertCustomer("Murali Unichamara", "9446197584", "Unichamara"),
+    noble: await upsertCustomer("Noble (Noble Site)", "7907141698", "Noble Local Site"),
+    madhu: await upsertCustomer("Madhu Bhai Nadakkal", "7012670678", "Nadakkal / Ullanpara"),
     manikandan: await upsertCustomer("Manikandan Konippada", "7306148480", "Konippada"),
-    jose:     await upsertCustomer("Jose Mestri Site", "9847272234", "Jose Mestri Site"),
-    faisal:   await upsertCustomer("Faisal Odayakkal", "7907246126", "Odayakkal"),
-    pookoth:  await upsertCustomer("Manoj Pookoth", "9447112233", "Pookoth"),
+    jose: await upsertCustomer("Jose Mestri Site", "9847272234", "Jose Mestri Site"),
+    faisal: await upsertCustomer("Faisal Odayakkal", "7907246126", "Odayakkal"),
+    pookoth: await upsertCustomer("Manoj Pookoth", "9447112233", "Pookoth"),
     siddique: await upsertCustomer("Siddique Nellikunnu", "9447000001", "Nellikunnu"),
-    plywood:  await upsertCustomer("Plywood Company", "9447223344", "Industrial Area"),
-    lnt:      await upsertCustomer("L&T Construction Pvt Ltd", "9000000001", "L&T Site - City Center"),
-    sobha:    await upsertCustomer("Sobha Developers", "9000000002", "Sobha Site - North Zone"),
+    plywood: await upsertCustomer("Plywood Company", "9447223344", "Industrial Area"),
+    lnt: await upsertCustomer("L&T Construction Pvt Ltd", "9000000001", "L&T Site - City Center"),
+    sobha: await upsertCustomer("Sobha Developers", "9000000002", "Sobha Site - North Zone"),
   };
 
   console.log(`  ✅ ${Object.keys(custs).length} customers seeded.\n`);
@@ -343,9 +350,9 @@ async function main() {
 
   const fuelEntries = [
     { machineId: machines.mix1.id, liters: 12, totalCost: 1200, days: 2 },
-    { machineId: machines.lft1.id, liters: 8,  totalCost: 800,  days: 5 },
+    { machineId: machines.lft1.id, liters: 8, totalCost: 800, days: 5 },
     { machineId: machines.mix3.id, liters: 15, totalCost: 1500, days: 7 },
-    { machineId: machines.lft2.id, liters: 6,  totalCost: 600,  days: 10 },
+    { machineId: machines.lft2.id, liters: 6, totalCost: 600, days: 10 },
     { vehicleId: vehicles.truck1.id, liters: 20, totalCost: 2000, days: 3 },
     { vehicleId: vehicles.truck2.id, liters: 18, totalCost: 1800, days: 6 },
     { machineId: machines.mix1.id, liters: 10, totalCost: 1000, days: 14 },
@@ -387,20 +394,20 @@ async function main() {
 
   const docEntries = [
     // Truck 1 — All docs valid
-    { vehicleId: vehicles.truck1.id, type: DocumentType.RC,        num: "KL10AK1234RC",  issue: subDays(today, 365), expiry: addDays(today, 730) },
-    { vehicleId: vehicles.truck1.id, type: DocumentType.INSURANCE, num: "INS-TK1-2025",  issue: subDays(today, 30),  expiry: addDays(today, 335) },
-    { vehicleId: vehicles.truck1.id, type: DocumentType.FITNESS,   num: "FIT-TK1-2025",  issue: subDays(today, 60),  expiry: addDays(today, 305) },
-    { vehicleId: vehicles.truck1.id, type: DocumentType.POLLUTION, num: "PUC-TK1-2025",  issue: subDays(today, 10),  expiry: addDays(today, 80)  },
+    { vehicleId: vehicles.truck1.id, type: DocumentType.RC, num: "KL10AK1234RC", issue: subDays(today, 365), expiry: addDays(today, 730) },
+    { vehicleId: vehicles.truck1.id, type: DocumentType.INSURANCE, num: "INS-TK1-2025", issue: subDays(today, 30), expiry: addDays(today, 335) },
+    { vehicleId: vehicles.truck1.id, type: DocumentType.FITNESS, num: "FIT-TK1-2025", issue: subDays(today, 60), expiry: addDays(today, 305) },
+    { vehicleId: vehicles.truck1.id, type: DocumentType.POLLUTION, num: "PUC-TK1-2025", issue: subDays(today, 10), expiry: addDays(today, 80) },
 
     // Truck 2 — Insurance expiring in 15 days (warning)
-    { vehicleId: vehicles.truck2.id, type: DocumentType.RC,        num: "KL10AK5678RC",  issue: subDays(today, 365), expiry: addDays(today, 730) },
+    { vehicleId: vehicles.truck2.id, type: DocumentType.RC, num: "KL10AK5678RC", issue: subDays(today, 365), expiry: addDays(today, 730) },
     { vehicleId: vehicles.truck2.id, type: DocumentType.INSURANCE, num: "INS-TK2-EXPIRING", issue: subDays(today, 350), expiry: addDays(today, 15) },
-    { vehicleId: vehicles.truck2.id, type: DocumentType.FITNESS,   num: "FIT-TK2-2025",  issue: subDays(today, 90),  expiry: addDays(today, 275) },
+    { vehicleId: vehicles.truck2.id, type: DocumentType.FITNESS, num: "FIT-TK2-2025", issue: subDays(today, 90), expiry: addDays(today, 275) },
 
     // Van — Fitness certificate EXPIRED (compliance alert!)
-    { vehicleId: vehicles.van1.id,   type: DocumentType.RC,        num: "KL10BK9001RC",  issue: subDays(today, 400), expiry: addDays(today, 600) },
-    { vehicleId: vehicles.van1.id,   type: DocumentType.INSURANCE, num: "INS-VAN1-2025", issue: subDays(today, 20),  expiry: addDays(today, 345) },
-    { vehicleId: vehicles.van1.id,   type: DocumentType.FITNESS,   num: "FIT-VAN1-EXPIRED", issue: subDays(today, 400), expiry: subDays(today, 35) },
+    { vehicleId: vehicles.van1.id, type: DocumentType.RC, num: "KL10BK9001RC", issue: subDays(today, 400), expiry: addDays(today, 600) },
+    { vehicleId: vehicles.van1.id, type: DocumentType.INSURANCE, num: "INS-VAN1-2025", issue: subDays(today, 20), expiry: addDays(today, 345) },
+    { vehicleId: vehicles.van1.id, type: DocumentType.FITNESS, num: "FIT-VAN1-EXPIRED", issue: subDays(today, 400), expiry: subDays(today, 35) },
   ];
 
   let docCount = 0;

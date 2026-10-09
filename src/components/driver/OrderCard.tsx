@@ -1,2 +1,2 @@
-﻿// Driver order card with optimistic updates
+// Driver order card with optimistic updates
 

@@ -1,2 +1,2 @@
-﻿// Expense submission form
+// Expense submission form
 

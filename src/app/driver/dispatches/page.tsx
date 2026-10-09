@@ -25,9 +25,16 @@ export default async function DispatchesPage() {
   if (!session?.user?.employeeId) redirect("/");
   const empId = session.user.employeeId;
 
+  const employee = await prisma.employee.findUnique({
+    where: { id: empId },
+    select: { role: true },
+  });
+
+  const isGodMode = ["ADMIN", "OWNER"].includes(employee?.role ?? session?.user?.role ?? "");
+
   const dispatches = await prisma.dailyDispatch.findMany({
     where: {
-      OR: [{ operatorId: empId }, { driverId: empId }],
+      ...(isGodMode ? {} : { OR: [{ operatorId: empId }, { driverId: empId }] }),
       dateOfService: { gte: subDays(new Date(), 30) },
     },
     include: {

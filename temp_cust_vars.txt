@@ -1,0 +1,9 @@
+﻿  const [showNewCustomerModal, setShowNewCustomerModal] = React.useState(false);
+  const [newCustName, setNewCustName] = React.useState("");
+  const [newCustPhone, setNewCustPhone] = React.useState("");
+  const [newCustAddress, setNewCustAddress] = React.useState("");
+  
+  const handleQuickCustomerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowNewCustomerModal(false);
+  };
