@@ -173,7 +173,7 @@ export default function TelemetryPage() {
                             key={p.id}
                             className="flex items-center justify-between text-xs text-slate-400 border-b border-slate-800 py-1"
                         >
-                            <span>{new Date(p.recordedAt).toLocaleTimeString("en-IN")}</span>
+                            <span suppressHydrationWarning>{new Date(p.recordedAt).toLocaleTimeString("en-IN")}</span>
                             <span>{p.employee?.name ?? "—"}</span>
                             <span className={p.isInsideGeofence ? "text-green-400" : "text-red-400"}>
                                 {p.isInsideGeofence ? "Inside" : "Outside"} ({(p.distanceFromCenter / 1000).toFixed(1)} km)

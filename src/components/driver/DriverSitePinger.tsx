@@ -27,6 +27,13 @@ interface DriverSitePingerProps {
   showAutoToggle?: boolean;
 }
 
+function formatPingTime(d: Date | string | number | null | undefined): string | null {
+  if (!d) return null;
+  const dateObj = typeof d === "string" || typeof d === "number" ? new Date(d) : d;
+  if (isNaN(dateObj.getTime())) return null;
+  return dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
 export default function DriverSitePinger({
   dispatchId,
   siteAddress,
@@ -47,10 +54,15 @@ export default function DriverSitePinger({
   const [currentLat, setCurrentLat] = useState<number | null>(lastKnownLat ?? null);
   const [currentLng, setCurrentLng] = useState<number | null>(lastKnownLng ?? null);
   const [accuracy, setAccuracy] = useState<number | null>(null);
-  const [lastPinged, setLastPinged] = useState<string | null>(
-    initialLastPing ? new Date(initialLastPing).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : null
-  );
+  const [lastPinged, setLastPinged] = useState<string | null>(null);
   const [distanceToSite, setDistanceToSite] = useState<number | null>(null);
+
+  // Sync initial last ping time safely on client to prevent SSR hydration mismatch
+  useEffect(() => {
+    if (initialLastPing) {
+      setLastPinged(formatPingTime(initialLastPing));
+    }
+  }, [initialLastPing]);
 
   // Google Maps navigation link
   const navQuery = siteLatitude && siteLongitude
@@ -88,7 +100,7 @@ export default function DriverSitePinger({
           setCurrentLat(lat);
           setCurrentLng(lng);
           setAccuracy(acc);
-          setLastPinged(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+          setLastPinged(formatPingTime(new Date()));
           if (res.distanceMeters != null) {
             setDistanceToSite(res.distanceMeters);
           }
@@ -141,7 +153,7 @@ export default function DriverSitePinger({
       setCurrentLat(simLat);
       setCurrentLng(simLng);
       setAccuracy(simAcc);
-      setLastPinged(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      setLastPinged(formatPingTime(new Date()));
       if (res.distanceMeters != null) {
         setDistanceToSite(res.distanceMeters);
       }
@@ -243,11 +255,11 @@ export default function DriverSitePinger({
             </span>
           </div>
 
-          <div className="text-[11px] text-slate-400">
+          <div className="text-[11px] text-slate-400" suppressHydrationWarning>
             {lastPinged ? (
-              <span>Last ping: <strong className="text-white">{lastPinged}</strong></span>
+              <span suppressHydrationWarning>Last ping: <strong className="text-white" suppressHydrationWarning>{lastPinged}</strong></span>
             ) : (
-              <span className="text-amber-400/80">Pending check-in</span>
+              <span className="text-amber-400/80" suppressHydrationWarning>Pending check-in</span>
             )}
           </div>
         </div>

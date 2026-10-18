@@ -127,10 +127,10 @@ export default async function StaffActivityLogPage() {
                 </div>
               </div>
               <div className="text-right shrink-0 ml-4">
-                <p className="text-xs text-zinc-400 font-medium">
+                <p className="text-xs text-zinc-400 font-medium" suppressHydrationWarning>
                   {new Date(entry.time).toLocaleDateString("en-IN")}
                 </p>
-                <p className="text-[10px] text-zinc-600">
+                <p className="text-[10px] text-zinc-600" suppressHydrationWarning>
                   {new Date(entry.time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
                 </p>
               </div>
