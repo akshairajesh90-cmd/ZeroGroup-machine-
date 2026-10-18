@@ -29,7 +29,7 @@ export async function GET(
     const assignments = await prisma.dispatchAssignment.findMany({
       where: { dispatchId },
       include: {
-        employee: { select: { id: true, name: true, role: true, defaultCrewRole: true, profilePhotoUrl: true } },
+        employee: { select: { id: true, name: true, role: true, defaultCrewRole: true, profilePhotoUrl: true, operatorType: true } },
         contractor: { select: { id: true, name: true, companyName: true } },
       },
       orderBy: { createdAt: "asc" },

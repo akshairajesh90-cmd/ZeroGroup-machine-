@@ -1,8 +1,10 @@
-import React from "react";
+﻿import React from "react";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/serverAuth";
 import { Role } from "@prisma/client";
 import { Wrench, Plus, Archive, Settings2, PackageCheck, Truck, ShieldAlert } from "lucide-react";
+import { EditToolModal } from "./EditToolModal";
+import { AddToolModal } from "./AddToolModal";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,7 @@ export default async function ToolsInventoryPage() {
           </h1>
           <p className="text-zinc-400 mt-1 text-sm">Manage small assets, shovels, baskets, and track their active site deployments.</p>
         </div>
+        <AddToolModal />
       </div>
 
       {/* Asset Registry Table */}
@@ -112,8 +115,8 @@ export default async function ToolsInventoryPage() {
                         {availableCount} Available
                       </td>
                       
-                      {/* Status */}
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                      {/* Status & Edit */}
+                      <td className="px-6 py-4 whitespace-nowrap text-right flex items-center justify-end gap-2">
                         {availableCount > 0 ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
                             In Stock
@@ -123,6 +126,7 @@ export default async function ToolsInventoryPage() {
                             Out of Stock
                           </span>
                         )}
+                        <EditToolModal tool={tool} />
                       </td>
                     </tr>
                   );
@@ -135,3 +139,4 @@ export default async function ToolsInventoryPage() {
     </div>
   );
 }
+

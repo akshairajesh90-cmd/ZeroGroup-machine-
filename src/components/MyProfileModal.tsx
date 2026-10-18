@@ -31,6 +31,9 @@ export default function MyProfileModal({ isOpen, onClose }: MyProfileModalProps)
           setFormData({
             ...formData,
             ...res.data,
+            phone: res.data.phone || "",
+            gpayNumber: res.data.gpayNumber || "",
+            upiId: res.data.upiId || "",
             newPassword: "" // don't show old password
           });
         }

@@ -9,8 +9,9 @@ import { ArrowLeft, FileText, CheckCircle2, Clock, DollarSign, ExternalLink, Cal
 export const dynamic = "force-dynamic";
 
 export default async function BillingListPage() {
-  const session = await requireAuth({ allowedRoles: [Role.OWNER, Role.STAFF] });
+  const session = await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN, Role.STAFF] });
   if (!session) redirect("/");
+  const isStaff = session.role === Role.STAFF;
 
   const invoices = await prisma.invoice.findMany({
     include: {
@@ -54,7 +55,7 @@ export default async function BillingListPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-900/80 border border-slate-800 p-5 rounded-2xl shadow-xl gap-4">
           <div className="flex items-center gap-4">
             <Link
-              href="/admin/dashboard"
+              href={isStaff ? "/staff/dashboard" : "/admin/dashboard"}
               className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />

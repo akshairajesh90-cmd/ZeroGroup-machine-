@@ -26,7 +26,7 @@ export default function WorkersClientPage({ workers }: { workers: any[] }) {
       role: "WORKER" as any, baseDailyWage: formData.baseDailyWage ? Number(formData.baseDailyWage) : undefined, capableRoles: formData.capableRoles
     };
     if (mode === "CREATE") await createEmployee(data);
-    else await updateEmployee({ id: selectedId, ...data });
+    else await updateEmployee(selectedId, data);
     setIsModalOpen(false);
   };
 

@@ -81,7 +81,7 @@ export default async function BillingPage({
 
   // 3. Crew
   let totalWages = 0;
-  dispatch.crewAssignments.forEach(ca => {
+  dispatch.crewAssignments.forEach((ca: any) => {
     totalWages += Number(ca.lockedWageRate || 0);
   });
   if (totalWages > 0) {
@@ -94,9 +94,20 @@ export default async function BillingPage({
     });
   }
 
-  // 4. External Labor
+  // 4. External / Additional Helpers
+  if (dispatch.helperCount && dispatch.helperCount > 0) {
+    const defaultHelperRate = 1200; // Default rate, staff can edit this on the billing screen
+    defaultItems.push({
+      itemKey: "HELPER_CHARGE",
+      description: `Helpers Provided`,
+      quantity: dispatch.helperCount,
+      rate: defaultHelperRate,
+      total: dispatch.helperCount * defaultHelperRate,
+    });
+  }
+
   let externalWages = 0;
-  dispatch.dispatchLabor.forEach(el => {
+  dispatch.dispatchLabor.forEach((el: any) => {
     externalWages += Number(el.lumpSumWage || 0);
   });
   if (externalWages > 0) {

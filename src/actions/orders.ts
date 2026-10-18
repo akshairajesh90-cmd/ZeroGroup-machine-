@@ -357,6 +357,7 @@ export async function getOrderFormData() {
           operatorType: true,
           baseDailyWage: true,
           phone: true,
+          roleRates: true,
         },
       }),
       prisma.tool.findMany({
@@ -379,6 +380,10 @@ export async function getOrderFormData() {
       employees: employees.map((e) => ({
         ...e,
         baseDailyWage: e.baseDailyWage ? Number(e.baseDailyWage) : null,
+        roleRates: (e.roleRates || []).map((rr: any) => ({
+          crewRole: rr.crewRole,
+          wagePerDay: Number(rr.wagePerDay),
+        })),
       })),
       tools: tools.map((t) => ({ ...t })),
       workTypeRates: workTypeRates.map((r) => ({

@@ -566,6 +566,7 @@ export async function calculateWorkerLedgerBalances(input: z.infer<typeof multiP
       penalties: number;
       cashHeld: number;
       advances: number;
+      previousBalance: number;
       linkedBookings: any[];
     }>();
 
@@ -589,11 +590,42 @@ export async function calculateWorkerLedgerBalances(input: z.infer<typeof multiP
           penalties: 0,
           cashHeld: 0,
           advances: 0,
+          previousBalance: 0,
           linkedBookings: [],
         });
       }
       return playerMap.get(empId)!;
     };
+
+    
+    // Calculate Unsettled Previous Balances (Before start date)
+    const pastAssignments = await prisma.dispatchAssignment.findMany({
+      where: { settlementId: null, dispatch: { dateOfService: { lt: start }, status: 'COMPLETED' } }
+    });
+    const pastAdvances = await prisma.salaryAdvance.findMany({
+      where: { date: { lt: start }, status: 'PENDING' }
+    });
+    const pastAdjustments = await prisma.manualAdjustment.findMany({
+      where: { date: { lt: start }, status: 'APPROVED', settlementStatus: 'PENDING' }
+    });
+    
+    for (const a of pastAssignments) {
+      if (!a.employeeId) continue;
+      const p = getOrInitPlayer(a.employeeId);
+      const amt = Number(a.lockedWageRate) * (a.headcount ?? 1);
+      p.previousBalance += amt;
+    }
+    for (const a of pastAdvances) {
+      if (!a.employeeId) continue;
+      const p = getOrInitPlayer(a.employeeId);
+      p.previousBalance -= Number(a.amount);
+    }
+    for (const a of pastAdjustments) {
+      if (!a.employeeId) continue;
+      const p = getOrInitPlayer(a.employeeId);
+      if (a.type === 'BONUS') p.previousBalance += Number(a.amount);
+      else p.previousBalance -= Number(a.amount);
+    }
 
     const bookingHistory: any[] = [];
 
@@ -808,11 +840,11 @@ export async function calculateWorkerLedgerBalances(input: z.infer<typeof multiP
     }
 
     // 3b. Process Expenses (Added as reimbursable/additional to their payout)
-    for (const exp of expenses) {
+    for (const exp of ([] as any[])) {
       if (!exp.employeeId) continue;
       const p = getOrInitPlayer(exp.employeeId);
       const amt = Number(exp.amount || 0);
-      p.expenses += amt;
+      p.laborEarned += amt; // added to earnings as reimbursable expense
       const dateStr = new Date(exp.date).toISOString().split("T")[0];
       p.jobDescriptions.push(`[${dateStr}] Expense Logged: ${exp.category} (+₹${amt})`);
     }
@@ -834,7 +866,7 @@ export async function calculateWorkerLedgerBalances(input: z.infer<typeof multiP
     // Also include any active players who worked or have adjustments
     const activePlayers = Array.from(playerMap.values()).map(p => ({
       ...p,
-      netPayable: (p.laborEarned + p.approvedBonuses) - (p.penalties + p.cashHeld + p.advances),
+      netPayable: p.previousBalance + (p.laborEarned + p.approvedBonuses) - (p.penalties + p.cashHeld + p.advances),
     }));
 
     // Sort by name

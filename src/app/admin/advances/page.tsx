@@ -9,7 +9,8 @@ import NewAdvanceForm from "./NewAdvanceForm";
 export const dynamic = "force-dynamic";
 
 export default async function AdminAdvancesPage() {
-  await requireAuth({ allowedRoles: [Role.OWNER, Role.STAFF] });
+  const authContext = await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN, Role.STAFF] });
+  const isStaff = authContext.role === Role.STAFF;
 
   const [advances, employees] = await Promise.all([
     prisma.salaryAdvance.findMany({
@@ -30,8 +31,8 @@ export default async function AdminAdvancesPage() {
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <Link href="/admin/dashboard" className="text-zinc-500 hover:text-white flex items-center gap-2 text-sm font-bold mb-2 w-max">
-            <ArrowLeft className="h-4 w-4" /> Back to God Mode
+          <Link href={isStaff ? "/staff/dashboard" : "/admin/dashboard"} className="text-zinc-500 hover:text-white flex items-center gap-2 text-sm font-bold mb-2 w-max">
+            <ArrowLeft className="h-4 w-4" /> {isStaff ? "Back to Staff Dashboard" : "Back to God Mode"}
           </Link>
           <h1 className="text-3xl font-black text-white flex items-center gap-3">
             <Wallet className="h-8 w-8 text-indigo-500" /> Salary Advances

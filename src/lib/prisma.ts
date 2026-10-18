@@ -9,12 +9,8 @@ const connectionString = process.env.DATABASE_URL || "postgresql://postgres:Aksh
 const config = typeof connectionString === 'string' ? parse(connectionString) : {};
 
 const pool = new Pool({
-  user: config.user,
-  password: config.password ? String(config.password) : undefined,
-  host: config.host,
-  port: config.port ? Number(config.port) : undefined,
-  database: config.database
-});
+  connectionString: process.env.DATABASE_URL
+} as any);
 const adapter = new PrismaPg(pool);
 
 const globalForPrisma = globalThis as unknown as {

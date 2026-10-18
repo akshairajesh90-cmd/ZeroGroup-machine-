@@ -53,11 +53,13 @@ export async function requireAuth(options?: { allowedRoles?: Role[]; redirectOnF
   });
 
   if (!currentUser) {
-    fail(401, "User not found");
+    if (shouldRedirect) redirect("/api/auth/force-logout");
+    throw new AuthError(401, "User not found in database");
   }
 
-  if (!currentUser!.employee) {
-    fail(401, "No employee profile linked");
+  if (!currentUser.employee) {
+    if (shouldRedirect) redirect("/api/auth/force-logout");
+    throw new AuthError(401, "No employee profile linked to user");
   }
 
   if (options?.allowedRoles && options.allowedRoles.length > 0) {

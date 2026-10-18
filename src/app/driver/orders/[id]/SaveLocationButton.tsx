@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateDispatchMapLinkAction } from "../../actions";
+import { updateDispatchMapLinkAction, pingDriverLocationAction } from "../../actions";
 import { MapPin, Loader2, CheckCircle2 } from "lucide-react";
 
 export default function SaveLocationButton({ dispatchId }: { dispatchId: string }) {
@@ -25,6 +25,7 @@ export default function SaveLocationButton({ dispatchId }: { dispatchId: string 
         
         try {
           await updateDispatchMapLinkAction(dispatchId, gmapLink, latitude, longitude);
+          await pingDriverLocationAction({ dispatchId, latitude, longitude, accuracy: position.coords.accuracy });
           setSuccess(true);
           setTimeout(() => setSuccess(false), 3000);
         } catch (err) {

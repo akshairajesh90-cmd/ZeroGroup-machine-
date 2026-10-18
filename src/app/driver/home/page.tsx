@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import ShiftTracker from "./ShiftTracker";
 import { CollectPaymentButton } from "@/components/shared/CollectPaymentButton";
+import DriverSitePinger from "@/components/driver/DriverSitePinger";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function DriverHomePage() {
 
   const employee = await prisma.employee.findUnique({
     where: { id: empId },
-    select: { name: true, role: true },
+    select: { name: true, role: true, lastLatitude: true, lastLongitude: true, lastLocationUpdate: true },
   });
 
   const todayStart = startOfDay(new Date());
@@ -187,7 +188,24 @@ export default async function DriverHomePage() {
           </Link>
 
           {/* Quick Action: Collect Payment */}
+          {/* Quick Action: Collect Payment */}
           <CollectPaymentButton dispatchId={todayJob.id} />
+
+          {/* ── Site Destination & Live GPS Pinger ─────── */}
+          <div className="mt-4 pt-3 border-t border-amber-500/20">
+            <DriverSitePinger
+              dispatchId={todayJob.id}
+              siteAddress={todayJob.location}
+              siteLatitude={todayJob.latitude ? Number(todayJob.latitude) : null}
+              siteLongitude={todayJob.longitude ? Number(todayJob.longitude) : null}
+              customerName={todayJob.customer?.name}
+              customerPhone={todayJob.customer?.phone}
+              lastKnownLat={employee?.lastLatitude ? Number(employee.lastLatitude) : null}
+              lastKnownLng={employee?.lastLongitude ? Number(employee.lastLongitude) : null}
+              lastPingTime={employee?.lastLocationUpdate}
+              showAutoToggle={true}
+            />
+          </div>
         </div>
       ) : (
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 text-center">
@@ -195,10 +213,58 @@ export default async function DriverHomePage() {
             <Clock className="w-6 h-6 text-slate-500" />
           </div>
           <h2 className="text-base font-black text-white">On Standby Today</h2>
-          <p className="text-xs text-slate-500 mt-1">No dispatch assigned yet. Office will call when ready.</p>
+          <p className="text-xs text-slate-400 mt-1">No dispatch assigned yet. Ping your standby position to stay visible to dispatchers.</p>
+          <div className="mt-4 pt-3 border-t border-slate-800">
+            <DriverSitePinger
+              siteAddress="Central Depot / Standby"
+              siteLatitude={9.5916}
+              siteLongitude={76.5222}
+              lastKnownLat={employee?.lastLatitude ? Number(employee.lastLatitude) : null}
+              lastKnownLng={employee?.lastLongitude ? Number(employee.lastLongitude) : null}
+              lastPingTime={employee?.lastLocationUpdate}
+              showAutoToggle={true}
+            />
+          </div>
           <div className="mt-4 bg-slate-800/60 rounded-xl px-4 py-2 inline-flex items-center gap-2">
             <Phone className="w-3.5 h-3.5 text-cyan-400" />
             <span className="text-xs font-bold text-cyan-400">Contact Office Staff</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Additional Scheduled Dispatches Today ──────── */}
+      {todayDispatches.length > 1 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-0.5">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              More Jobs Today ({todayDispatches.length - 1})
+            </h3>
+            <span className="text-[10px] text-cyan-400 font-bold">Assigned to you</span>
+          </div>
+          <div className="space-y-2.5">
+            {todayDispatches.slice(1).map((d) => (
+              <div key={d.id} className="bg-slate-900/70 border border-slate-800 hover:border-cyan-500/30 rounded-2xl p-4 space-y-2 transition-all">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-black text-white">{d.machine?.machineId ?? "CREW WORK"}</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                    {d.status}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span className="font-bold text-white truncate">{d.location}</span>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs">
+                  <span className="text-slate-400 truncate">{d.customer?.name}</span>
+                  <Link
+                    href={`/driver/orders/${d.id}`}
+                    className="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 shrink-0"
+                  >
+                    View & Ping <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -225,6 +291,7 @@ export default async function DriverHomePage() {
             { href: "/driver/expenses",   icon: Fuel,          label: "Log Fuel",        sub: "Record refill",     color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
             { href: "/driver/portal",     icon: Wrench,        label: "Breakdown",       sub: "Report issue",      color: "text-red-400",    bg: "bg-red-500/10 border-red-500/20" },
             { href: "/driver/map",        icon: MapPin,        label: "Live Map",        sub: "Crew Tracking",     color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+            { href: "/driver/chat",       icon: Phone,         label: "Crew Chat",       sub: "Talk to Office",    color: "text-pink-400",    bg: "bg-pink-500/10 border-pink-500/20" },
           ].map((a) => (
             <Link key={a.label} href={a.href} className="bg-slate-900/70 border border-white/5 hover:border-white/15 rounded-2xl p-4 flex flex-col gap-3 transition-all active:scale-[0.97]">
               <div className={`w-9 h-9 rounded-xl border flex items-center justify-center ${a.bg}`}>

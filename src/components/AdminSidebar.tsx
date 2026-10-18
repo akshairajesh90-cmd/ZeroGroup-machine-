@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -15,167 +15,163 @@ import {
   SlidersHorizontal,
   FileSpreadsheet,
   LogOut,
-  MessageCircle,
-  Smartphone,
-  HardHat,
-  Building2,
-  Wrench,
-  PenTool,
-  FileText,
-  Briefcase,
-  Activity,
-  Trash2,
   MapPin,
+  Wrench,
+  BarChart2,
+  Trash2,
+  HardHat,
   ClipboardList,
-  FolderKanban,
-  BookOpen
+  CreditCard,
+  UserCog,
 } from "lucide-react";
 import { handleSignOut } from "@/actions/auth";
-import { useState } from "react";
-import MyProfileModal from "./MyProfileModal";
 
 interface AdminSidebarProps {
-  userRole: "OWNER" | "STAFF" | "ADMIN";
   userName: string;
   userEmail: string;
+  role: string;
 }
 
-export default function AdminSidebar({ userRole, userName, userEmail }: AdminSidebarProps) {
+export default function AdminSidebar({ userName, userEmail, role }: AdminSidebarProps) {
   const pathname = usePathname();
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navGroups = [
     {
-      group: "Executive Oversight",
-      links: [
-        { label: "Executive Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-        { label: "P&L Analytics", href: "/admin/analytics", icon: Activity },
-        { label: "Staff Activity Log", href: "/admin/staff-log", icon: FileText },
-        { label: "Pending Approvals", href: "/admin/trash", icon: Shield },
-        { label: "Company Chat", href: "/admin/chat", icon: MessageCircle },
+      title: "Morning Briefing",
+      items: [
+        { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+        { label: "Analytics and Projects", href: "/staff/projects", icon: BarChart2 },
+        { label: "Crew Directory", href: "/staff/directory", icon: Users },
       ]
     },
     {
-      group: "Command Center (God Mode)",
-      links: [
-        { label: "Operations Dashboard", href: "/staff/dashboard", icon: Briefcase },
-        { label: "Live Operations", href: "/admin/live", icon: MapPin },
-        { label: "Projects", href: "/staff/projects", icon: FolderKanban },
-      ]
-    },
-    {
-      group: "Operations",
-      links: [
-        { label: "Daily Dispatches", href: "/staff/dispatch", icon: CalendarDays },
+      title: "Dispatch & Ops",
+      items: [
         { label: "Dispatch Board", href: "/staff/orders", icon: ClipboardList },
-        { label: "Fleet and Machines", href: "/staff/fleet", icon: Truck },
-        { label: "Asset Maintenance", href: "/admin/maintenance", icon: PenTool },
-        { label: "Tools Inventory", href: "/staff/tools", icon: Wrench },
+        { label: "Daily Dispatches", href: "/staff/dispatch", icon: CalendarDays },
+        { label: "Live Operations", href: "/admin/live/map", icon: MapPin },
       ]
     },
     {
-      group: "Finance",
-      links: [
-        { label: "Billing", href: "/admin/billing", icon: Receipt },
-        { label: "Invoices", href: "/staff/invoices", icon: FileSpreadsheet },
-        { label: "Weekly Settlements", href: "/staff/settlements", icon: BookOpen },
+      title: "Fleet & Logistics",
+      items: [
+        { label: "Fleet and Machines", href: "/staff/fleet", icon: Truck },
+        { label: "Tools Inventory", href: "/staff/tools", icon: Wrench },
+        { label: "Asset Maintenance", href: "/staff/maintenance", icon: Wrench },
+      ]
+    },
+    {
+      title: "Closing & Finance",
+      items: [
+        { label: "Expenses and Store", href: "/staff/expenses", icon: Receipt },
+        { label: "Weekly Cash Flow", href: "/owner/ledger", icon: FileSpreadsheet },
         { label: "Cash Collections", href: "/staff/cash", icon: Wallet },
+        { label: "Billing", href: "/admin/billing", icon: Receipt },
+        { label: "Invoices", href: "/staff/invoices", icon: ClipboardList },
+        { label: "Weekly Settlements", href: "/staff/settlements", icon: FileSpreadsheet },
         { label: "Salary Advances", href: "/admin/advances", icon: PiggyBank },
         { label: "Manual Adjustments", href: "/admin/adjustments", icon: SlidersHorizontal },
-        { label: "Expenses and Store", href: "/staff/expenses", icon: Receipt },
       ]
     },
     {
-      group: "People and HR",
-      links: [
-        { label: "Office Employees", href: "/staff/employees", icon: Shield },
-        { label: "Field Workers", href: "/staff/workers", icon: Users },
-        { label: "Field Operators", href: "/staff/operators", icon: HardHat },
-        { label: "External Sub-Leaders", href: "/staff/sub-leaders", icon: Users },
-        { label: "Crew Directory", href: "/staff/directory", icon: MessageCircle },
-        { label: "Compliance Docs", href: "/staff/documents", icon: FileText },
+      title: "Portals & System",
+      items: [
+        { label: "Office Staff Portal", href: "/staff/dashboard", icon: UserCog },
+        { label: "Driver Mobile App", href: "/driver/home", icon: Truck },
+        { label: "Field Operator App", href: "/operator/home", icon: HardHat },
+        { label: "Trash & Recovery", href: "/owner/trash", icon: Trash2 },
       ]
     }
   ];
 
   return (
-    <aside className="hidden lg:flex w-64 flex-col border-r border-zinc-800 bg-zinc-950 font-sans shadow-xl">
-      {/* Brand Header */}
-      <Link href="/admin/dashboard" className="flex h-16 shrink-0 items-center gap-3 border-b border-zinc-800 px-6 bg-zinc-950/50 backdrop-blur-xl hover:bg-zinc-900 transition-colors">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-500 to-cyan-500 shadow-lg shadow-indigo-500/20">
-          <Shield className="h-5 w-5 text-white" />
-        </div>
-        <div>
-          <h2 className="font-bold tracking-tight text-white text-base">ZERO GROUP</h2>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
-            {userRole === "OWNER" ? "Command Center" : "Executive Portal"}
-          </p>
-        </div>
-      </Link>
+    <>
+      {/* Mobile Hamburger Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="lg:hidden fixed bottom-6 left-6 z-[99999] p-3 rounded-full bg-indigo-600 border border-indigo-500 text-white hover:bg-indigo-500 shadow-2xl flex items-center justify-center"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}></path></svg>
+      </button>
 
-      {/* Navigation */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
-        {navGroups.map((group) => (
-          <div key={group.group}>
-            <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-              {group.group}
-            </p>
-            <nav className="space-y-1">
-              {group.links.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname.startsWith(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-                      isActive
-                        ? "bg-indigo-500/10 text-indigo-400 font-bold"
-                        : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
-                    }`}
-                  >
-                    <Icon className={`h-4 w-4 ${isActive ? "text-indigo-400" : "text-zinc-500"}`} />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-        ))}
-      </div>
-
-      {/* User Footer */}
-      <div className="border-t border-zinc-800 p-4 bg-zinc-950/50">
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
         <div 
-          onClick={() => setIsProfileOpen(true)}
-          className="flex items-center gap-3 mb-4 px-2 cursor-pointer hover:bg-zinc-900 py-2 rounded-xl transition-colors"
-          title="Edit Profile"
-        >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-800 border border-zinc-700">
-            <span className="text-sm font-bold text-white">
-              {userName.charAt(0).toUpperCase()}
-            </span>
+          className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar Content */}
+      <aside className={`fixed lg:static inset-y-0 left-0 z-40 w-64 flex flex-col border-r border-slate-800/80 bg-slate-900/90 font-sans shadow-2xl transition-transform duration-300 ease-in-out backdrop-blur-xl ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
+        {/* Logo */}
+        <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-800/80 px-6 pt-4 lg:pt-0 pl-16 lg:pl-6">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 shadow-lg shadow-indigo-500/20">
+            <Shield className="h-5 w-5 text-white" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="truncate text-sm font-bold text-white">
-              {userName}
-            </p>
-            <p className="truncate text-xs font-medium text-zinc-500">
-              {userEmail}
+          <div>
+            <h2 className="font-bold tracking-tight text-white text-base">ZERO GROUP</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400">
+              {role === "OWNER" ? "Owner Portal" : "Admin Portal"}
             </p>
           </div>
         </div>
-        <form action={handleSignOut}>
-          <button
-            type="submit"
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500/10 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-500/20 transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>Secure Logout</span>
-          </button>
-        </form>
-      </div>
-      <MyProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
-    </aside>
+
+        {/* Nav Groups */}
+        <nav className="flex-1 overflow-y-auto py-4 space-y-5 px-3">
+          {navGroups.map((group) => (
+            <div key={group.title}>
+              <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                {group.title}
+              </p>
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const isDanger = group.title === "System";
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      prefetch={false}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all ${
+                        isActive 
+                          ? (isDanger ? "bg-rose-500/20 text-rose-400" : "bg-indigo-500/20 text-indigo-400")
+                          : (isDanger ? "text-rose-400 hover:bg-rose-500/10 hover:text-rose-300" : "text-slate-300 hover:bg-slate-800/80 hover:text-white")
+                      }`}
+                    >
+                      <Icon className={`h-4 w-4 ${isActive ? (isDanger ? "text-rose-500" : "text-indigo-400") : (isDanger ? "text-rose-500" : "text-slate-400")}`} />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        {/* User Profile & Sign Out */}
+        <div className="border-t border-slate-800/80 p-4 shrink-0">
+          <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3 border border-slate-800/50">
+            <div className="overflow-hidden">
+              <p className="truncate text-xs font-semibold text-white">{userName}</p>
+              <p className="truncate text-[10px] text-slate-400">{userEmail}</p>
+            </div>
+            <form action={handleSignOut}>
+              <button
+                type="submit"
+                className="rounded-lg p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 transition-colors"
+                title="Sign Out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </form>
+          </div>
+        </div>
+      </aside>
+    </>
   );
 }
+

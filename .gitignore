@@ -36,3 +36,15 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# temporary dev/scratch scripts
+fix_*.js
+fix_*.ts
+fix_*.py
+scratch_*.ts
+check_logins.js
+get_users.ts
+keep_alive_tunnel.js
+make-features.ps1
+patch.js
+refactor.py

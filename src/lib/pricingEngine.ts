@@ -144,3 +144,55 @@ export function calculateLiftCharge(liftFloors: number): number {
   const floors = Math.max(0, liftFloors || 0);
   return DEFAULT_PRICING.LIFT_BASE + (floors * DEFAULT_PRICING.LIFT_PER_FLOOR);
 }
+
+/**
+ * LIFT OPERATOR WAGE BY FLOOR:
+ * Base wage covers Ground / 1st Floor.
+ * Each additional floor above 1 adds ₹100/floor.
+ * e.g., Base ₹1,000 for 1 floor. 3 Floors = ₹1,000 + (2 × ₹100) = ₹1,200/day.
+ */
+export const LIFT_OPERATOR_PER_FLOOR_RATE = 100;
+
+export function calculateLiftOperatorWage(
+  baseWage: number,
+  liftFloors: number,
+  perFloorAddon = LIFT_OPERATOR_PER_FLOOR_RATE
+): number {
+  const floors = Math.max(1, Number(liftFloors) || 1);
+  const extraFloors = Math.max(0, floors - 1);
+  return Number(baseWage) + extraFloors * perFloorAddon;
+}
+
+/**
+ * COMPANY WORKER VS OUTSIDE WORKER WAGES:
+ * - Company Workers (INTERNAL): Paid role-specific rates (Mixer ₹1,100, Vibrator ₹900, Lift ₹1,000, Helper ₹750)
+ * - Outside Workers (SUBCONTRACTOR): Flat rate across roles (Flat ₹1,200/day default)
+ */
+export const COMPANY_WORKER_ROLE_WAGES: Record<string, number> = {
+  MIXER_OPERATOR: 1100,
+  HYDRAULIC_OPERATOR: 1100,
+  VIBRATOR_OPERATOR: 900,
+  LIFT_OPERATOR: 1000,
+  WORKER_LEADER: 1200,
+  SUB_LEADER: 1100,
+  DRIVER: 1000,
+  HELPER: 750,
+  PANI_HELPER: 700,
+  TROLLY_1_WHEEL: 800,
+  TROLLY_2_WHEEL: 850,
+  P_VIBRATOR: 900,
+};
+
+export const OUTSIDE_WORKER_FLAT_WAGE = 1200;
+
+export function getDefaultWorkerWage(
+  operatorType: "INTERNAL" | "SUBCONTRACTOR" | string | null | undefined,
+  role: string
+): number {
+  if (operatorType === "SUBCONTRACTOR") {
+    return OUTSIDE_WORKER_FLAT_WAGE;
+  }
+  return COMPANY_WORKER_ROLE_WAGES[role] ?? DEFAULT_PRICING.INTERNAL_WORKER_WAGE;
+}
+
+

@@ -89,15 +89,15 @@ export default function LoginPage() {
           <form action={dispatch} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                Work Email Address
+                Email or Phone Number
               </label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <input
                   name="email"
-                  type="email"
+                  type="text"
                   required
-                  placeholder={activeTab === "ADMIN" ? "admin@zerogroup.in" : "driver@zerogroup.in"}
+                  placeholder={activeTab === "ADMIN" ? "admin@zerogroup.com or 9876543210" : "driver@zerogroup.com or 9999999999"}
                   className="w-full rounded-xl border border-slate-800 bg-slate-950/90 pl-10 pr-4 py-3 text-sm text-white placeholder-slate-600 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>

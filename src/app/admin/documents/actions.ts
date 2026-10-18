@@ -44,10 +44,11 @@ export async function addVehicleDocument(data: {
 
     await tx.auditLog.create({
       data: {
-        entity: "VEHICLE_DOCUMENT",
-        entityId: newDoc.id,
-        action: "CREATE_AND_ARCHIVE_OLD",
-        delta: data as any,
+        entity: newDoc.id,
+        actionType: "CREATE_AND_ARCHIVE_OLD",
+        newPayload: data as any,
+        actorRole: "ADMIN",
+        modelName: "INVOICE",
         actorId: employeeId
       }
     });
@@ -70,10 +71,11 @@ export async function archiveVehicleDocument(documentId: string) {
 
     await tx.auditLog.create({
       data: {
-        entity: "VEHICLE_DOCUMENT",
-        entityId: doc.id,
-        action: "ARCHIVE",
-        delta: { status: "ARCHIVED" } as any,
+        entity: doc.id,
+        actionType: "ARCHIVE",
+        newPayload: { status: "ARCHIVED" } as any,
+        actorRole: "ADMIN",
+        modelName: "INVOICE",
         actorId: employeeId
       }
     });
@@ -105,10 +107,11 @@ export async function updateVehicleDocument(documentId: string, data: {
 
     await tx.auditLog.create({
       data: {
-        entity: "VEHICLE_DOCUMENT",
-        entityId: doc.id,
-        action: "UPDATE_METADATA",
-        delta: data as any,
+        entity: doc.id,
+        actionType: "UPDATE_METADATA",
+        newPayload: data as any,
+        actorRole: "ADMIN",
+        modelName: "INVOICE",
         actorId: employeeId
       }
     });
@@ -162,10 +165,11 @@ export async function addEmployeeDocument(data: {
 
     await tx.auditLog.create({
       data: {
-        entity: "EMPLOYEE_DOCUMENT",
-        entityId: newDoc.id,
-        action: "CREATE_AND_ARCHIVE_OLD",
-        delta: data as any,
+        entity: newDoc.id,
+        actionType: "CREATE_AND_ARCHIVE_OLD",
+        newPayload: data as any,
+        actorRole: "ADMIN",
+        modelName: "INVOICE",
         actorId
       }
     });
@@ -188,10 +192,11 @@ export async function archiveEmployeeDocument(documentId: string) {
 
     await tx.auditLog.create({
       data: {
-        entity: "EMPLOYEE_DOCUMENT",
-        entityId: doc.id,
-        action: "ARCHIVE",
-        delta: { status: "ARCHIVED" } as any,
+        entity: doc.id,
+        actionType: "ARCHIVE",
+        newPayload: { status: "ARCHIVED" } as any,
+        actorRole: "ADMIN",
+        modelName: "INVOICE",
         actorId: employeeId
       }
     });
@@ -223,10 +228,11 @@ export async function updateEmployeeDocument(documentId: string, data: {
 
     await tx.auditLog.create({
       data: {
-        entity: "EMPLOYEE_DOCUMENT",
-        entityId: doc.id,
-        action: "UPDATE_METADATA",
-        delta: data as any,
+        entity: doc.id,
+        actionType: "UPDATE_METADATA",
+        newPayload: data as any,
+        actorRole: "ADMIN",
+        modelName: "INVOICE",
         actorId: employeeId
       }
     });

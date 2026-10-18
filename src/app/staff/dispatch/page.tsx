@@ -34,7 +34,7 @@ export default async function DispatchPage() {
         },
         crewAssignments: {
           include: {
-            employee: { select: { id: true, name: true, role: true, profilePhotoUrl: true, phone: true } },
+            employee: { select: { id: true, name: true, role: true, profilePhotoUrl: true, phone: true, operatorType: true } },
             contractor: { select: { id: true, name: true, companyName: true } },
           },
         },

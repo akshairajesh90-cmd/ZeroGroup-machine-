@@ -58,13 +58,13 @@ export default function SettlementClient({
   // Top-level Navigation Tabs (Defaulting to Weekend Settlement Hub for exact Physical Notebook reconciliation)
   const [viewMode, setViewMode] = useState<'MULTI_DAY' | 'MULTI_WEEK' | 'SINGLE_CALC'>('MULTI_WEEK');
 
-  // Day-Based State (Daily Ledger)
-  const [dayDate, setDayDate] = useState('2026-07-08');
+  // Day-Based State (Daily Ledger - Defaulted to Today: Oct 12, 2026)
+  const [dayDate, setDayDate] = useState('2026-10-12');
   const [dayRoleFilter, setDayRoleFilter] = useState<'ALL' | 'OPERATOR' | 'WORKER' | 'DRIVER'>('ALL');
 
-  // Week-Based State (Weekend Settlement Hub - Exact Physical Notebook Week: July 5 to July 11, 2026)
-  const [weekStartDate, setWeekStartDate] = useState('2026-07-05');
-  const [weekEndDate, setWeekEndDate] = useState('2026-07-11');
+  // Week-Based State (Weekend Settlement Hub - Last Saturday: Oct 4 to Oct 10, 2026)
+  const [weekStartDate, setWeekStartDate] = useState('2026-10-04');
+  const [weekEndDate, setWeekEndDate] = useState('2026-10-10');
   const [weekRoleFilter, setWeekRoleFilter] = useState<'ALL' | 'OPERATOR' | 'WORKER' | 'DRIVER'>('ALL');
 
   // Multi-Player Breakdown Result (Shared for Day or Week)
@@ -474,13 +474,13 @@ export default function SettlementClient({
                   <button
                     onClick={() => {
                       checkUnsavedEdits(() => {
-                        setDayDate('2026-07-08');
-                        handleFetchMultiBreakdown('2026-07-08', '2026-07-08');
+                        setDayDate('2026-10-12');
+                        handleFetchMultiBreakdown('2026-10-12', '2026-10-12');
                       });
                     }}
                     className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/40 px-2.5 py-1.5 rounded-xl text-[11px] font-black shadow"
                   >
-                    📅 Notebook Day (08 Jul)
+                    📅 Today (12 Oct)
                   </button>
                 </div>
               ) : (
@@ -508,14 +508,14 @@ export default function SettlementClient({
                   <button
                     onClick={() => {
                       checkUnsavedEdits(() => {
-                        setWeekStartDate('2026-07-05');
-                        setWeekEndDate('2026-07-11');
-                        handleFetchMultiBreakdown('2026-07-05', '2026-07-11');
+                        setWeekStartDate('2026-10-04');
+                        setWeekEndDate('2026-10-10');
+                        handleFetchMultiBreakdown('2026-10-04', '2026-10-10');
                       });
                     }}
                     className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2.5 py-1.5 rounded-xl text-[11px] font-black shadow"
                   >
-                    📅 Notebook Week (05 Jul - 11 Jul)
+                    📅 Last Week Ending Sat (04 Oct - 10 Oct)
                   </button>
                 </div>
               )}

@@ -8,6 +8,7 @@ import {
   AlertTriangle, ShieldAlert, CheckCircle2, Upload
 } from "lucide-react";
 import { createMaintenanceTicket, closeMaintenanceTicket, logStaffFuel, uploadVehicleDocument } from "@/actions/fleet";
+import { EditVehicleModal } from "./EditVehicleModal";
 
 export default function VehicleDetailClient({ vehicle }: any) {
   const [activeTab, setActiveTab] = useState<"DOCS" | "MAINTENANCE" | "FUEL">("DOCS");
@@ -97,6 +98,7 @@ export default function VehicleDetailClient({ vehicle }: any) {
             </h1>
           </div>
           <div className="flex gap-2">
+            <EditVehicleModal vehicle={vehicle} />
             <button onClick={() => setShowRepairModal(true)} className="px-4 py-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors">
               <Wrench className="w-4 h-4" /> Report Breakdown
             </button>

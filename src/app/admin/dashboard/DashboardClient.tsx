@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { TrendingUp, Truck, Wrench, ShieldAlert, Search, Filter, Clock, User, FileText } from "lucide-react";
+import { TrendingUp, Truck, Wrench, ShieldAlert, Search, Filter, Clock, User, FileText, Users } from "lucide-react";
 import { getAuditLogs } from "@/actions/audit";
 
 // Strict TypeScript interfaces defining the serialized props
@@ -59,8 +59,10 @@ export default function DashboardClient({ metrics }: { metrics: DashboardMetrics
     async function fetchLogs() {
       setIsLogsLoading(true);
       const result = await getAuditLogs({ timeframe, searchTerm: debouncedSearch });
-      if (result.success) {
-        setLogs(result.data);
+      if (result?.success) {
+        setLogs(result.data as any[]);
+      } else {
+        console.error("Audit log fetch failed or returned undefined:", result);
       }
       setIsLogsLoading(false);
     }

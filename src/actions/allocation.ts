@@ -3,6 +3,11 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/serverAuth";
 import { logAudit } from "@/lib/auditLogger";
+import {
+  calculateLiftOperatorWage,
+  COMPANY_WORKER_ROLE_WAGES,
+  OUTSIDE_WORKER_FLAT_WAGE,
+} from "@/lib/pricingEngine";
 
 export async function getAssetPnL(startDate: string, endDate: string) {
   await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
@@ -225,6 +230,12 @@ export async function getAvailableCrew(dispatchId: string) {
 export async function assignCrewToDispatch(dispatchId: string, employeeIds: string[]): Promise<{ success: boolean; error?: string }> {
   try {
     const ctx = await requireAuth({ allowedRoles: ["ADMIN", "OWNER", "STAFF", "OPERATOR"] });
+    const dispatch = await prisma.dailyDispatch.findUnique({
+      where: { id: dispatchId },
+      select: { liftFloors: true },
+    });
+    const floors = dispatch?.liftFloors || 1;
+
     for (const employeeId of employeeIds) {
       const existing = await prisma.dispatchAssignment.findUnique({
         where: { dispatchId_employeeId: { dispatchId, employeeId } }
@@ -234,9 +245,20 @@ export async function assignCrewToDispatch(dispatchId: string, employeeIds: stri
           where: { id: employeeId },
           include: { roleRates: true }
         });
-        const assignedRole = "HELPER";
-        const customRate = employee?.roleRates.find(r => r.crewRole === assignedRole)?.wagePerDay;
-        const finalWage = Number(customRate || employee?.baseDailyWage || 0);
+        const assignedRole = (employee?.defaultCrewRole as any) || "HELPER";
+        const explicitRate = employee?.roleRates.find(r => r.crewRole === assignedRole)?.wagePerDay;
+        const isSubcontractor = employee?.operatorType === "SUBCONTRACTOR";
+        let baseWage: number;
+        if (explicitRate != null) {
+          baseWage = Number(explicitRate);
+        } else if (isSubcontractor) {
+          baseWage = Number(employee?.baseDailyWage ?? OUTSIDE_WORKER_FLAT_WAGE);
+        } else {
+          baseWage = Number(COMPANY_WORKER_ROLE_WAGES[assignedRole] ?? employee?.baseDailyWage ?? 1100);
+        }
+        const finalWage = assignedRole === "LIFT_OPERATOR"
+          ? calculateLiftOperatorWage(baseWage, floors)
+          : baseWage;
 
         await prisma.dispatchAssignment.create({
           data: {

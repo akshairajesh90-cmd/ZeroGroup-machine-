@@ -17,10 +17,16 @@ import ToolReturnModal from "@/components/ToolReturnModal";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { Calendar as BigCalendar, dateFnsLocalizer } from "react-big-calendar";
+import "react-big-calendar/lib/css/react-big-calendar.css";
 import { startOfMonth, endOfMonth, endOfWeek, startOfDay, endOfDay, parseISO, addWeeks, subWeeks, addDays, subDays } from "date-fns";
 import { useEffect } from "react";
-import "react-big-calendar/lib/css/react-big-calendar.css";
 import { fetchDispatchesByRange, updateDailyDispatch } from "@/actions/dispatch";
+import {
+  calculateLiftOperatorWage,
+  COMPANY_WORKER_ROLE_WAGES,
+  OUTSIDE_WORKER_FLAT_WAGE,
+  getDefaultWorkerWage,
+} from "@/lib/pricingEngine";
 
 import { 
   Truck, 
@@ -1005,275 +1011,7 @@ export default function DispatchBoardClient({
                           </div>
                         </div>
 
-                        {(() => {
-                          const CREW_ROLES = [
-                            "MIXER_OPERATOR","HYDRAULIC_OPERATOR","VIBRATOR_OPERATOR",
-                            "LIFT_OPERATOR","WORKER_LEADER","SUB_LEADER","DRIVER",
-                            "HELPER","PANI_HELPER","TROLLY_1_WHEEL","TROLLY_2_WHEEL","P_VIBRATOR"
-                          ];
-                          const roleColors: Record<string, { bg: string; text: string; border: string; avatar: string }> = {
-                            MIXER_OPERATOR:     { bg:"bg-orange-950/60",  text:"text-orange-300",  border:"border-orange-500/40",  avatar:"bg-orange-500/30 text-orange-300" },
-                            HYDRAULIC_OPERATOR: { bg:"bg-amber-950/60",   text:"text-amber-300",   border:"border-amber-500/40",   avatar:"bg-amber-500/30 text-amber-300" },
-                            VIBRATOR_OPERATOR:  { bg:"bg-yellow-950/60",  text:"text-yellow-300",  border:"border-yellow-500/40",  avatar:"bg-yellow-500/30 text-yellow-300" },
-                            LIFT_OPERATOR:      { bg:"bg-blue-950/60",    text:"text-blue-300",    border:"border-blue-500/40",    avatar:"bg-blue-500/30 text-blue-300" },
-                            WORKER_LEADER:      { bg:"bg-emerald-950/60", text:"text-emerald-300", border:"border-emerald-500/40", avatar:"bg-emerald-500/30 text-emerald-300" },
-                            SUB_LEADER:         { bg:"bg-teal-950/60",    text:"text-teal-300",    border:"border-teal-500/40",    avatar:"bg-teal-500/30 text-teal-300" },
-                            DRIVER:             { bg:"bg-cyan-950/60",    text:"text-cyan-300",    border:"border-cyan-500/40",    avatar:"bg-cyan-500/30 text-cyan-300" },
-                            HELPER:             { bg:"bg-slate-800/60",   text:"text-slate-300",   border:"border-slate-600/40",   avatar:"bg-slate-600/50 text-slate-300" },
-                            PANI_HELPER:        { bg:"bg-sky-950/60",     text:"text-sky-300",     border:"border-sky-500/40",     avatar:"bg-sky-500/30 text-sky-300" },
-                            TROLLY_1_WHEEL:     { bg:"bg-violet-950/60",  text:"text-violet-300",  border:"border-violet-500/40",  avatar:"bg-violet-500/30 text-violet-300" },
-                            TROLLY_2_WHEEL:     { bg:"bg-purple-950/60",  text:"text-purple-300",  border:"border-purple-500/40",  avatar:"bg-purple-500/30 text-purple-300" },
-                            P_VIBRATOR:         { bg:"bg-rose-950/60",    text:"text-rose-300",    border:"border-rose-500/40",    avatar:"bg-rose-500/30 text-rose-300" },
-                          };
-
-                          const [editingCrewId, setEditingCrewId] = React.useState<string|null>(null);
-                          const [editRole, setEditRole] = React.useState("");
-                          const [editRate, setEditRate] = React.useState("");
-                          const [addingCrew, setAddingCrew] = React.useState(false);
-                          const [newEmpId, setNewEmpId] = React.useState("");
-                          const [newRole, setNewRole] = React.useState("HELPER");
-                          const [newRate, setNewRate] = React.useState("");
-                          const [crewSaving, setCrewSaving] = React.useState(false);
-                          const [localCrew, setLocalCrew] = React.useState<any[]>(d.crewAssignments || []);
-
-                          const saveEdit = async (ca: any) => {
-                            setCrewSaving(true);
-                            try {
-                              await fetch(`/api/staff/dispatch/${d.id}/crew`, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  assignments: [{
-                                    employeeId: ca.employee?.id || undefined,
-                                    contractorId: ca.contractor?.id || undefined,
-                                    assignedRole: editRole,
-                                    lockedWageRate: Number(editRate),
-                                    headcount: ca.headcount || 1,
-                                  }]
-                                })
-                              });
-                              setLocalCrew(prev => prev.map(x => x.id === ca.id
-                                ? { ...x, assignedRole: editRole, lockedWageRate: Number(editRate) }
-                                : x
-                              ));
-                              setEditingCrewId(null);
-                            } finally { setCrewSaving(false); }
-                          };
-
-                          const removeCrew = async (ca: any) => {
-                            if (!confirm(`Remove ${ca.employee?.name || "this member"} from this dispatch?`)) return;
-                            setCrewSaving(true);
-                            try {
-                              await fetch(`/api/staff/dispatch/${d.id}/crew`, {
-                                method: "DELETE",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ assignmentId: ca.id })
-                              });
-                              setLocalCrew(prev => prev.filter(x => x.id !== ca.id));
-                            } finally { setCrewSaving(false); }
-                          };
-
-                          const addCrew = async () => {
-                            if (!newEmpId || !newRole || !newRate) return;
-                            setCrewSaving(true);
-                            try {
-                              const res = await fetch(`/api/staff/dispatch/${d.id}/crew`, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  assignments: [{
-                                    employeeId: newEmpId,
-                                    assignedRole: newRole,
-                                    lockedWageRate: Number(newRate),
-                                    headcount: 1,
-                                  }]
-                                })
-                              });
-                              const data = await res.json();
-                              if (data.success) {
-                                const emp = employees.find((e: any) => e.id === newEmpId);
-                                setLocalCrew(prev => [...prev, {
-                                  id: data.upserted?.[0]?.id || Date.now().toString(),
-                                  assignedRole: newRole,
-                                  lockedWageRate: Number(newRate),
-                                  headcount: 1,
-                                  employee: emp ? { id: emp.id, name: emp.name, role: emp.role, profilePhotoUrl: emp.profilePhotoUrl } : null,
-                                }]);
-                                setAddingCrew(false);
-                                setNewEmpId(""); setNewRole("HELPER"); setNewRate("");
-                              }
-                            } finally { setCrewSaving(false); }
-                          };
-
-                          return (
-                            <div className="mt-2 space-y-2">
-                              {localCrew.length > 0 && (
-                                <>
-                                  <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider block">
-                                    Crew Assigned · {localCrew.length}
-                                  </span>
-                                  <div className="flex flex-wrap gap-2">
-                                    {localCrew.map((ca: any) => {
-                                      const c = roleColors[ca.assignedRole] || roleColors.HELPER;
-                                      const name = ca.employee?.name || ca.contractor?.name || "Unknown";
-                                      const initials = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
-                                      const photo = ca.employee?.profilePhotoUrl;
-                                      const isEditing = editingCrewId === ca.id;
-                                      return (
-                                        <div key={ca.id} className={`relative flex flex-col items-center gap-1 p-2 rounded-xl border ${c.bg} ${c.border} min-w-[72px] max-w-[82px] group`}>
-                                          {/* Avatar */}
-                                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm overflow-hidden ${c.avatar}`}>
-                                            {photo
-                                              ? <img src={photo} alt={name} className="w-full h-full object-cover rounded-full" />
-                                              : <span>{initials}</span>}
-                                          </div>
-                                          {/* Name */}
-                                          <span className="text-white font-bold text-[10px] text-center leading-tight line-clamp-2 w-full">{name}</span>
-
-                                          {isEditing ? (
-                                            /* ── EDIT MODE ── */
-                                            <div className="w-full space-y-1 mt-0.5">
-                                              <select
-                                                value={editRole}
-                                                onChange={e => setEditRole(e.target.value)}
-                                                className="w-full bg-slate-900 border border-slate-700 text-slate-200 text-[9px] rounded-md px-1 py-0.5 outline-none"
-                                              >
-                                                {CREW_ROLES.map(r => (
-                                                  <option key={r} value={r}>{r.replace(/_/g," ")}</option>
-                                                ))}
-                                              </select>
-                                              <input
-                                                type="number"
-                                                value={editRate}
-                                                onChange={e => setEditRate(e.target.value)}
-                                                placeholder="Rate ₹"
-                                                className="w-full bg-slate-900 border border-slate-700 text-emerald-400 font-mono font-bold text-[9px] rounded-md px-1 py-0.5 outline-none"
-                                              />
-                                              <div className="flex gap-1">
-                                                <button
-                                                  onClick={() => saveEdit(ca)}
-                                                  disabled={crewSaving}
-                                                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md py-0.5 flex items-center justify-center"
-                                                >
-                                                  <Check className="w-3 h-3" />
-                                                </button>
-                                                <button
-                                                  onClick={() => setEditingCrewId(null)}
-                                                  className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-md py-0.5 flex items-center justify-center"
-                                                >
-                                                  <X className="w-3 h-3" />
-                                                </button>
-                                              </div>
-                                            </div>
-                                          ) : (
-                                            /* ── VIEW MODE ── */
-                                            <>
-                                              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full border ${c.text} ${c.border} text-center leading-tight`}>
-                                                {ca.assignedRole.replace(/_/g," ")}
-                                              </span>
-                                              {ca.lockedWageRate > 0 && (
-                                                <span className="text-emerald-400 font-mono font-black text-[9px]">
-                                                  ₹{Number(ca.lockedWageRate).toLocaleString("en-IN")}
-                                                </span>
-                                              )}
-                                              {/* Edit / Remove — visible on hover */}
-                                              <div className="absolute top-1 right-1 hidden group-hover:flex gap-0.5">
-                                                <button
-                                                  onClick={() => { setEditingCrewId(ca.id); setEditRole(ca.assignedRole); setEditRate(String(ca.lockedWageRate || "")); }}
-                                                  className="w-4 h-4 bg-slate-700/90 rounded flex items-center justify-center text-slate-300 hover:text-white"
-                                                  title="Edit rate / role"
-                                                >
-                                                  <Pencil className="w-2.5 h-2.5" />
-                                                </button>
-                                                <button
-                                                  onClick={() => removeCrew(ca)}
-                                                  className="w-4 h-4 bg-rose-900/80 rounded flex items-center justify-center text-rose-400 hover:text-rose-200"
-                                                  title="Remove from dispatch"
-                                                >
-                                                  <UserMinus className="w-2.5 h-2.5" />
-                                                </button>
-                                              </div>
-                                            </>
-                                          )}
-                                          {ca.headcount > 1 && (
-                                            <span className="absolute -top-1.5 -left-1.5 bg-slate-700 border border-slate-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
-                                              {ca.headcount}
-                                            </span>
-                                          )}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </>
-                              )}
-
-                              {/* Add Crew Row */}
-                              {addingCrew ? (
-                                <div className="bg-slate-900 border border-slate-700 rounded-xl p-3 space-y-2">
-                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Add Crew Member</p>
-                                  <select
-                                    value={newEmpId}
-                                    onChange={e => {
-                                      setNewEmpId(e.target.value);
-                                      const emp = employees.find((x: any) => x.id === e.target.value);
-                                      if (emp?.defaultCrewRole) setNewRole(emp.defaultCrewRole);
-                                    }}
-                                    className="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg px-2 py-1.5 outline-none"
-                                  >
-                                    <option value="">— Select Employee —</option>
-                                    {employees
-                                      .filter((e: any) => !localCrew.some((ca: any) => ca.employee?.id === e.id))
-                                      .map((e: any) => (
-                                        <option key={e.id} value={e.id}>{e.name} ({e.role})</option>
-                                      ))}
-                                  </select>
-                                  <select
-                                    value={newRole}
-                                    onChange={e => setNewRole(e.target.value)}
-                                    className="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg px-2 py-1.5 outline-none"
-                                  >
-                                    {CREW_ROLES.map(r => (
-                                      <option key={r} value={r}>{r.replace(/_/g," ")}</option>
-                                    ))}
-                                  </select>
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-slate-400 text-xs font-bold">₹</span>
-                                    <input
-                                      type="number"
-                                      value={newRate}
-                                      onChange={e => setNewRate(e.target.value)}
-                                      placeholder="Daily rate"
-                                      className="flex-1 bg-slate-950 border border-slate-700 text-emerald-400 font-mono font-bold text-xs rounded-lg px-2 py-1.5 outline-none"
-                                    />
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={addCrew}
-                                      disabled={crewSaving || !newEmpId || !newRate}
-                                      className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs rounded-lg py-1.5 flex items-center justify-center gap-1"
-                                    >
-                                      {crewSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                                      Add
-                                    </button>
-                                    <button
-                                      onClick={() => { setAddingCrew(false); setNewEmpId(""); setNewRole("HELPER"); setNewRate(""); }}
-                                      className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold text-xs rounded-lg py-1.5"
-                                    >
-                                      Cancel
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => setAddingCrew(true)}
-                                  className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 hover:text-indigo-400 transition-colors mt-1"
-                                >
-                                  <UserPlus className="w-3 h-3" /> Add Crew Member
-                                </button>
-                              )}
-                            </div>
-                          );
-                        })()}
+                        <CrewAssignmentManager d={d} employees={employees} />
                       </div>
                         ))}
                       </td>
@@ -1286,7 +1024,7 @@ export default function DispatchBoardClient({
                           {hasLift && (
                             <span className="bg-blue-950/80 text-blue-300 border border-blue-500/40 px-2.5 py-1 rounded-lg font-bold text-xs flex items-center gap-1">
                               <Truck className="w-3.5 h-3.5 text-blue-400" />
-                              Lift ({d.liftFloors ?? 1} Floored used)
+                              Lift ({d.liftFloors ?? 1} Floor{(d.liftFloors ?? 1) > 1 ? "s" : ""})
                             </span>
                           )}
                           {hasMixer && (
@@ -1987,3 +1725,343 @@ export default function DispatchBoardClient({
 
 
 
+
+
+function CrewAssignmentManager({ d, employees }: { d: any, employees: any[] }) {
+  const CREW_ROLES = [
+    "MIXER_OPERATOR","HYDRAULIC_OPERATOR","VIBRATOR_OPERATOR",
+    "LIFT_OPERATOR","WORKER_LEADER","SUB_LEADER","DRIVER",
+    "HELPER","PANI_HELPER","TROLLY_1_WHEEL","TROLLY_2_WHEEL","P_VIBRATOR"
+  ];
+  const roleColors: Record<string, { bg: string; text: string; border: string; avatar: string }> = {
+    MIXER_OPERATOR:     { bg:"bg-orange-950/60",  text:"text-orange-300",  border:"border-orange-500/40",  avatar:"bg-orange-500/30 text-orange-300" },
+    HYDRAULIC_OPERATOR: { bg:"bg-amber-950/60",   text:"text-amber-300",   border:"border-amber-500/40",   avatar:"bg-amber-500/30 text-amber-300" },
+    VIBRATOR_OPERATOR:  { bg:"bg-yellow-950/60",  text:"text-yellow-300",  border:"border-yellow-500/40",  avatar:"bg-yellow-500/30 text-yellow-300" },
+    LIFT_OPERATOR:      { bg:"bg-blue-950/60",    text:"text-blue-300",    border:"border-blue-500/40",    avatar:"bg-blue-500/30 text-blue-300" },
+    WORKER_LEADER:      { bg:"bg-emerald-950/60", text:"text-emerald-300", border:"border-emerald-500/40", avatar:"bg-emerald-500/30 text-emerald-300" },
+    SUB_LEADER:         { bg:"bg-teal-950/60",    text:"text-teal-300",    border:"border-teal-500/40",    avatar:"bg-teal-500/30 text-teal-300" },
+    DRIVER:             { bg:"bg-cyan-950/60",    text:"text-cyan-300",    border:"border-cyan-500/40",    avatar:"bg-cyan-500/30 text-cyan-300" },
+    HELPER:             { bg:"bg-slate-800/60",   text:"text-slate-300",   border:"border-slate-600/40",   avatar:"bg-slate-600/50 text-slate-300" },
+    PANI_HELPER:        { bg:"bg-sky-950/60",     text:"text-sky-300",     border:"border-sky-500/40",     avatar:"bg-sky-500/30 text-sky-300" },
+    TROLLY_1_WHEEL:     { bg:"bg-violet-950/60",  text:"text-violet-300",  border:"border-violet-500/40",  avatar:"bg-violet-500/30 text-violet-300" },
+    TROLLY_2_WHEEL:     { bg:"bg-purple-950/60",  text:"text-purple-300",  border:"border-purple-500/40",  avatar:"bg-purple-500/30 text-purple-300" },
+    P_VIBRATOR:         { bg:"bg-rose-950/60",    text:"text-rose-300",    border:"border-rose-500/40",    avatar:"bg-rose-500/30 text-rose-300" },
+  };
+
+  const [editingCrewId, setEditingCrewId] = React.useState<string|null>(null);
+  const [editRole, setEditRole] = React.useState("");
+  const [editRate, setEditRate] = React.useState("");
+  const [addingCrew, setAddingCrew] = React.useState(false);
+  const [newEmpId, setNewEmpId] = React.useState("");
+  const [newRole, setNewRole] = React.useState("HELPER");
+  const [newRate, setNewRate] = React.useState("");
+  const [crewSaving, setCrewSaving] = React.useState(false);
+  const [localCrew, setLocalCrew] = React.useState<any[]>(d.crewAssignments || []);
+
+  const getWageForRole = (emp: any, role: string) => {
+    if (!emp) return 0;
+    const isSubcontractor = emp.operatorType === "SUBCONTRACTOR";
+    const explicitRate = emp.roleRates?.find((rr: any) => rr.crewRole === role)?.wagePerDay;
+
+    let baseWage: number;
+    if (explicitRate != null) {
+      baseWage = Number(explicitRate);
+    } else if (isSubcontractor) {
+      baseWage = Number(emp.baseDailyWage ?? OUTSIDE_WORKER_FLAT_WAGE);
+    } else {
+      baseWage = Number(COMPANY_WORKER_ROLE_WAGES[role] ?? emp.baseDailyWage ?? 1100);
+    }
+
+    if (role === "LIFT_OPERATOR") {
+      const floors = Math.max(1, Number(d.liftFloors) || 1);
+      return calculateLiftOperatorWage(baseWage, floors);
+    }
+    return baseWage;
+  };
+
+  const saveEdit = async (ca: any) => {
+    setCrewSaving(true);
+    try {
+      await fetch(`/api/staff/dispatch/${d.id}/crew`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignments: [{
+            employeeId: ca.employee?.id || undefined,
+            contractorId: ca.contractor?.id || undefined,
+            assignedRole: editRole,
+            lockedWageRate: Number(editRate),
+            headcount: ca.headcount || 1,
+          }]
+        })
+      });
+      setLocalCrew(prev => prev.map(x => x.id === ca.id
+        ? { ...x, assignedRole: editRole, lockedWageRate: Number(editRate) }
+        : x
+      ));
+      setEditingCrewId(null);
+    } finally { setCrewSaving(false); }
+  };
+
+  const removeCrew = async (ca: any) => {
+    if (!confirm(`Remove ${ca.employee?.name || "this member"} from this dispatch?`)) return;
+    setCrewSaving(true);
+    try {
+      await fetch(`/api/staff/dispatch/${d.id}/crew`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignmentId: ca.id })
+      });
+      setLocalCrew(prev => prev.filter(x => x.id !== ca.id));
+    } finally { setCrewSaving(false); }
+  };
+
+  const addCrew = async () => {
+    if (!newEmpId || !newRole || !newRate) return;
+    setCrewSaving(true);
+    try {
+      const res = await fetch(`/api/staff/dispatch/${d.id}/crew`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignments: [{
+            employeeId: newEmpId,
+            assignedRole: newRole,
+            lockedWageRate: Number(newRate),
+            headcount: 1,
+          }]
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const emp = employees.find((e: any) => e.id === newEmpId);
+        setLocalCrew(prev => [...prev, {
+          id: data.upserted?.[0]?.id || Date.now().toString(),
+          assignedRole: newRole,
+          lockedWageRate: Number(newRate),
+          headcount: 1,
+          employee: emp ? { id: emp.id, name: emp.name, role: emp.role, profilePhotoUrl: emp.profilePhotoUrl } : null,
+        }]);
+        setAddingCrew(false);
+        setNewEmpId(""); setNewRole("HELPER"); setNewRate("");
+      }
+    } finally { setCrewSaving(false); }
+  };
+
+  return (
+    <div className="mt-2 space-y-2">
+      {localCrew.length > 0 && (
+        <>
+          <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider block">
+            Crew Assigned · {localCrew.length}
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {localCrew.map((ca: any) => {
+              const c = roleColors[ca.assignedRole] || roleColors.HELPER;
+              const name = ca.employee?.name || ca.contractor?.name || "Unknown";
+              const initials = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
+              const photo = ca.employee?.profilePhotoUrl;
+              const isEditing = editingCrewId === ca.id;
+              const isSub = ca.employee?.operatorType === "SUBCONTRACTOR" || Boolean(ca.contractor);
+              return (
+                <div key={ca.id} className={`relative flex flex-col items-center gap-1 p-2 rounded-xl border ${c.bg} ${c.border} min-w-[72px] max-w-[82px] group`}>
+                  {/* Avatar */}
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm overflow-hidden ${c.avatar}`}>
+                    {photo
+                      ? <img src={photo} alt={name} className="w-full h-full object-cover rounded-full" />
+                      : <span>{initials}</span>}
+                  </div>
+                  {/* Name & Worker Type */}
+                  <span className="text-white font-bold text-[10px] text-center leading-tight line-clamp-2 w-full">{name}</span>
+                  <span className={`text-[7px] font-black uppercase px-1 py-0.2 rounded border ${
+                    isSub
+                      ? "bg-violet-950/80 text-violet-300 border-violet-500/30"
+                      : "bg-emerald-950/80 text-emerald-300 border-emerald-500/30"
+                  }`}>
+                    {isSub ? "🌐 Outside" : "🏢 Company"}
+                  </span>
+
+                  {isEditing ? (
+                    /* ── EDIT MODE ── */
+                    <div className="w-full space-y-1 mt-0.5">
+                      <select
+                        value={editRole}
+                        onChange={e => {
+                          const selected = e.target.value;
+                          setEditRole(selected);
+                          const emp = employees.find((x: any) => x.id === ca.employee?.id);
+                          const roleWage = getWageForRole(emp, selected);
+                          if (roleWage) setEditRate(String(roleWage));
+                        }}
+                        className="w-full bg-slate-900 border border-slate-700 text-slate-200 text-[9px] rounded-md px-1 py-0.5 outline-none"
+                      >
+                        {CREW_ROLES.map(r => (
+                          <option key={r} value={r}>{r.replace(/_/g," ")}</option>
+                        ))}
+                      </select>
+                      {editRole === "LIFT_OPERATOR" && (
+                        <p className="text-[9px] text-amber-300 font-bold bg-amber-500/10 border border-amber-500/20 px-1 py-0.5 rounded leading-tight">
+                          Fl. {d.liftFloors || 1}: +₹{Math.max(0, (d.liftFloors || 1) - 1) * 100}
+                        </p>
+                      )}
+                      <input
+                        type="number"
+                        value={editRate}
+                        onChange={e => setEditRate(e.target.value)}
+                        placeholder="Rate ₹"
+                        className="w-full bg-slate-900 border border-slate-700 text-emerald-400 font-mono font-bold text-[9px] rounded-md px-1 py-0.5 outline-none"
+                      />
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => saveEdit(ca)}
+                          disabled={crewSaving}
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md py-0.5 flex items-center justify-center"
+                        >
+                          <Check className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => setEditingCrewId(null)}
+                          className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-md py-0.5 flex items-center justify-center"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ── VIEW MODE ── */
+                    <>
+                      <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full border ${c.text} ${c.border} text-center leading-tight`}>
+                        {ca.assignedRole === "LIFT_OPERATOR"
+                          ? `LIFT (Fl. ${d.liftFloors || 1})`
+                          : ca.assignedRole.replace(/_/g," ")}
+                      </span>
+                      {ca.lockedWageRate > 0 && (
+                        <span className="text-emerald-400 font-mono font-black text-[9px]">
+                          ₹{Number(ca.lockedWageRate).toLocaleString("en-IN")}
+                        </span>
+                      )}
+                      {/* Edit / Remove — visible on hover */}
+                      <div className="absolute top-1 right-1 hidden group-hover:flex gap-0.5">
+                        <button
+                          onClick={() => { setEditingCrewId(ca.id); setEditRole(ca.assignedRole); setEditRate(String(ca.lockedWageRate || "")); }}
+                          className="w-4 h-4 bg-slate-700/90 rounded flex items-center justify-center text-slate-300 hover:text-white"
+                          title="Edit rate / role"
+                        >
+                          <Pencil className="w-2.5 h-2.5" />
+                        </button>
+                        <button
+                          onClick={() => removeCrew(ca)}
+                          className="w-4 h-4 bg-rose-900/80 rounded flex items-center justify-center text-rose-400 hover:text-rose-200"
+                          title="Remove from dispatch"
+                        >
+                          <UserMinus className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  {ca.headcount > 1 && (
+                    <span className="absolute -top-1.5 -left-1.5 bg-slate-700 border border-slate-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                      {ca.headcount}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* Add Crew Row */}
+      {addingCrew ? (
+        <div className="bg-slate-900 border border-slate-700 rounded-xl p-3 space-y-2">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Add Crew Member</p>
+          <select
+            value={newEmpId}
+            onChange={e => {
+              const selectedId = e.target.value;
+              setNewEmpId(selectedId);
+              const emp = employees.find((x: any) => x.id === selectedId);
+              const roleToSet = emp?.defaultCrewRole || (emp?.capableRoles?.[0]) || newRole;
+              if (roleToSet) setNewRole(roleToSet);
+              const roleWage = getWageForRole(emp, roleToSet);
+              if (roleWage) setNewRate(String(roleWage));
+            }}
+            className="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg px-2 py-1.5 outline-none"
+          >
+            <option value="">— Select Employee —</option>
+            {employees
+              .filter((e: any) => !localCrew.some((ca: any) => ca.employee?.id === e.id))
+              .map((e: any) => {
+                const isSub = e.operatorType === "SUBCONTRACTOR";
+                const typePrefix = isSub ? "🌐 [Outside]" : "🏢 [Company]";
+                const rolesDisplay = e.capableRoles && e.capableRoles.length > 0
+                  ? e.capableRoles.map((r: string) => r.replace(/_/g, " ")).join(", ")
+                  : e.role;
+                const rateHint = isSub
+                  ? `Flat ₹${e.baseDailyWage || OUTSIDE_WORKER_FLAT_WAGE}/d`
+                  : `Role rates`;
+                return (
+                  <option key={e.id} value={e.id}>
+                    {typePrefix} {e.name} — [{rolesDisplay}] ({rateHint})
+                  </option>
+                );
+              })}
+          </select>
+          <select
+            value={newRole}
+            onChange={e => {
+              const r = e.target.value;
+              setNewRole(r);
+              const emp = employees.find((x: any) => x.id === newEmpId);
+              const roleWage = getWageForRole(emp, r);
+              if (roleWage) setNewRate(String(roleWage));
+            }}
+            className="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg px-2 py-1.5 outline-none"
+          >
+            {CREW_ROLES.map(r => (
+              <option key={r} value={r}>{r.replace(/_/g," ")}</option>
+            ))}
+          </select>
+          {newRole === "LIFT_OPERATOR" && (
+            <p className="text-[10px] text-amber-300 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-lg">
+              🏗️ Lift Floor {d.liftFloors || 1}: Base + ₹{Math.max(0, (d.liftFloors || 1) - 1) * 100} (+₹100/extra floor)
+            </p>
+          )}
+          <div className="flex items-center gap-1">
+            <span className="text-slate-400 text-xs font-bold">₹</span>
+            <input
+              type="number"
+              value={newRate}
+              onChange={e => setNewRate(e.target.value)}
+              placeholder="Daily rate"
+              className="flex-1 bg-slate-950 border border-slate-700 text-emerald-400 font-mono font-bold text-xs rounded-lg px-2 py-1.5 outline-none"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={addCrew}
+              disabled={crewSaving || !newEmpId || !newRate}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs rounded-lg py-1.5 flex items-center justify-center gap-1"
+            >
+              {crewSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+              Add
+            </button>
+            <button
+              onClick={() => { setAddingCrew(false); setNewEmpId(""); setNewRole("HELPER"); setNewRate(""); }}
+              className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold text-xs rounded-lg py-1.5"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setAddingCrew(true)}
+          className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 hover:text-indigo-400 transition-colors mt-1"
+        >
+          <UserPlus className="w-3 h-3" /> Add Crew Member
+        </button>
+      )}
+    </div>
+  );
+}

@@ -53,10 +53,11 @@ export async function generateInvoice(customerId: string, dispatchIds: string[])
     // 4. Audit Log
     await tx.auditLog.create({
       data: {
-        entity: "INVOICE",
-        entityId: invoice.id,
-        action: "GENERATE_INVOICE",
-        delta: { invoiceNumber, totalAmount, dispatchIds } as any,
+        entity: invoice.id,
+        actionType: "GENERATE_INVOICE",
+        actorRole: "ADMIN",
+        modelName: "INVOICE",
+        newPayload: { invoiceNumber, totalAmount, dispatchIds },
         actorId: employeeId
       }
     });
@@ -122,10 +123,11 @@ export async function recordPayment(data: {
     // 3. Audit Log
     await tx.auditLog.create({
       data: {
-        entity: "PAYMENT_RECEIPT",
-        entityId: receipt.id,
-        action: "RECORD_PAYMENT",
-        delta: data as any,
+        entity: receipt.id,
+        actionType: "RECORD_PAYMENT",
+        newPayload: data as any,
+        actorRole: "ADMIN",
+        modelName: "INVOICE",
         actorId: employeeId
       }
     });

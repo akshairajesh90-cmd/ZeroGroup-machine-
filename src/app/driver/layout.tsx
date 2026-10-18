@@ -31,6 +31,7 @@ export default async function DriverLayout({
     { label: "Dispatches", href: "/driver/dispatches",  icon: CalendarDays },
     { label: "Log Fuel",   href: "/driver/expenses",    icon: Receipt },
     { label: "Portal",     href: "/driver/portal",      icon: Wrench },
+    { label: "Chat",       href: "/driver/chat",        icon: Truck },
   ];
 
 

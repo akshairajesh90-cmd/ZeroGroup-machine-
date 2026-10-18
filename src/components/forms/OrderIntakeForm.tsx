@@ -9,13 +9,29 @@ import {
 } from "lucide-react";
 import { createOrderWithAssets, createNewCustomer } from "@/actions/orders";
 import { CrewRole } from "@prisma/client";
+import {
+  calculateLiftOperatorWage,
+  COMPANY_WORKER_ROLE_WAGES,
+  OUTSIDE_WORKER_FLAT_WAGE,
+  getDefaultWorkerWage,
+} from "@/lib/pricingEngine";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES (serialized from server — no Decimal, no Date objects)
 // ─────────────────────────────────────────────────────────────────────────────
 type Customer = { id: string; name: string; phone: string; address: string };
 type Machine = { id: string; machineId: string; type: string; status: string; operatorDailyPayout: number };
-type Employee = { id: string; name: string; role: string; capableRoles: string[]; defaultCrewRole: string | null; baseDailyWage: number | null; phone: string | null };
+type Employee = {
+  id: string;
+  name: string;
+  role: string;
+  operatorType?: "INTERNAL" | "SUBCONTRACTOR" | string;
+  capableRoles: string[];
+  defaultCrewRole: string | null;
+  baseDailyWage: number | null;
+  phone: string | null;
+  roleRates?: { crewRole: string; wagePerDay: number }[];
+};
 type Tool = { id: string; toolId: string; name: string; toolType: string | null; totalInventory: number };
 
 type Props = {
@@ -202,17 +218,54 @@ export default function OrderIntakeForm({ customers: initialCustomers, machines,
     ]);
   };
 
+  const getCrewWage = (empId: string, role: CrewRole, floors: number) => {
+    const emp = employees.find((e) => e.id === empId);
+    if (!emp) return 0;
+    const isSubcontractor = emp.operatorType === "SUBCONTRACTOR";
+    const explicitRate = emp.roleRates?.find((rr) => rr.crewRole === role)?.wagePerDay;
+
+    let baseWage: number;
+    if (explicitRate != null) {
+      baseWage = Number(explicitRate);
+    } else if (isSubcontractor) {
+      baseWage = Number(emp.baseDailyWage ?? OUTSIDE_WORKER_FLAT_WAGE);
+    } else {
+      baseWage = Number(COMPANY_WORKER_ROLE_WAGES[role] ?? emp.baseDailyWage ?? 1100);
+    }
+
+    if (role === "LIFT_OPERATOR") {
+      return calculateLiftOperatorWage(baseWage, floors);
+    }
+    return baseWage;
+  };
+
   const updateCrew = (idx: number, field: keyof CrewAssignment, value: string | number) => {
     setCrewAssignments((prev) => {
       const next = [...prev];
       next[idx] = { ...next[idx], [field]: value } as CrewAssignment;
-      // Auto-fill wage when employee changes
-      if (field === "employeeId") {
-        const emp = employees.find((e) => e.id === value);
-        if (emp?.baseDailyWage) next[idx].lockedWageRate = emp.baseDailyWage;
+      // Auto-fill wage when employee or role changes
+      if (field === "employeeId" || field === "role") {
+        const empId = field === "employeeId" ? (value as string) : next[idx].employeeId;
+        const role = field === "role" ? (value as CrewRole) : next[idx].role;
+        if (empId) {
+          next[idx].lockedWageRate = getCrewWage(empId, role, liftFloors);
+        }
       }
       return next;
     });
+  };
+
+  const handleLiftFloorsChange = (floors: number) => {
+    const validFloors = Math.max(1, floors);
+    setLiftFloors(validFloors);
+    setCrewAssignments((prev) =>
+      prev.map((a) => {
+        if (a.role === "LIFT_OPERATOR" && a.employeeId) {
+          return { ...a, lockedWageRate: getCrewWage(a.employeeId, a.role, validFloors) };
+        }
+        return a;
+      })
+    );
   };
 
   const removeCrew = (idx: number) =>
@@ -449,7 +502,7 @@ export default function OrderIntakeForm({ customers: initialCustomers, machines,
                   <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5"><Layers className="h-3.5 w-3.5" /> Lift Configuration</p>
                   <div>
                     <label className="block text-xs font-semibold text-zinc-400 mb-1.5">Number of Floors</label>
-                    <input type="number" min={1} max={30} value={liftFloors} onChange={(e) => setLiftFloors(parseInt(e.target.value) || 1)}
+                    <input type="number" min={1} max={30} value={liftFloors} onChange={(e) => handleLiftFloorsChange(parseInt(e.target.value) || 1)}
                       className="w-32 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
                   </div>
                   <p className="text-xs text-zinc-500">⚠ Only operators with the <strong className="text-indigo-400">Lift Operator</strong> skill tag can be assigned below.</p>
@@ -581,10 +634,18 @@ export default function OrderIntakeForm({ customers: initialCustomers, machines,
                         <div className="flex gap-2">
                           <select value={crew.employeeId} onChange={(e) => updateCrew(idx, "employeeId", e.target.value)}
                             className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500">
-                            <option value="">Select operator/worker...</option>
-                            {availableEmployees.map((e) => (
-                              <option key={e.id} value={e.id}>{e.name} <span>({e.role})</span></option>
-                            ))}
+                            {availableEmployees.map((e) => {
+                              const isSub = e.operatorType === "SUBCONTRACTOR";
+                              const typePrefix = isSub ? "🌐 [Outside]" : "🏢 [Company]";
+                              const rateHint = isSub
+                                ? `Flat ₹${e.baseDailyWage || OUTSIDE_WORKER_FLAT_WAGE}/d`
+                                : `Role rates`;
+                              return (
+                                <option key={e.id} value={e.id}>
+                                  {typePrefix} {e.name} ({e.role}) — {rateHint}
+                                </option>
+                              );
+                            })}
                           </select>
                           <button type="button" onClick={() => removeCrew(idx)} className="shrink-0 text-zinc-600 hover:text-rose-400 transition-colors px-2">
                             <X className="h-4 w-4" />
@@ -606,6 +667,11 @@ export default function OrderIntakeForm({ customers: initialCustomers, machines,
                               className="flex-1 bg-transparent text-sm text-white w-full focus:outline-none" placeholder="Wage" />
                           </div>
                         </div>
+                        {crew.role === "LIFT_OPERATOR" && (
+                          <p className="text-[11px] text-amber-300 font-semibold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">
+                            🏗️ Lift Floor {liftFloors}: Base + ₹{Math.max(0, liftFloors - 1) * 100} (+₹100/extra floor)
+                          </p>
+                        )}
                         {warning && (
                           <div className="flex items-center gap-2 text-xs text-rose-400 font-medium">
                             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />

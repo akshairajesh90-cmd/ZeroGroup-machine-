@@ -127,10 +127,10 @@ export default function SettlementClient({
     setErrorMsg(null);
     startTransition(async () => {
       const res = await calculateMultiPlayerBreakdown({ startDate: start, endDate: end });
-      if (!res.success || !res.data) {
-        setErrorMsg(res.error || 'Failed to fetch player settlements.');
+      if (!res.success || !(res as any).data) {
+        setErrorMsg((res as any).error || 'Failed to fetch player settlements.');
       } else {
-        setMultiBreakdown(res.data);
+        setMultiBreakdown((res as any).data);
         // Clear old overrides when loading new period
         setCustomPayOverrides({});
       }
@@ -172,10 +172,10 @@ export default function SettlementClient({
         endDate: singleEndDate,
       });
 
-      if (!res.success) {
-        setErrorMsg(res.error || 'Failed to calculate settlement figures.');
+      if (!(res as any).success) {
+        setErrorMsg((res as any).error || 'Failed to calculate settlement figures.');
       } else {
-        setCalculationResult(res.data);
+        setCalculationResult((res as any).data);
       }
     });
   };
@@ -194,8 +194,8 @@ export default function SettlementClient({
         date: adjDate,
       });
 
-      if (!res.success) {
-        setErrorMsg(res.error || 'Failed to create adjustment.');
+      if (!(res as any).success) {
+        setErrorMsg((res as any).error || 'Failed to create adjustment.');
       } else {
         setSuccessMsg(
           Number(adjAmount) <= 500 || userRole === 'OWNER'
@@ -218,8 +218,8 @@ export default function SettlementClient({
 
     startTransition(async () => {
       const res = await approveManualAdjustment({ adjustmentId });
-      if (!res.success) {
-        alert(res.error || 'Approval failed.');
+      if (!(res as any).success) {
+        alert((res as any).error || 'Approval failed.');
       } else {
         router.refresh();
       }
@@ -258,8 +258,8 @@ export default function SettlementClient({
         customBonuses: effective?.bonuses,
       });
 
-      if (!res.success) {
-        setErrorMsg(res.error || 'Failed to generate draft settlement.');
+      if (!(res as any).success) {
+        setErrorMsg((res as any).error || 'Failed to generate draft settlement.');
       } else {
         setSuccessMsg('✅ Draft Settlement generated and saved successfully!');
         router.refresh();
@@ -279,8 +279,8 @@ export default function SettlementClient({
 
     startTransition(async () => {
       const res = await finalizeSettlement({ settlementId, currentVersion: 1 });
-      if (!res.success) {
-        alert(res.error || 'Finalization failed.');
+      if (!(res as any).success) {
+        alert((res as any).error || 'Finalization failed.');
       } else {
         alert('🔒 Settlement locked immutably for payroll!');
         router.refresh();

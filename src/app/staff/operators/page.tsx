@@ -12,6 +12,9 @@ export default async function StaffOperatorsPage() {
 
   const operators = await prisma.employee.findMany({
     where: { role: "OPERATOR", isPendingDelete: false },
+    include: {
+      roleRates: true,
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -22,6 +25,14 @@ export default async function StaffOperatorsPage() {
     contractorCoName: op.contractorCoName || null,
     phone: op.phone ?? null,
     role: op.role,
+    defaultCrewRole: op.defaultCrewRole || null,
+    capableRoles: op.capableRoles || [],
+    roleRates: (op.roleRates || []).map((rr: any) => ({
+      crewRole: rr.crewRole,
+      wagePerDay: Number(rr.wagePerDay),
+    })),
+    baseDailyWage: op.baseDailyWage ? Number(op.baseDailyWage) : null,
+    dailyBataRate: op.dailyBataRate ? Number(op.dailyBataRate) : null,
     createdAt: op.createdAt.toISOString(),
   }));
 

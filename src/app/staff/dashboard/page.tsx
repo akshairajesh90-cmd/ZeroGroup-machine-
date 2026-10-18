@@ -87,6 +87,39 @@ export default async function DashboardPage() {
     count: volumeMap[date]
   }));
 
+  // --- Step 4: Daily P&L Command Center ---
+  const dispatchesToday = await prisma.dailyDispatch.findMany({
+    where: { dateOfService: { gte: today, lte: endOfDay(today) } },
+    include: { crewAssignments: true }
+  });
+
+  let pnlRevenue = 0;
+  let pnlLabor = 0;
+  dispatchesToday.forEach((d: any) => {
+     pnlRevenue += Number(d.customerCharge || 0);
+     
+     if (d.operatorId) pnlLabor += Number(d.actualWagePaid || d.operatorDailyRate || 1000);
+     if (d.driverId) pnlLabor += 900; 
+     
+     if (d.crewAssignments) {
+       d.crewAssignments.forEach((a: any) => {
+          pnlLabor += Number(a.lockedWageRate || 0) * (a.headcount || 1);
+       });
+     }
+     
+     if (d.mainHelperId || d.mainHelperName) {
+       pnlLabor += Number(d.helperCount || 1) * 1200;
+     }
+  });
+
+  const expensesTodayAgg = await prisma.expense.aggregate({
+    _sum: { amount: true },
+    where: { date: { gte: today, lte: endOfDay(today) } }
+  });
+  const pnlExpenses = Number(expensesTodayAgg._sum.amount || 0);
+
+  const dailyGrossMargin = pnlRevenue - pnlLabor - pnlExpenses;
+
   // Ensure ALL data is strictly JSON-serializable
   const serializedMetrics = {
     totalRevenue,
@@ -94,7 +127,13 @@ export default async function DashboardPage() {
     availableMachines,
     rentedMachines,
     repairMachines,
-    chartData
+    chartData,
+    pnl: {
+      revenue: pnlRevenue,
+      labor: pnlLabor,
+      expenses: pnlExpenses,
+      margin: dailyGrossMargin
+    }
   };
 
   return <DashboardClient metrics={serializedMetrics} />;

@@ -26,8 +26,9 @@ export default async function SettlementsPage() {
   // Fetch all recent settlements
   const recentSettlements = await prisma.settlement.findMany({
     include: {
-      operator: true,
-      finalizedBy: true,
+      
+      employee: true,
+      contractor: true,
     },
     orderBy: { weekEnding: 'desc' },
     take: 20,

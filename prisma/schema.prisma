@@ -147,7 +147,7 @@ model Employee {
   baseDailyWage              Decimal?                @db.Decimal(10, 2)
   dailyBataRate              Decimal?                @db.Decimal(10, 2)
   hourlyRate                 Decimal?                @db.Decimal(10, 2)
-  phone                      String?
+  phone                      String?                 @unique
   gpayNumber                 String?
   upiId                      String?
   isCrewLeader               Boolean                 @default(false)

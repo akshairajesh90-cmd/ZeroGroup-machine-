@@ -155,16 +155,40 @@ export async function editEmployeeDetails(targetEmployeeId: string, data: any) {
 
     if (!target) throw new Error("Employee not found");
 
-    await prisma.$transaction([
-      prisma.employee.update({
+    const { roleRates, ...employeeData } = data;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.employee.update({
         where: { id: targetEmployeeId },
-        data: data
-      }),
-      ...(data.role ? [prisma.user.update({
-        where: { id: target.userId },
-        data: { role: data.role }
-      })] : [])
-    ]);
+        data: {
+          ...employeeData,
+          capableRoles: Array.isArray(employeeData.capableRoles) ? { set: employeeData.capableRoles } : undefined,
+        }
+      });
+
+      if (employeeData.role) {
+        await tx.user.update({
+          where: { id: target.userId },
+          data: { role: employeeData.role }
+        });
+      }
+
+      if (Array.isArray(roleRates)) {
+        await tx.employeeRoleRate.deleteMany({
+          where: { employeeId: targetEmployeeId }
+        });
+
+        if (roleRates.length > 0) {
+          await tx.employeeRoleRate.createMany({
+            data: roleRates.map((rr: any) => ({
+              employeeId: targetEmployeeId,
+              crewRole: rr.crewRole,
+              wagePerDay: Number(rr.wagePerDay)
+            }))
+          });
+        }
+      }
+    });
 
     revalidatePath("/staff/operators");
     revalidatePath("/admin/employees");

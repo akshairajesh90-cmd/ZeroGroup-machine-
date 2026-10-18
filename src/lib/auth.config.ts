@@ -9,6 +9,7 @@ if (!authSecret) {
 
 export const authConfig = {
   secret: authSecret,
+  trustHost: true,
   pages: {
     signIn: "/",
     error: "/",
@@ -78,6 +79,11 @@ export const authConfig = {
         return false;
       }
 
+      // If arriving at root with an error or logout parameter, stay on root to display message/re-login
+      if (pathname === "/" && (nextUrl.searchParams.has("error") || nextUrl.searchParams.has("logout"))) {
+        return true;
+      }
+
       // ── GOD MODE UNIVERSAL BYPASS ────────────────────────────────────────────
       // OWNER and ADMIN can go ANYWHERE. No exceptions. Period.
       const isGodMode = role === "OWNER" || role === "ADMIN";
@@ -100,7 +106,18 @@ export const authConfig = {
 
       // Block /admin and /owner from non-admins
       if (pathname.startsWith("/owner") || pathname.startsWith("/admin")) {
-        if (role === "STAFF") return Response.redirect(new URL("/staff/dashboard", nextUrl));
+        if (role === "STAFF") {
+          const allowedAdminPathsForStaff = [
+            "/admin/live/map",
+            "/admin/billing",
+            "/admin/advances",
+            "/admin/adjustments"
+          ];
+          if (allowedAdminPathsForStaff.some(p => pathname.startsWith(p))) {
+            return true;
+          }
+          return Response.redirect(new URL("/staff/dashboard", nextUrl));
+        }
         if (role === "OPERATOR") return Response.redirect(new URL("/operator/home", nextUrl));
         return Response.redirect(new URL("/driver/home", nextUrl));
       }

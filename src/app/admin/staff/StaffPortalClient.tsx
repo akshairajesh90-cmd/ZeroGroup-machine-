@@ -140,8 +140,8 @@ export default function StaffPortalClient({
       });
     }
     
-    if (res.success) {
-      const empId = modalMode === "CREATE" ? res.data.id : selectedId;
+    if ((res as any).success) {
+      const empId = modalMode === "CREATE" ? (res as any).data?.id : selectedId;
       
       // Save per-role rates
       if (formData.capableRoles.length > 0) {

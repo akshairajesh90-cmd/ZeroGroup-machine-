@@ -8,6 +8,7 @@ import {
   Wrench, Users, Calendar, Banknote, FileText
 } from "lucide-react";
 import SaveLocationButton from "./SaveLocationButton";
+import DriverSitePinger from "@/components/driver/DriverSitePinger";
 
 import DriverOrderClient from "./DriverOrderClient";
 
@@ -98,7 +99,14 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     <div className="p-4 md:p-6 max-w-lg mx-auto">
       <DriverOrderClient dispatch={dispatch} userRole={role} groupAggregate={groupAggregate} />
       <div className="mt-4">
-        <SaveLocationButton dispatchId={dispatch.id} />
+        <DriverSitePinger
+          dispatchId={dispatch.id}
+          siteAddress={dispatch.location}
+          siteLatitude={dispatch.latitude ? Number(dispatch.latitude) : null}
+          siteLongitude={dispatch.longitude ? Number(dispatch.longitude) : null}
+          customerName={dispatch.customer?.name}
+          customerPhone={dispatch.customer?.phone}
+        />
       </div>
     </div>
   );

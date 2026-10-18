@@ -204,7 +204,7 @@ export async function createOperator(formData: FormData | object) {
     await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN, Role.STAFF] });
 
     const raw = formData instanceof FormData ? Object.fromEntries(formData as FormData) : formData;
-    const { name, phone, pin, operatorType, isCrewLeader } = raw as Record<string, any>;
+    const { name, phone, pin, operatorType, isCrewLeader, defaultCrewRole, capableRoles, baseDailyWage, contractorCoName, roleRates } = raw as Record<string, any>;
 
     if (!name || !phone || !pin) {
       return { success: false, error: "Name, phone and PIN are required." };
@@ -223,6 +223,59 @@ export async function createOperator(formData: FormData | object) {
     }
     const hashedPin = await bcrypt.hash(pin, 10);
 
+    // Compute capable roles array
+    let parsedCapableRoles: any[] = [];
+    if (Array.isArray(capableRoles)) {
+      parsedCapableRoles = capableRoles;
+    } else if (typeof capableRoles === "string") {
+      try {
+        const arr = JSON.parse(capableRoles);
+        if (Array.isArray(arr)) parsedCapableRoles = arr;
+      } catch {
+        parsedCapableRoles = [capableRoles];
+      }
+    }
+    if (defaultCrewRole && !parsedCapableRoles.includes(defaultCrewRole)) {
+      parsedCapableRoles.push(defaultCrewRole);
+    }
+
+    // Parse roleRates
+    let parsedRoleRates: { crewRole: any; wagePerDay: number }[] = [];
+    if (Array.isArray(roleRates)) {
+      parsedRoleRates = roleRates
+        .filter((rr: any) => rr && rr.crewRole && Number(rr.wagePerDay) > 0)
+        .map((rr: any) => ({ crewRole: rr.crewRole, wagePerDay: Number(rr.wagePerDay) }));
+    } else if (typeof roleRates === "string") {
+      try {
+        const parsed = JSON.parse(roleRates);
+        if (Array.isArray(parsed)) {
+          parsedRoleRates = parsed
+            .filter((rr: any) => rr && rr.crewRole && Number(rr.wagePerDay) > 0)
+            .map((rr: any) => ({ crewRole: rr.crewRole, wagePerDay: Number(rr.wagePerDay) }));
+        } else if (typeof parsed === "object" && parsed !== null) {
+          parsedRoleRates = Object.entries(parsed)
+            .filter(([k, v]) => k && Number(v) > 0)
+            .map(([crewRole, wagePerDay]) => ({ crewRole, wagePerDay: Number(wagePerDay) }));
+        }
+      } catch {
+        // ignore
+      }
+    } else if (typeof roleRates === "object" && roleRates !== null) {
+      parsedRoleRates = Object.entries(roleRates)
+        .filter(([k, v]) => k && Number(v) > 0)
+        .map(([crewRole, wagePerDay]) => ({ crewRole, wagePerDay: Number(wagePerDay) }));
+    }
+
+    const defaultRoleWage = defaultCrewRole
+      ? parsedRoleRates.find((rr) => rr.crewRole === defaultCrewRole)?.wagePerDay
+      : parsedRoleRates[0]?.wagePerDay;
+
+    const finalBaseDailyWage = baseDailyWage
+      ? Number(baseDailyWage)
+      : defaultRoleWage
+      ? defaultRoleWage
+      : null;
+
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -236,6 +289,15 @@ export async function createOperator(formData: FormData | object) {
               phone: normalizedPhone,
               operatorType: operatorType as "INTERNAL" | "SUBCONTRACTOR",
               isCrewLeader: Boolean(isCrewLeader),
+              defaultCrewRole: defaultCrewRole ? defaultCrewRole : null,
+              capableRoles: parsedCapableRoles,
+              baseDailyWage: finalBaseDailyWage,
+              roleRates: parsedRoleRates.length > 0 ? {
+                create: parsedRoleRates.map((rr) => ({
+                  crewRole: rr.crewRole,
+                  wagePerDay: rr.wagePerDay,
+                }))
+              } : undefined,
             },
           },
         },

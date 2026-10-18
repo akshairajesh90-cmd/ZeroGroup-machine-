@@ -19,7 +19,7 @@ export default function EmployeesClientPage({ employees }: { employees: any[] })
       role: "STAFF" as any, fixedSalary: formData.fixedSalary ? Number(formData.fixedSalary) : undefined
     };
     if (mode === "CREATE") await createEmployee(data);
-    else await updateEmployee({ id: selectedId, ...data });
+    else await updateEmployee(selectedId, data);
     setIsModalOpen(false);
   };
 

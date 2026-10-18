@@ -28,8 +28,28 @@ interface OperatorRow {
   contractorCoName: string | null;
   phone: string | null;
   role: any;
+  defaultCrewRole: string | null;
+  capableRoles: string[];
+  roleRates?: { crewRole: string; wagePerDay: number }[];
+  baseDailyWage: number | null;
+  dailyBataRate: number | null;
   createdAt: string;
 }
+
+const crewRoleMeta: Record<string, { label: string; icon: string; bg: string; text: string; border: string }> = {
+  MIXER_OPERATOR:     { label: "Mixer Operator",     icon: "🛠️", bg: "bg-orange-500/10",  text: "text-orange-400",  border: "border-orange-500/20" },
+  HYDRAULIC_OPERATOR: { label: "Hydraulic Operator", icon: "🚜", bg: "bg-amber-500/10",   text: "text-amber-400",   border: "border-amber-500/20" },
+  VIBRATOR_OPERATOR:  { label: "Vibrator Operator",  icon: "⚡", bg: "bg-yellow-500/10",  text: "text-yellow-400",  border: "border-yellow-500/20" },
+  LIFT_OPERATOR:      { label: "Lift Operator",      icon: "🏗️", bg: "bg-blue-500/10",    text: "text-blue-400",    border: "border-blue-500/20" },
+  WORKER_LEADER:      { label: "Worker Leader",      icon: "👷", bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20" },
+  SUB_LEADER:         { label: "Sub Leader",         icon: "👥", bg: "bg-teal-500/10",    text: "text-teal-400",    border: "border-teal-500/20" },
+  DRIVER:             { label: "Driver",             icon: "🚚", bg: "bg-cyan-500/10",    text: "text-cyan-400",    border: "border-cyan-500/20" },
+  HELPER:             { label: "Helper",             icon: "🤝", bg: "bg-slate-500/10",   text: "text-slate-400",   border: "border-slate-500/20" },
+  PANI_HELPER:        { label: "Pani Helper",        icon: "💧", bg: "bg-sky-500/10",     text: "text-sky-400",     border: "border-sky-500/20" },
+  TROLLY_1_WHEEL:     { label: "1-Wheel Trolly",     icon: "🛞", bg: "bg-violet-500/10",  text: "text-violet-400",  border: "border-violet-500/20" },
+  TROLLY_2_WHEEL:     { label: "2-Wheel Trolly",     icon: "🛞", bg: "bg-purple-500/10",  text: "text-purple-400",  border: "border-purple-500/20" },
+  P_VIBRATOR:         { label: "Petrol Vibrator",    icon: "⛽", bg: "bg-rose-500/10",    text: "text-rose-400",    border: "border-rose-500/20" },
+};
 
 interface Props {
   operators: OperatorRow[];
@@ -41,30 +61,40 @@ export default function OperatorsClientPage({ operators: initialOperators }: Pro
   const [editingOperator, setEditingOperator] = useState<OperatorRow | null>(null);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<"ALL" | OperatorType>("ALL");
+  const [filterRole, setFilterRole] = useState<string>("ALL");
   const [, startTransition] = useTransition();
 
   // Refresh list after creation (router.refresh alternative using startTransition)
   const handleSuccess = () => {
     startTransition(() => {
-      // The server action does revalidatePath, so a hard reload picks up new data.
-      // For a seamless UX without page reload, we leave the new operator out until
-      // the user next visits; or we could push to the list optimistically.
       window.location.reload();
     });
   };
 
   const filtered = operators.filter((op) => {
     const matchType = filterType === "ALL" || op.operatorType === filterType;
+    const matchRole =
+      filterRole === "ALL"
+        ? true
+        : filterRole === "UNALLOCATED"
+        ? (!op.defaultCrewRole && (!op.capableRoles || op.capableRoles.length === 0))
+        : (op.capableRoles?.includes(filterRole) || op.defaultCrewRole === filterRole);
+
+    const searchLower = search.trim().toLowerCase();
     const matchSearch =
-      search.trim() === "" ||
-      op.name.toLowerCase().includes(search.toLowerCase()) ||
-      op.phone?.includes(search) ||
-      op.contractorCoName?.toLowerCase().includes(search.toLowerCase());
-    return matchType && matchSearch;
+      searchLower === "" ||
+      op.name.toLowerCase().includes(searchLower) ||
+      op.phone?.includes(searchLower) ||
+      op.contractorCoName?.toLowerCase().includes(searchLower) ||
+      (op.defaultCrewRole && op.defaultCrewRole.toLowerCase().includes(searchLower)) ||
+      (op.capableRoles && op.capableRoles.some(r => r.toLowerCase().includes(searchLower) || crewRoleMeta[r]?.label.toLowerCase().includes(searchLower)));
+
+    return matchType && matchRole && matchSearch;
   });
 
   const internalCount = operators.filter((o) => o.operatorType === "INTERNAL").length;
   const subCount = operators.filter((o) => o.operatorType === "SUBCONTRACTOR").length;
+  const allocatedCount = operators.filter((o) => Boolean(o.defaultCrewRole)).length;
 
   return (
     <>
@@ -72,9 +102,9 @@ export default function OperatorsClientPage({ operators: initialOperators }: Pro
         {/* Page header */}
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-black text-white">Field Operators</h1>
+            <h1 className="text-3xl font-black text-white">Field Operators & Crew Roles</h1>
             <p className="text-zinc-500 text-sm mt-1">
-              Manage operator accounts and Phone + PIN credentials
+              Manage operator profiles, primary crew role allocations, and login PINs
             </p>
           </div>
           <button
@@ -95,9 +125,9 @@ export default function OperatorsClientPage({ operators: initialOperators }: Pro
             accent="blue"
           />
           <StatCard
-            label="Internal"
-            value={internalCount}
-            icon={<HardHat className="h-5 w-5 text-emerald-400" />}
+            label="Crew Role Allocated"
+            value={allocatedCount}
+            icon={<HardHat className="h-5 w-5 text-amber-400" />}
             accent="emerald"
           />
           <StatCard
@@ -116,10 +146,31 @@ export default function OperatorsClientPage({ operators: initialOperators }: Pro
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, phone, or company..."
+              placeholder="Search by name, phone, company, or crew role..."
               className="w-full rounded-2xl border border-zinc-800 bg-zinc-900/60 pl-11 pr-4 py-3 text-sm text-white placeholder-zinc-600 focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/20 transition-all"
             />
           </div>
+
+          {/* Crew Role Filter */}
+          <div className="relative">
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 pointer-events-none" />
+            <select
+              value={filterRole}
+              onChange={(e) => setFilterRole(e.target.value)}
+              className="appearance-none rounded-2xl border border-zinc-800 bg-zinc-900/60 pl-11 pr-8 py-3 text-sm text-amber-300 font-bold focus:border-amber-500/50 focus:outline-none transition-all"
+            >
+              <option value="ALL">All Crew Roles</option>
+              <option value="MIXER_OPERATOR">🛠️ Mixer Operator</option>
+              <option value="HYDRAULIC_OPERATOR">🚜 Hydraulic Operator</option>
+              <option value="VIBRATOR_OPERATOR">⚡ Vibrator Operator</option>
+              <option value="LIFT_OPERATOR">🏗️ Lift Operator</option>
+              <option value="WORKER_LEADER">👷 Worker Leader</option>
+              <option value="DRIVER">🚚 Driver</option>
+              <option value="UNALLOCATED">⚪ Unallocated</option>
+            </select>
+          </div>
+
+          {/* Type Filter */}
           <div className="relative">
             <Filter className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 pointer-events-none" />
             <select
@@ -236,15 +287,104 @@ function OperatorRow({ operator: op, onEdit }: { operator: OperatorRow; onEdit: 
         <span className="font-mono">{op.phone ? `+91 ${op.phone.slice(0, 5)} ${op.phone.slice(5)}` : "N/A"}</span>
       </div>
 
+      {/* Multi-Role Capabilities Badges with Per-Role Wages */}
+      <div className="flex flex-wrap items-center gap-1.5 max-w-md">
+        {op.capableRoles && op.capableRoles.length > 0 ? (
+          op.capableRoles.map((rId) => {
+            const meta = crewRoleMeta[rId];
+            if (!meta) return null;
+            const isPrimary = op.defaultCrewRole === rId;
+            const roleRate =
+              op.roleRates?.find((rr) => rr.crewRole === rId)?.wagePerDay ?? op.baseDailyWage;
+
+            return (
+              <span
+                key={rId}
+                title={
+                  rId === "LIFT_OPERATOR"
+                    ? `Lift Operator: Base ₹${roleRate ?? 0}/day for 1st Floor + ₹100 per additional floor`
+                    : isPrimary
+                    ? `Primary Assigned Role — ₹${roleRate ?? 0}/day`
+                    : `Qualified Role — ₹${roleRate ?? 0}/day`
+                }
+                className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-colors ${
+                  meta.bg
+                } ${meta.text} ${meta.border} ${
+                  isPrimary ? "ring-1 ring-amber-400/50 shadow-sm shadow-amber-400/20" : ""
+                }`}
+              >
+                <span>{meta.icon}</span>
+                <span>{meta.label}</span>
+                {roleRate != null && (
+                  <span className="ml-0.5 px-1.5 py-0.2 rounded-md bg-zinc-950/70 text-emerald-400 font-mono text-[10px] font-black border border-emerald-500/30">
+                    ₹{Number(roleRate).toLocaleString("en-IN")}/d
+                    {rId === "LIFT_OPERATOR" && (
+                      <span className="text-amber-300 ml-1 font-sans text-[9px] font-bold" title="+₹100 per extra floor above 1st floor">
+                        +₹100/fl
+                      </span>
+                    )}
+                  </span>
+                )}
+                {isPrimary && (
+                  <span className="text-[10px] text-amber-300 font-black" title="Primary Role">
+                    ★
+                  </span>
+                )}
+              </span>
+            );
+          })
+        ) : op.defaultCrewRole && crewRoleMeta[op.defaultCrewRole] ? (
+          (() => {
+            const meta = crewRoleMeta[op.defaultCrewRole];
+            const roleRate =
+              op.roleRates?.find((rr) => rr.crewRole === op.defaultCrewRole)?.wagePerDay ??
+              op.baseDailyWage;
+            return (
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-[11px] font-bold border ${meta.bg} ${meta.text} ${meta.border}`}
+              >
+                <span>{meta.icon}</span>
+                <span>{meta.label}</span>
+                {roleRate != null && (
+                  <span className="ml-0.5 px-1.5 py-0.2 rounded-md bg-zinc-950/70 text-emerald-400 font-mono text-[10px] font-black border border-emerald-500/30">
+                    ₹{Number(roleRate).toLocaleString("en-IN")}/d
+                  </span>
+                )}
+              </span>
+            );
+          })()
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-[10px] font-semibold text-zinc-500 bg-zinc-800/40 border border-zinc-700/40">
+            Unallocated {op.baseDailyWage ? `(₹${op.baseDailyWage}/d)` : ""}
+          </span>
+        )}
+      </div>
+
+      {/* Daily Bata Rate if any */}
+      {op.dailyBataRate ? (
+        <span
+          className="hidden xl:inline-flex text-[11px] font-mono text-zinc-400 shrink-0 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-lg"
+          title="Daily Bata / Food Allowance"
+        >
+          Bata: ₹{op.dailyBataRate}/d
+        </span>
+      ) : null}
+
       {/* Type badge */}
       <span
-        className={`hidden md:inline-flex shrink-0 rounded-xl px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border ${
+        className={`inline-flex items-center gap-1.5 shrink-0 rounded-xl px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border ${
           isInternal
             ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
             : "bg-violet-500/10 text-violet-400 border-violet-500/20"
         }`}
       >
-        {isInternal ? "Internal" : "Subcontractor"}
+        <span>{isInternal ? "🏢" : "🌐"}</span>
+        <span>{isInternal ? "Company Worker" : "Outside Worker"}</span>
+        {!isInternal && (
+          <span className="ml-0.5 px-1.5 py-0.5 rounded-md bg-violet-950/80 text-violet-300 font-mono text-[9px] font-black border border-violet-500/30">
+            Flat ₹1,200/d
+          </span>
+        )}
       </span>
 
       {/* Date */}

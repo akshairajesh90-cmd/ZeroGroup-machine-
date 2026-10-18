@@ -14,7 +14,31 @@ import {
   AlertCircle,
   User,
   Building2,
+  Award,
+  Check,
+  DollarSign,
 } from "lucide-react";
+import { ALL_CREW_ROLES } from "./EditOperatorModal";
+import {
+  COMPANY_WORKER_ROLE_WAGES,
+  OUTSIDE_WORKER_FLAT_WAGE,
+  getDefaultWorkerWage,
+} from "@/lib/pricingEngine";
+
+const DEFAULT_ROLE_WAGES: Record<string, string> = {
+  MIXER_OPERATOR: "1100",
+  HYDRAULIC_OPERATOR: "1100",
+  VIBRATOR_OPERATOR: "900",
+  LIFT_OPERATOR: "1000",
+  WORKER_LEADER: "1200",
+  SUB_LEADER: "1100",
+  DRIVER: "1000",
+  HELPER: "750",
+  PANI_HELPER: "700",
+  TROLLY_1_WHEEL: "800",
+  TROLLY_2_WHEEL: "850",
+  P_VIBRATOR: "900",
+};
 
 interface CreateOperatorModalProps {
   onClose: () => void;
@@ -40,9 +64,56 @@ export default function CreateOperatorModal({
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
   const [operatorType, setOperatorType] = useState<OperatorTypeValue>("INTERNAL");
+  const [capableRoles, setCapableRoles] = useState<string[]>(["MIXER_OPERATOR"]);
+  const [defaultCrewRole, setDefaultCrewRole] = useState("MIXER_OPERATOR");
+  const [roleRates, setRoleRates] = useState<Record<string, string>>({
+    MIXER_OPERATOR: "1100",
+  });
   const [isCrewLeader, setIsCrewLeader] = useState(false);
   const [contractorCoName, setContractorCoName] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const handleOperatorTypeChange = (newType: OperatorTypeValue) => {
+    setOperatorType(newType);
+    setRoleRates((prev) => {
+      const updated: Record<string, string> = {};
+      capableRoles.forEach((roleId) => {
+        if (newType === "SUBCONTRACTOR") {
+          updated[roleId] = String(OUTSIDE_WORKER_FLAT_WAGE);
+        } else {
+          updated[roleId] = String(COMPANY_WORKER_ROLE_WAGES[roleId] ?? 1100);
+        }
+      });
+      return updated;
+    });
+  };
+
+  const toggleRole = (roleId: string) => {
+    let next: string[];
+    if (capableRoles.includes(roleId)) {
+      if (capableRoles.length === 1) return;
+      next = capableRoles.filter((r) => r !== roleId);
+      if (defaultCrewRole === roleId) {
+        setDefaultCrewRole(next[0] || "");
+      }
+    } else {
+      next = [...capableRoles, roleId];
+      if (!defaultCrewRole) {
+        setDefaultCrewRole(roleId);
+      }
+      // Populate default wage based on worker type (Outside worker flat 1200 vs Company worker role rate)
+      const defaultWage =
+        operatorType === "SUBCONTRACTOR"
+          ? String(OUTSIDE_WORKER_FLAT_WAGE)
+          : String(COMPANY_WORKER_ROLE_WAGES[roleId] ?? 1100);
+
+      setRoleRates((prev) => ({
+        ...prev,
+        [roleId]: prev[roleId] || defaultWage,
+      }));
+    }
+    setCapableRoles(next);
+  };
 
   // Success state
   const [credentials, setCredentials] = useState<SuccessCredentials | null>(null);
@@ -92,6 +163,19 @@ export default function CreateOperatorModal({
       setError("Full name is required.");
       return;
     }
+    if (capableRoles.length === 0) {
+      setError("Please select at least one role this operator can perform.");
+      return;
+    }
+
+    const formattedRoleRates = capableRoles.map((rId) => ({
+      crewRole: rId,
+      wagePerDay: Number(roleRates[rId] || DEFAULT_ROLE_WAGES[rId] || 900),
+    }));
+
+    const primaryWage = Number(
+      roleRates[defaultCrewRole] || formattedRoleRates[0]?.wagePerDay || 900
+    );
 
     startTransition(async () => {
       const result = await createOperator({
@@ -100,6 +184,10 @@ export default function CreateOperatorModal({
         pin,
         operatorType,
         isCrewLeader,
+        defaultCrewRole: defaultCrewRole || capableRoles[0] || null,
+        capableRoles,
+        roleRates: formattedRoleRates,
+        baseDailyWage: primaryWage,
         contractorCoName: operatorType === "SUBCONTRACTOR" ? contractorCoName : undefined,
       });
 
@@ -255,20 +343,54 @@ export default function CreateOperatorModal({
 
           {/* Operator Type */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-              Operator Type *
-            </label>
-            <div className="relative">
-              <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-              <select
-                value={operatorType}
-                onChange={(e) => setOperatorType(e.target.value as OperatorTypeValue)}
-                className="w-full appearance-none rounded-2xl border border-zinc-700 bg-zinc-800/60 pl-11 pr-10 py-3.5 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                Worker Category *
+              </label>
+              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                operatorType === "INTERNAL"
+                  ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                  : "bg-violet-500/10 text-violet-300 border-violet-500/30"
+              }`}>
+                {operatorType === "INTERNAL" ? "🏢 Role-Specific Wages" : "🌐 Flat ₹1,200/Day Rate"}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleOperatorTypeChange("INTERNAL")}
+                className={`flex items-center gap-2.5 p-3 rounded-2xl border text-left transition-all ${
+                  operatorType === "INTERNAL"
+                    ? "bg-emerald-500/15 border-emerald-500 text-white ring-1 ring-emerald-500/30 shadow-lg shadow-emerald-500/10"
+                    : "bg-zinc-800/60 border-zinc-700/60 text-zinc-400 hover:border-zinc-600"
+                }`}
               >
-                <option value="INTERNAL">Internal (Company Employee)</option>
-                <option value="SUBCONTRACTOR">Subcontractor (External)</option>
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 pointer-events-none" />
+                <div className={`p-2 rounded-xl ${operatorType === "INTERNAL" ? "bg-emerald-500/20 text-emerald-300" : "bg-zinc-800 text-zinc-500"}`}>
+                  <Building2 className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-white">Company Worker</p>
+                  <p className="text-[10px] text-zinc-400">Role-specific daily rates</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleOperatorTypeChange("SUBCONTRACTOR")}
+                className={`flex items-center gap-2.5 p-3 rounded-2xl border text-left transition-all ${
+                  operatorType === "SUBCONTRACTOR"
+                    ? "bg-violet-500/15 border-violet-500 text-white ring-1 ring-violet-500/30 shadow-lg shadow-violet-500/10"
+                    : "bg-zinc-800/60 border-zinc-700/60 text-zinc-400 hover:border-zinc-600"
+                }`}
+              >
+                <div className={`p-2 rounded-xl ${operatorType === "SUBCONTRACTOR" ? "bg-violet-500/20 text-violet-300" : "bg-zinc-800 text-zinc-500"}`}>
+                  <User className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-white">Outside Worker</p>
+                  <p className="text-[10px] text-zinc-400">Flat ₹1,200/d across roles</p>
+                </div>
+              </button>
             </div>
           </div>
 
@@ -276,7 +398,7 @@ export default function CreateOperatorModal({
           {operatorType === "SUBCONTRACTOR" && (
             <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
               <label className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                Contractor Company Name
+                Contractor / Agency Name
               </label>
               <input
                 type="text"
@@ -287,6 +409,163 @@ export default function CreateOperatorModal({
               />
             </div>
           )}
+
+          {/* MULTI-ROLE CAPABILITIES SELECTOR */}
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                  <Award className="h-4 w-4 text-amber-400" />
+                  Qualified Roles (Multiple Allowed) *
+                </label>
+                <p className="text-[11px] text-zinc-400 mt-0.5">
+                  Select all tasks this operator is qualified to perform ({capableRoles.length} selected).
+                </p>
+              </div>
+              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                Multi-Skill
+              </span>
+            </div>
+
+            {/* Role Grid Chips */}
+            <div className="grid grid-cols-2 gap-2 pt-1 max-h-48 overflow-y-auto pr-1">
+              {ALL_CREW_ROLES.map((r) => {
+                const isSelected = capableRoles.includes(r.id);
+                const isDefault = defaultCrewRole === r.id;
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => toggleRole(r.id)}
+                    className={`flex items-center justify-between p-2 rounded-xl border text-left transition-all ${
+                      isSelected
+                        ? "bg-amber-500/20 border-amber-500/50 text-white shadow-md shadow-amber-500/10"
+                        : "bg-zinc-800/60 border-zinc-700/60 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className="text-sm">{r.icon}</span>
+                      <span className="text-xs font-bold truncate">{r.label}</span>
+                    </div>
+                    <div
+                      className={`h-4 w-4 shrink-0 rounded-md flex items-center justify-center border transition-all ${
+                        isSelected
+                          ? "bg-amber-500 border-amber-400 text-zinc-950 font-black"
+                          : "border-zinc-700 bg-zinc-950"
+                      }`}
+                    >
+                      {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Primary / Default Role Selection */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center justify-between">
+              <span>Primary / Default Crew Role *</span>
+              <span className="text-[10px] text-zinc-500 font-normal">Default assignment in dispatch</span>
+            </label>
+            <div className="relative">
+              <select
+                value={defaultCrewRole}
+                onChange={(e) => setDefaultCrewRole(e.target.value)}
+                className="w-full appearance-none rounded-2xl border border-zinc-700 bg-zinc-800/80 px-4 py-3.5 text-sm text-amber-300 font-bold focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50 transition-all"
+              >
+                {capableRoles.map((rId) => {
+                  const meta = ALL_CREW_ROLES.find((r) => r.id === rId);
+                  return (
+                    <option key={rId} value={rId}>
+                      {meta?.icon || "🛠️"} {meta?.label || rId}
+                    </option>
+                  );
+                })}
+              </select>
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* PER-ROLE DAILY WAGE RATES (EACH ROLE HAS ITS OWN WAGE) */}
+          <div className={`rounded-2xl border p-4 space-y-3 ${
+            operatorType === "SUBCONTRACTOR"
+              ? "border-violet-500/30 bg-violet-500/5"
+              : "border-emerald-500/30 bg-emerald-500/5"
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                  operatorType === "SUBCONTRACTOR" ? "text-violet-300" : "text-emerald-400"
+                }`}>
+                  <DollarSign className="h-4 w-4" />
+                  {operatorType === "SUBCONTRACTOR"
+                    ? "Outside Worker Daily Wage Rates (₹ / Day)"
+                    : "Company Worker Daily Wage Rates (₹ / Day)"}
+                </label>
+                <p className="text-[11px] text-zinc-400 mt-0.5">
+                  {operatorType === "SUBCONTRACTOR"
+                    ? "Outside workers are paid a flat ₹1,200/day across roles by default. Adjust any role below if necessary."
+                    : "Company workers have role-specific pay rates (Mixer: ₹1,100, Vibrator: ₹900, Lift: ₹1,000 base + ₹100/floor, Helper: ₹750)."}
+                </p>
+              </div>
+              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                operatorType === "SUBCONTRACTOR"
+                  ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                  : "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+              }`}>
+                {operatorType === "SUBCONTRACTOR" ? "Flat ₹1,200/d Rate Card" : "Standard Rate Card"}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              {capableRoles.map((rId) => {
+                const meta = ALL_CREW_ROLES.find((r) => r.id === rId);
+                const isPrimary = defaultCrewRole === rId;
+                return (
+                  <div
+                    key={rId}
+                    className={`flex items-center justify-between p-2.5 rounded-xl border bg-zinc-900/90 transition-all ${
+                      isPrimary ? "border-amber-500/50 ring-1 ring-amber-500/20" : "border-zinc-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <span className="text-base shrink-0">{meta?.icon || "🛠️"}</span>
+                      <div className="truncate">
+                        <span className="text-xs font-bold text-white block truncate">
+                          {meta?.label || rId}
+                        </span>
+                        {rId === "LIFT_OPERATOR" && (
+                          <span className="text-[10px] text-indigo-400 font-semibold block truncate">
+                            Base 1st Fl (+₹100/extra fl)
+                          </span>
+                        )}
+                        {isPrimary && (
+                          <span className="text-[9px] font-black text-amber-400 uppercase tracking-wider">
+                            ★ Primary
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 w-32">
+                      <span className="text-xs font-bold text-emerald-400">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={roleRates[rId] || ""}
+                        onChange={(e) =>
+                          setRoleRates((prev) => ({ ...prev, [rId]: e.target.value }))
+                        }
+                        placeholder={DEFAULT_ROLE_WAGES[rId] || "900"}
+                        className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-xs text-emerald-400 font-mono font-bold focus:border-emerald-500 focus:outline-none"
+                      />
+                      <span className="text-[10px] text-zinc-500">/d</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Crew Leader Checkbox */}
           <div className="flex items-center gap-3 bg-zinc-800/40 p-4 rounded-2xl border border-zinc-700/50">

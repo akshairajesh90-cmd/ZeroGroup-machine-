@@ -22,8 +22,10 @@ export default async function AdminStaffPage() {
   let auditLogs: any[] = [];
   if (currentUser.role === "OWNER" || currentUser.role === "ADMIN") {
     const logsRes = await getAuditLogs();
-    if (logsRes.success) {
+    if (logsRes?.success) {
       auditLogs = logsRes.data || [];
+    } else {
+      console.error("Failed to fetch audit logs:", logsRes);
     }
   }
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { TrendingUp, Truck, Wrench, ShieldAlert, Search, Filter, Clock, User, FileText } from "lucide-react";
+import { TrendingUp, Truck, Wrench, ShieldAlert, Search, Filter, Clock, User, FileText, Users } from "lucide-react";
 import { getAuditLogs } from "@/actions/audit";
 
 // Strict TypeScript interfaces defining the serialized props
@@ -18,6 +18,12 @@ interface DashboardMetrics {
   rentedMachines: number;
   repairMachines: number;
   chartData: ChartData[];
+  pnl: {
+    revenue: number;
+    labor: number;
+    expenses: number;
+    margin: number;
+  };
 }
 
 export default function DashboardClient({ metrics }: { metrics: DashboardMetrics }) {
@@ -59,8 +65,10 @@ export default function DashboardClient({ metrics }: { metrics: DashboardMetrics
     async function fetchLogs() {
       setIsLogsLoading(true);
       const result = await getAuditLogs({ timeframe, searchTerm: debouncedSearch });
-      if (result.success) {
-        setLogs(result.data);
+      if (result?.success && result.data) {
+        setLogs(result.data as any[]);
+      } else {
+        console.error("Audit log fetch failed or returned undefined:", result);
       }
       setIsLogsLoading(false);
     }
@@ -130,6 +138,36 @@ export default function DashboardClient({ metrics }: { metrics: DashboardMetrics
           <p className="text-rose-400 text-xs font-bold uppercase tracking-wider mb-2">Fleet In Repair</p>
           <h2 className="text-3xl font-black text-white">{metrics.repairMachines}</h2>
           <p className="text-slate-400 text-xs mt-2">Requires immediate attention</p>
+        </div>
+      </div>
+
+      {/* STEP 4: DAILY P&L COMMAND CENTER (WIDGET) */}
+      <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="flex-1">
+            <p className="text-indigo-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+              <FileText className="w-4 h-4" /> Daily P&L Command Center
+            </p>
+            <h2 className="text-4xl font-black text-white">{formatCurrency(metrics.pnl.margin)}</h2>
+            <p className="text-slate-400 text-sm mt-1">Real-time Gross Margin (Today)</p>
+          </div>
+          
+          <div className="flex-1 w-full flex items-center justify-between md:justify-end gap-8 border-t md:border-t-0 md:border-l border-slate-700/50 pt-4 md:pt-0 md:pl-8">
+            <div>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Est. Revenue</p>
+              <p className="text-emerald-400 font-bold text-xl">{formatCurrency(metrics.pnl.revenue)}</p>
+            </div>
+            <div className="text-slate-600 text-xl font-bold">-</div>
+            <div>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Labor</p>
+              <p className="text-amber-400 font-bold text-xl">{formatCurrency(metrics.pnl.labor)}</p>
+            </div>
+            <div className="text-slate-600 text-xl font-bold">-</div>
+            <div>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Expenses</p>
+              <p className="text-rose-400 font-bold text-xl">{formatCurrency(metrics.pnl.expenses)}</p>
+            </div>
+          </div>
         </div>
       </div>
 
