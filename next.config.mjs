@@ -10,8 +10,9 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Needed for next-auth server actions
+  // Needed for next-auth server actions & fast local compilation
   experimental: {
+    optimizePackageImports: ["lucide-react", "date-fns"],
     serverActions: {
       allowedOrigins: ["localhost:3000"],
     },

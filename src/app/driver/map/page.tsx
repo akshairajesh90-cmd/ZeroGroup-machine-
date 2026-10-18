@@ -1,8 +1,17 @@
 import { requireAuth } from "@/lib/serverAuth";
-import LiveMap from "@/components/LiveMap";
+import nextDynamic from "next/dynamic";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
+
+const LiveMap = nextDynamic(() => import("@/components/LiveMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full bg-zinc-900 animate-pulse flex items-center justify-center">
+      <span className="text-zinc-500 font-medium text-xs">Loading Live Route Map...</span>
+    </div>
+  ),
+});
 
 export default async function DriverLiveMapPage() {
   const { role } = await requireAuth();

@@ -20,7 +20,7 @@ export async function authenticate(
       email,
       password,
       redirect: true,
-      redirectTo: "/redirecting",
+      redirectTo: "/",
     });
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error && String(error.digest).includes("NEXT_REDIRECT")) {
