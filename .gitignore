@@ -45,9 +45,16 @@ fix_*.js
 fix_*.ts
 fix_*.py
 scratch_*.ts
+scratch/
 check_logins.js
 get_users.ts
 keep_alive_tunnel.js
 make-features.ps1
 patch.js
 refactor.py
+orig_chunk_*
+found_content_*
+step_*
+target_*
+temp_*
+*.log
