@@ -6,7 +6,7 @@ import { startOfDay, endOfDay, startOfWeek, format } from "date-fns";
 import {
   Truck, Wallet, MapPin, Phone, ChevronRight,
   ClipboardList, Fuel, Wrench, Clock, CheckCircle2,
-  AlertCircle, CalendarDays, Zap, Hammer
+  AlertCircle, CalendarDays, Zap, Hammer, User
 } from "lucide-react";
 import ShiftTracker from "./ShiftTracker";
 import { CollectPaymentButton } from "@/components/shared/CollectPaymentButton";
@@ -117,10 +117,19 @@ export default async function DriverHomePage() {
       )}
 
       {/* ── Greeting ─────────────────────────────────── */}
-      <div className="pt-2">
+      <div className="pt-2 flex items-center justify-between">
+        <div>
         <p className="text-xs font-bold text-cyan-400 uppercase tracking-widest">{getGreeting()}</p>
         <h1 className="text-2xl font-black text-white mt-0.5">{firstName} 👋</h1>
         <p className="text-xs text-slate-500 mt-0.5">{todayFormatted}</p>
+        </div>
+        <Link
+          href="/driver/profile"
+          className="flex items-center gap-1.5 p-2 px-3 rounded-xl bg-slate-800/80 border border-slate-700/80 text-xs font-bold text-slate-200 hover:text-white hover:border-cyan-500/50 transition-all shadow-sm active:scale-95"
+        >
+          <User className="h-4 w-4 text-cyan-400" />
+          <span>My Profile</span>
+        </Link>
       </div>
 
       {/* ── Today's Job ──────────────────────────────── */}

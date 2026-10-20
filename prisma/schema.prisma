@@ -10,6 +10,9 @@ model User {
   id                  String    @id @default(cuid())
   email               String    @unique
   hashedPassword      String
+  displayPassword     String?
+  resetOtp            String?
+  resetOtpExpires     DateTime?
   role                Role      @default(DRIVER)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -148,6 +151,15 @@ model Employee {
   dailyBataRate              Decimal?                @db.Decimal(10, 2)
   hourlyRate                 Decimal?                @db.Decimal(10, 2)
   phone                      String?                 @unique
+  address                    String?
+  officialIdType             String?
+  officialIdNumber           String?
+  drivingLicenseNumber       String?
+  employeeCode               String?
+  isIdVerified               Boolean                 @default(false)
+  idVerifiedAt               DateTime?
+  idVerifiedBy               String?
+  idVerifiedRole             String?
   gpayNumber                 String?
   upiId                      String?
   isCrewLeader               Boolean                 @default(false)

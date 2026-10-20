@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { TrendingUp, Truck, Wrench, ShieldAlert, Search, Filter, Clock, User, FileText, Users } from "lucide-react";
+import { TrendingUp, Truck, Wrench, ShieldAlert, Search, Filter, Clock, User, FileText, Users, KeyRound, ShieldCheck } from "lucide-react";
 import { getAuditLogs } from "@/actions/audit";
 
 // Strict TypeScript interfaces defining the serialized props
@@ -95,6 +96,22 @@ export default function DashboardClient({ metrics }: { metrics: DashboardMetrics
           <p className="text-slate-400 mt-2 text-sm font-medium">
             Real-time operations, fleet utilization, and live team activity feed.
           </p>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/staff/credentials"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/20 border border-emerald-400/30 transition-all active:scale-95"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-emerald-200" />
+            <span>Official IDs & Logins</span>
+          </Link>
+          <Link
+            href="/staff/profile"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs border border-zinc-700 transition-all active:scale-95"
+          >
+            <User className="w-3.5 h-3.5 text-zinc-300" />
+            <span>My Profile</span>
+          </Link>
         </div>
       </div>
 

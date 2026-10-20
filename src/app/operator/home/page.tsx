@@ -3,8 +3,9 @@ import { requireAuth } from "@/lib/serverAuth";
 import { startOfDay, endOfDay, format, addDays } from "date-fns";
 import PreStartChecklist from "./PreStartChecklist";
 import DocketCanvas from "./DocketCanvas";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, User } from "lucide-react";
 import CrewAllocation from "./CrewAllocation";
+import Link from "next/link";
 import UpdateSiteLocationButton from "@/components/operator/UpdateSiteLocationButton";
 import { CollectPaymentButton } from "@/components/shared/CollectPaymentButton";
 import { IdleDelayButton } from "@/components/shared/IdleDelayButton";
@@ -132,18 +133,27 @@ export default async function OperatorHomePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header with Profile Photo */}
-      <div className="pt-2 flex items-center gap-4">
-        <ProfilePhotoUploader
-          name={employee?.name ?? "User"}
-          currentPhotoUrl={employee?.profilePhotoUrl}
-          size="lg"
-        />
-        <div>
-          <p className="text-xs font-bold text-orange-500 uppercase tracking-widest">Operator Portal</p>
-          <h1 className="text-2xl font-black text-white mt-0.5">{firstName} 👋</h1>
-          <p className="text-[10px] text-zinc-600 font-medium mt-0.5">Tap photo to update</p>
+      {/* Header with Profile Photo & Action */}
+      <div className="pt-2 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <ProfilePhotoUploader
+            name={employee?.name ?? "User"}
+            currentPhotoUrl={employee?.profilePhotoUrl}
+            size="lg"
+          />
+          <div>
+            <p className="text-xs font-bold text-orange-500 uppercase tracking-widest">Operator Portal</p>
+            <h1 className="text-2xl font-black text-white mt-0.5">{firstName} 👋</h1>
+            <p className="text-[10px] text-zinc-600 font-medium mt-0.5">Tap photo to update</p>
+          </div>
         </div>
+        <Link
+          href="/operator/profile"
+          className="flex items-center gap-1.5 p-2 px-3 rounded-xl bg-zinc-800/80 border border-zinc-700/80 text-xs font-bold text-zinc-200 hover:text-white hover:border-orange-500/50 transition-all shadow-sm active:scale-95 shrink-0"
+        >
+          <User className="h-4 w-4 text-orange-400" />
+          <span>My Profile</span>
+        </Link>
       </div>
 
       {/* ─── Saturday Payout Summary ──────────────────────────────── */}

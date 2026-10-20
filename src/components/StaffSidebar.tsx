@@ -23,7 +23,9 @@ import {
   PiggyBank,
   SlidersHorizontal,
   PenTool,
-  Activity
+  Activity,
+  KeyRound,
+  User,
 } from "lucide-react";
 import { handleSignOut } from "@/actions/auth";
 import { useState } from "react";
@@ -80,6 +82,7 @@ export default function StaffSidebar({ userName, userEmail }: StaffSidebarProps)
     {
       group: "HR Roster",
       links: [
+        { label: "ID & Passwords Hub", href: "/staff/credentials", icon: KeyRound },
         { label: "Office Employees", href: "/staff/employees", icon: Shield },
         { label: "Field Workers", href: "/staff/workers", icon: Users },
         { label: "Drivers", href: "/staff/drivers", icon: Truck },
@@ -152,24 +155,38 @@ export default function StaffSidebar({ userName, userEmail }: StaffSidebarProps)
         </div>
 
         <div className="shrink-0 border-t border-zinc-800 p-4 bg-zinc-950/80 backdrop-blur-xl">
-          <div 
-            onClick={() => setIsProfileOpen(true)}
-            className="flex cursor-pointer items-center justify-between rounded-xl bg-zinc-900/50 p-3 border border-zinc-800/80 hover:bg-zinc-800 transition-colors"
-            title="Edit Profile"
-          >
-            <div className="overflow-hidden">
-              <p className="truncate text-xs font-semibold text-white">{userName}</p>
-              <p className="truncate text-[10px] font-medium text-zinc-500">{userEmail}</p>
-            </div>
-            <form action={handleSignOut} onClick={e => e.stopPropagation()}>
-              <button
-                type="submit"
+          <div className="flex items-center justify-between rounded-xl bg-zinc-900/50 p-3 border border-zinc-800/80">
+            <Link
+              href="/staff/profile"
+              className="flex items-center gap-2.5 overflow-hidden hover:opacity-80 transition-opacity"
+              title="Edit Profile"
+            >
+              <div className="h-8 w-8 rounded-lg bg-emerald-600/30 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs shrink-0">
+                {userName.charAt(0).toUpperCase()}
+              </div>
+              <div className="overflow-hidden">
+                <p className="truncate text-xs font-semibold text-white">{userName}</p>
+                <p className="truncate text-[10px] font-medium text-zinc-500">{userEmail}</p>
+              </div>
+            </Link>
+            <div className="flex items-center gap-1">
+              <Link
+                href="/staff/profile"
                 className="rounded-lg p-2 text-zinc-400 hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors"
-                title="Sign Out"
+                title="My Profile & IDs"
               >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </form>
+                <User className="h-4 w-4" />
+              </Link>
+              <form action={handleSignOut} onClick={e => e.stopPropagation()}>
+                <button
+                  type="submit"
+                  className="rounded-lg p-2 text-zinc-400 hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors"
+                  title="Sign Out"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </form>
+            </div>
           </div>
         </div>
         <MyProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />

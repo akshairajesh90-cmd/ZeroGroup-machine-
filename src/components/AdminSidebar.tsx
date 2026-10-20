@@ -23,6 +23,9 @@ import {
   ClipboardList,
   CreditCard,
   UserCog,
+  KeyRound,
+  ShieldCheck,
+  User,
 } from "lucide-react";
 import { handleSignOut } from "@/actions/auth";
 
@@ -41,6 +44,7 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
       title: "Morning Briefing",
       items: [
         { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+        { label: "ID & Passwords Hub", href: "/admin/credentials", icon: KeyRound },
         { label: "Analytics and Projects", href: "/staff/projects", icon: BarChart2 },
         { label: "Crew Directory", href: "/staff/directory", icon: Users },
       ]
@@ -155,19 +159,37 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
         {/* User Profile & Sign Out */}
         <div className="border-t border-slate-800/80 p-4 shrink-0">
           <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3 border border-slate-800/50">
-            <div className="overflow-hidden">
-              <p className="truncate text-xs font-semibold text-white">{userName}</p>
-              <p className="truncate text-[10px] text-slate-400">{userEmail}</p>
-            </div>
-            <form action={handleSignOut}>
-              <button
-                type="submit"
-                className="rounded-lg p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 transition-colors"
-                title="Sign Out"
+            <Link 
+              href="/admin/profile"
+              className="flex items-center gap-2.5 overflow-hidden hover:opacity-80 transition-opacity"
+              title="View & Edit My Profile"
+            >
+              <div className="h-8 w-8 rounded-lg bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold text-xs shrink-0">
+                {userName.charAt(0).toUpperCase()}
+              </div>
+              <div className="overflow-hidden">
+                <p className="truncate text-xs font-semibold text-white">{userName}</p>
+                <p className="truncate text-[10px] text-slate-400">{userEmail}</p>
+              </div>
+            </Link>
+            <div className="flex items-center gap-1">
+              <Link
+                href="/admin/profile"
+                className="rounded-lg p-2 text-slate-400 hover:bg-indigo-500/10 hover:text-indigo-400 transition-colors"
+                title="My Profile & IDs"
               >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </form>
+                <User className="h-4 w-4" />
+              </Link>
+              <form action={handleSignOut}>
+                <button
+                  type="submit"
+                  className="rounded-lg p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 transition-colors"
+                  title="Sign Out"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       </aside>

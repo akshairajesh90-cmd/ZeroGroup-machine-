@@ -26,15 +26,17 @@ export default function MyProfileModal({ isOpen, onClose }: MyProfileModalProps)
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
-      getMyProfile().then(res => {
+      getMyProfile().then((res: Awaited<ReturnType<typeof getMyProfile>>) => {
         if (res.success && res.data) {
           setFormData({
-            ...formData,
-            ...res.data,
+            name: res.data.name || "",
+            email: res.data.email || "",
             phone: res.data.phone || "",
             gpayNumber: res.data.gpayNumber || "",
             upiId: res.data.upiId || "",
-            newPassword: "" // don't show old password
+            profilePhotoUrl: res.data.profilePhotoUrl || "",
+            newPassword: "",
+            role: String(res.data.role || ""),
           });
         }
         setLoading(false);
@@ -51,8 +53,6 @@ export default function MyProfileModal({ isOpen, onClose }: MyProfileModalProps)
       phone: formData.phone,
       gpayNumber: formData.gpayNumber,
       upiId: formData.upiId,
-      profilePhotoUrl: formData.profilePhotoUrl,
-      newPassword: formData.newPassword
     });
     setSaving(false);
     if (res.success) {
