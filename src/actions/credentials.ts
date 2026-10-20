@@ -380,12 +380,22 @@ export async function requestPasswordResetOtp(phoneOrEmail: string) {
     const clean = phoneOrEmail.trim().toLowerCase();
     if (!clean) return { success: false, error: "Please enter your phone number or email." };
 
-    // Find by phone or email
+    const digitsOnly = clean.replace(/\D/g, "");
+    const last10 = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : "";
+
+    // Find by phone or email (supporting +91, with/without country code, and email)
     const user = await prisma.user.findFirst({
       where: {
         OR: [
           { email: clean },
           { employee: { phone: clean } },
+          ...(last10
+            ? [
+                { employee: { phone: last10 } },
+                { employee: { phone: `+91${last10}` } },
+                { employee: { phone: `+91 ${last10}` } },
+              ]
+            : []),
         ],
       },
       include: { employee: true },
@@ -446,11 +456,21 @@ export async function verifyOtpAndResetPassword(data: {
       return { success: false, error: "Password must be at least 4 characters long." };
     }
 
+    const digitsOnly = clean.replace(/\D/g, "");
+    const last10 = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : "";
+
     const user = await prisma.user.findFirst({
       where: {
         OR: [
           { email: clean },
           { employee: { phone: clean } },
+          ...(last10
+            ? [
+                { employee: { phone: last10 } },
+                { employee: { phone: `+91${last10}` } },
+                { employee: { phone: `+91 ${last10}` } },
+              ]
+            : []),
         ],
       },
     });
