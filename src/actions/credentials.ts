@@ -514,3 +514,83 @@ export async function verifyOtpAndResetPassword(data: {
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * Verify Employee Identity via Name & Email.
+ * If TRUE, automatically returns and selects the registered phone number.
+ */
+export async function verifyNameAndEmailAction(data: { name: string; email: string }) {
+  try {
+    const cleanName = data.name.trim();
+    const cleanEmail = data.email.trim().toLowerCase();
+
+    if (!cleanName || !cleanEmail) {
+      return { success: false, error: "Please provide both your registered Full Name and Email." };
+    }
+
+    const employee = await prisma.employee.findFirst({
+      where: {
+        user: {
+          email: cleanEmail,
+        },
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    if (!employee) {
+      return {
+        success: false,
+        error: "No employee account found matching this email address.",
+      };
+    }
+
+    const dbNameClean = employee.name.trim().toLowerCase();
+    const inputNameClean = cleanName.toLowerCase();
+
+    const isMatch =
+      dbNameClean === inputNameClean ||
+      dbNameClean.includes(inputNameClean) ||
+      inputNameClean.includes(dbNameClean);
+
+    if (!isMatch) {
+      return {
+        success: false,
+        error: `The name "${cleanName}" does not match the registered records for this email address.`,
+      };
+    }
+
+    if (employee.user.role === "ADMIN" || employee.user.role === "OWNER") {
+      return {
+        success: false,
+        error: "OTP reset is strictly disabled for Admin/Owner accounts.",
+      };
+    }
+
+    if (!employee.phone) {
+      return {
+        success: false,
+        error: "No phone number is registered for this employee account. Please contact Office Staff.",
+      };
+    }
+
+    const digits = employee.phone.replace(/\D/g, "");
+    const maskedPhone =
+      digits.length >= 10
+        ? `+91 ${digits.slice(-10, -7)}•••••${digits.slice(-2)}`
+        : employee.phone;
+
+    return {
+      success: true,
+      employeeName: employee.name,
+      employeeRole: employee.role,
+      phone: employee.phone,
+      maskedPhone,
+    };
+  } catch (error: any) {
+    console.error("[CREDENTIALS] verifyNameAndEmailAction error:", error);
+    return { success: false, error: error.message };
+  }
+}
+

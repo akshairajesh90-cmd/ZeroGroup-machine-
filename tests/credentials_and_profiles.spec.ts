@@ -22,11 +22,18 @@ test.describe('Clean Unified Login', () => {
 
   test('OTP Reset page auto-fills phone from query param', async ({ page }) => {
     await page.goto('/reset-password?phone=9876543210');
-    // The phone input should be pre-filled and read-only
     const phoneInput = page.locator('input[placeholder*="9876543210"]').first();
     await expect(phoneInput).toBeVisible();
     const val = await phoneInput.inputValue();
     expect(val).toContain('9876543210');
+  });
+
+  test('OTP Reset page verifies identity with Name and Email', async ({ page }) => {
+    await page.goto('/reset-password');
+    await expect(page.getByText(/Name & Email Verify/i)).toBeVisible();
+    await page.fill('input[placeholder*="Suresh"]', 'Suresh Kumar');
+    await page.fill('input[placeholder*="suresh@"]', 'suresh@zerogroup.in');
+    await expect(page.getByRole('button', { name: /Verify Identity & Send SMS OTP/i })).toBeVisible();
   });
 });
 
