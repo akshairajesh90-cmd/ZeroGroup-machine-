@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Shield, KeyRound, ArrowLeft, CheckCircle2, AlertCircle, Phone, Lock, Sparkles } from "lucide-react";
+import { Shield, KeyRound, ArrowLeft, CheckCircle2, AlertCircle, Phone, Lock, Sparkles, Send, Smartphone } from "lucide-react";
 import { requestPasswordResetOtp, verifyOtpAndResetPassword } from "@/actions/credentials";
+import { getFirebaseAuth, isFirebaseConfigured, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "@/lib/firebase";
 
 export default function ResetPasswordClient({ prefilledIdentifier }: { prefilledIdentifier: string }) {
   const router = useRouter();
@@ -19,8 +20,20 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
   const [demoOtpHint, setDemoOtpHint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [firebaseStatus, setFirebaseStatus] = useState<string | null>(null);
+
+  // Firebase Phone Auth State
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
 
   const isAutoLocked = Boolean(prefilledIdentifier);
+
+  const formatPhoneNumber = (input: string) => {
+    const cleaned = input.replace(/\D/g, "");
+    if (cleaned.length === 10) return `+91${cleaned}`;
+    if (cleaned.startsWith("91") && cleaned.length === 12) return `+${cleaned}`;
+    return input.startsWith("+") ? input : `+${cleaned}`;
+  };
 
   const handleRequestOtp = async () => {
     if (!identifier.trim()) {
@@ -29,6 +42,38 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
     }
     setError(null);
     setLoadingOtp(true);
+    setFirebaseStatus(null);
+
+    // Try Google Firebase Phone Auth if configured and input is a phone number
+    const isPhone = !identifier.includes("@") && identifier.replace(/\D/g, "").length >= 10;
+    
+    if (isFirebaseConfigured && isPhone) {
+      try {
+        const auth = getFirebaseAuth();
+        if (auth) {
+          if (!recaptchaVerifierRef.current) {
+            recaptchaVerifierRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
+              size: "invisible",
+              callback: () => {
+                // reCAPTCHA solved
+              },
+            });
+          }
+          const formattedPhone = formatPhoneNumber(identifier.trim());
+          const confirmation = await signInWithPhoneNumber(auth, formattedPhone, recaptchaVerifierRef.current);
+          setConfirmationResult(confirmation);
+          setOtpSent(true);
+          setFirebaseStatus(`Google Firebase SMS sent to ${formattedPhone}! Check your phone.`);
+          setLoadingOtp(false);
+          return;
+        }
+      } catch (fbErr: any) {
+        console.warn("[FIREBASE] Phone auth error, falling back to server OTP:", fbErr);
+        // Fallback to server-generated OTP if reCAPTCHA or Firebase keys encounter issue
+      }
+    }
+
+    // Default built-in OTP generation
     try {
       const res = await requestPasswordResetOtp(identifier);
       if (res.success) {
@@ -68,10 +113,25 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
 
     setSubmitting(true);
     try {
+      let isFirebaseVerified = false;
+
+      // If SMS was delivered via Google Firebase, confirm with Firebase client first
+      if (confirmationResult) {
+        try {
+          await confirmationResult.confirm(otp.trim());
+          isFirebaseVerified = true;
+        } catch (verifyErr: any) {
+          setError("Invalid or expired SMS code from Google Firebase. Please try again.");
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const res = await verifyOtpAndResetPassword({
         phoneOrEmail: identifier,
         otp: otp.trim(),
         newPassword: newPassword.trim(),
+        firebaseVerified: isFirebaseVerified,
       });
 
       if (res.success) {
@@ -151,6 +211,14 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
                 </div>
               </div>
 
+              {/* Firebase SMS Status Pill */}
+              {firebaseStatus && (
+                <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs flex items-center gap-2">
+                  <Smartphone className="h-4 w-4 shrink-0 text-blue-400" />
+                  <p>{firebaseStatus}</p>
+                </div>
+              )}
+
               {/* OTP Generation / Hint */}
               <div className="flex items-center justify-between gap-2 pt-1">
                 <button
@@ -159,7 +227,7 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
                   disabled={loadingOtp || !identifier.trim()}
                   className="text-xs font-bold text-indigo-400 hover:text-indigo-300 underline underline-offset-4 disabled:opacity-50"
                 >
-                  {loadingOtp ? "Generating OTP..." : otpSent ? "Resend 6-Digit OTP" : "Request / Generate 6-Digit OTP"}
+                  {loadingOtp ? "Dispatching SMS..." : otpSent ? "Resend 6-Digit SMS OTP" : isFirebaseConfigured ? "Send Carrier SMS via Firebase" : "Request / Generate 6-Digit OTP"}
                 </button>
                 {demoOtpHint && (
                   <span className="text-[11px] font-mono text-cyan-300 bg-cyan-500/20 px-2 py-0.5 rounded border border-cyan-500/30 flex items-center gap-1">
@@ -167,6 +235,9 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
                   </span>
                 )}
               </div>
+
+              {/* Invisible Google reCAPTCHA container for Firebase */}
+              <div id="recaptcha-container"></div>
 
               {/* 6-Digit OTP Input */}
               <div>
@@ -237,9 +308,14 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
           )}
 
           {/* Footer badge */}
-          <div className="border-t border-slate-800/60 pt-4 flex items-center justify-center text-[11px] text-slate-500 font-medium gap-1.5">
-            <Shield className="h-3.5 w-3.5 text-emerald-500" />
-            <span>Secure 15-Minute Verified Handshake</span>
+          <div className="border-t border-slate-800/60 pt-4 flex flex-col items-center justify-center text-[11px] text-slate-500 font-medium gap-1">
+            <span className="flex items-center gap-1.5">
+              <Shield className="h-3.5 w-3.5 text-emerald-500" />
+              <span>Secure 15-Minute Verified Handshake</span>
+            </span>
+            <span className="text-[10px] text-indigo-400 font-medium">
+              ⚡ Google Firebase Automated Carrier SMS Gateway (10,000 Free SMS/Month)
+            </span>
           </div>
         </div>
 

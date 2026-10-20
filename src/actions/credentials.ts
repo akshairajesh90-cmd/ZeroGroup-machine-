@@ -427,14 +427,19 @@ export async function verifyOtpAndResetPassword(data: {
   phoneOrEmail: string;
   otp: string;
   newPassword: string;
+  firebaseVerified?: boolean;
 }) {
   try {
     const clean = data.phoneOrEmail.trim().toLowerCase();
     const cleanOtp = data.otp.trim();
     const cleanPassword = data.newPassword.trim();
 
-    if (!clean || !cleanOtp || !cleanPassword) {
-      return { success: false, error: "All fields are required." };
+    if (!clean || !cleanPassword) {
+      return { success: false, error: "Phone number and new password are required." };
+    }
+
+    if (!data.firebaseVerified && !cleanOtp) {
+      return { success: false, error: "6-digit OTP code is required." };
     }
 
     if (cleanPassword.length < 4) {
@@ -454,12 +459,18 @@ export async function verifyOtpAndResetPassword(data: {
       return { success: false, error: "User account not found." };
     }
 
-    if (!user.resetOtp || user.resetOtp !== cleanOtp) {
-      return { success: false, error: "Invalid OTP code. Please check and try again." };
+    if (user.role === "ADMIN" || user.role === "OWNER") {
+      return { success: false, error: "OTP reset is disabled for Admin accounts." };
     }
 
-    if (!user.resetOtpExpires || new Date() > user.resetOtpExpires) {
-      return { success: false, error: "OTP has expired. Please request a new OTP code." };
+    if (!data.firebaseVerified) {
+      if (!user.resetOtp || user.resetOtp !== cleanOtp) {
+        return { success: false, error: "Invalid OTP code. Please check and try again." };
+      }
+
+      if (!user.resetOtpExpires || new Date() > user.resetOtpExpires) {
+        return { success: false, error: "OTP has expired. Please request a new OTP code." };
+      }
     }
 
     const hashedPassword = await bcrypt.hash(cleanPassword, 10);
