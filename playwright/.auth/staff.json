@@ -2,7 +2,7 @@
   "cookies": [
     {
       "name": "authjs.csrf-token",
-      "value": "9f7fee0251f26b8f1655606b55ab584f948bd4d8b6b54e68fc4d281670247700%7C87cfec6cefef5d2796e603996e47ad761505b9343beac8a7292b63edd92a9ae1",
+      "value": "5e0075611ada974888c0700f0740843f481ae07e84510a9d5d91066bda0615e5%7Cc24f760173e42ba6fabd36f35dcc14b3e8a25aef5ac4087f561111b0705dd435",
       "domain": "localhost",
       "path": "/",
       "expires": -1,
@@ -22,10 +22,10 @@
     },
     {
       "name": "authjs.session-token",
-      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiMnRPSk9YaW1WbHV2V3E1SV81dTNiTW1pTVMyLURWSnFFOU5iWGMwNHpFd2taWGc0RV91b1ZwajVucGFNSjNCb2d6a3BzaWFtN3pUU3RTYWpyMndPQmcifQ..dJpT7eFqjRgptLYWsLrMrQ.IzWL674jLsYp2Zs9BE11Zx1M1UrAH4WKIFTfiB1WdHTJrns-utpVx_zX4b9vzjcHRMDvwVvrtMB3_RTkh5_OGZj-f7w4e63SNsppSLPQ0S9145jSESzXdUsQ5yGrr4O5sQyvNw5lCMIL4sBHgwlzIVcV306S5Vl_KbQYkNEmg-i8d0P2QJf3YKSRwr1Sn562oTLJ7j1CLlBhh1dqzqfXfBLdPc_-Wlomu-KjGvZzs2A4jJoKyEGu7ONTzhtyNkcF15eWQmVODjZUv4LnRcAGYTYU7xsVzerWYLMCW2PfSV5strkuqr0C-f-ygUBjhatfubWB4HrZiwygTzctJ509YTWKU4gANry23Pj_c7v2HTa-BWy-Pe_oWtpfqz5Phdk2Vt_6P1xE4xkB4vfLm1wESw.HbeOcev7iOi26Jck7fCRQuSwLxJaFg2SHFhQFN1XdCo",
+      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiSEJseXJFSy1Za3JkUE03RjFZRTdlZHNWTkYtci1FcDVnV1VrV0hLb1ZpNnVqdEN4NUtvd1pYcGVULWg3bHlVSDBURWVmU3NieEpLSEFZaW03ZVV5cVEifQ.._m-MwwMPQMMNGkGVy2ZYXw.J1ugdpbGBpgBe9XBiKoEOcYBmjdG0PfvTE5eVlXENnouCC1U2Iu5GDXSAmXNstZ0hmZNMHNEHci4FKQeiQnexYm3E4AcqRJQEllzuiORqYnsgYSTjIumz8tZ0WeXW5HaN1gjdzHYEtD8D3sh-Rpzp_nGOCQRgmgXtRh592xTXvia5ekVNsyxCewXW5LAaZPvXzZav8maEffuQuaF-u1Xc3HQ8c-Rk05GIq64dUbQiBtzmiuIurlUAskcew1DDWf_TjlMjZkegKLubSc0n6DhyrQ24VIKaejCTvzeG1Z9_N2wFfIeP1KDIVCwk2FHKL65RbZ-pUZKP82-oi-e8tSV79bl--O8bGMYumbBfeCD2PHQX-vwoluOapVCpOr-WV4wUYoQhUL_IKqxup1NttRt7g.3P-kQ20onGZuTAq_O_dKriiUYnjNVrkQ8LhsOgfcS54",
       "domain": "localhost",
       "path": "/",
-      "expires": 1793137418.158567,
+      "expires": 1795117190.867561,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"

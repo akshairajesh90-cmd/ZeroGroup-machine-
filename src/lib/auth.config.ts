@@ -74,7 +74,7 @@ export const authConfig = {
       // ── NOT LOGGED IN ────────────────────────────────────────────────────────
       if (!isLoggedIn) {
         // Allow public paths without a session
-        if (pathname === "/" || pathname === "/operator/login" || pathname.startsWith("/api/")) return true;
+        if (pathname === "/" || pathname === "/operator/login" || pathname.startsWith("/reset-password") || pathname.startsWith("/api/")) return true;
         // Everything else requires login
         return false;
       }

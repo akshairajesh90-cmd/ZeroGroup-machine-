@@ -34,8 +34,7 @@ setup('authenticate as staff', async ({ page }) => {
 
 setup('authenticate as driver', async ({ page }) => {
   await page.goto('/');
-  // Switch to the Field / Driver App tab first
-  await page.click('button:has-text("Field / Driver App")');
+  // Clean unified login — no tab click needed anymore
   await page.fill('input[name="email"]', 'driver@ironrent.test');
   await page.fill('input[name="password"]', 'password123');
   await page.click('button[type="submit"]');
@@ -48,8 +47,7 @@ setup('authenticate as driver', async ({ page }) => {
 
 setup('authenticate as operator', async ({ page }) => {
   await page.goto('/');
-  // Switch to the Field / Driver App tab first
-  await page.click('button:has-text("Field / Driver App")');
+  // Clean unified login — no tab click needed anymore
   await page.fill('input[name="email"]', 'operator@ironrent.test');
   await page.fill('input[name="password"]', 'password123');
   await page.click('button[type="submit"]');

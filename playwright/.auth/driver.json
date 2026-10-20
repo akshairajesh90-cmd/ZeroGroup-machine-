@@ -2,7 +2,7 @@
   "cookies": [
     {
       "name": "authjs.csrf-token",
-      "value": "1ea2ed9ccbea7f7c6f48e62ff130825f1951b6b688e3cc9d8ff70da45a110436%7C78cad464fb1fc6a3a7f6574c18bb4e17588512d945bc35d36c30f9b6b222d210",
+      "value": "0d56405ad1c3001150d7143dac71e0feec88d444746286e39e13286a116f8346%7Cae26927b7c3b34acb7e4baef255877aa81ff237221910d82aeffef59b2068c38",
       "domain": "localhost",
       "path": "/",
       "expires": -1,
@@ -22,10 +22,10 @@
     },
     {
       "name": "authjs.session-token",
-      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiMnRPSk9YaW1WbHV2V3E1SV81dTNiTW1pTVMyLURWSnFFOU5iWGMwNHpFd2taWGc0RV91b1ZwajVucGFNSjNCb2d6a3BzaWFtN3pUU3RTYWpyMndPQmcifQ..BgXnEldcOBoOqQW8sJPG1A.OcFRkOaS7n8dZGF3MHeXdC1pLDH9eN1SMEVbgVA_HlQUlvbCDF7nZnOxbjx5ddK6OGGCg1us6uLURH-Di7KDKiQTR52TpO7N49qKofConAOKrjwlOB1HXC2axGyTg0x63E4NjwabQxN4Zt7S-pub40b4jGZjbhYGtdpXIDddjaRvvXzJfYjlhLkwgUrpIo3xYpoYLH7hs-qt6sWrZut7vvxn7Xqisnvip6Myn2CFklA1yPUt0TBmfzvVkQNHH4V-p7JsiIw9xAJdj26W-RYxcxfqa7i4vXtqO13beAZDcfIIuSrY6-JR_r3IUr-CJjjqt8gzX0xxCM8A8dkIUqezsksGFolC4xFZkBs1ia2dSt0TM3MDIl31SIZFP4GLYxh0SQ7K0OlpiJdwrZd34LQ8Qg.id4wQctNIH2Hx2ybsSW44_kQc3lMLinTqWllsGzzl7w",
+      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiSEJseXJFSy1Za3JkUE03RjFZRTdlZHNWTkYtci1FcDVnV1VrV0hLb1ZpNnVqdEN4NUtvd1pYcGVULWg3bHlVSDBURWVmU3NieEpLSEFZaW03ZVV5cVEifQ..0l7wL7tBcs9HmlPXO7esKg.Sx_eyqNnN5t4SrEvWH252bHqRGYPBmhs6lAxs3rC1UCyZVdPemoGjUZXIEQgNhzXpYKdC-bK0FnEJNiHrRP9jJcESxy7KIxe2P8shXzjQchBYL7MaCu-TDxnKAJ9stIkT11l2RzAYDXNaZlcCB3-aLlBpanEFmoMrHP2U6uvhsotK0wPcZLDguW0E6-pe1QLloArKY4ZRtsfKTvBiMlaPVXq1K4WBRvCIg1iScd7pUgY6CLqs0SlV4ko02yUGiz76IvZbec5hKyO62gdz9JM_YPmSxebr1_7a4yIF8pYHeRTcDNJPv9Ma1Nc43G11KzlwNXaIETCyBvdwrXDZyaK1m7su0sTtVOYNPWav4N018OWu1Ev7hBCnYhNyVVOpAvSYlx2qoA8Kk8uSAZnP6NV8k7QTygDpVgOS0KO_UVFNB0.NzpGZouP666iEDfiA-2RvE_LbboDz0mMXYHQLW52n0w",
       "domain": "localhost",
       "path": "/",
-      "expires": 1793137417.500184,
+      "expires": 1795117192.364468,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
