@@ -339,6 +339,10 @@ export async function adminGenerateOtpAction(employeeId: string) {
     if (!employee || !employee.userId) throw new Error("Employee record not found.");
     checkManagePermission(session.role, employee.role);
 
+    if (employee.role === "ADMIN" || employee.role === "OWNER") {
+      throw new Error("OTP password reset is restricted for Admin/Owner accounts.");
+    }
+
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
@@ -389,6 +393,10 @@ export async function requestPasswordResetOtp(phoneOrEmail: string) {
 
     if (!user) {
       return { success: false, error: "No employee account found with this phone number or email." };
+    }
+
+    if (user.role === "ADMIN" || user.role === "OWNER") {
+      return { success: false, error: "OTP reset is disabled for Admin accounts. Please use master credentials." };
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();

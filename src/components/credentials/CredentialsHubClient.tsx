@@ -644,16 +644,19 @@ export default function CredentialsHubClient({
                         <span className="text-[10px] text-slate-600 font-bold uppercase">Locked</span>
                       ) : (
                         <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => handleGenerateOtp(emp)}
-                            disabled={actionLoading}
-                            className="px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 font-bold text-[11px] transition-colors flex items-center gap-1"
-                            title="Generate 6-digit OTP reset link"
-                          >
-                            <KeyRound className="h-3 w-3" />
-                            <span>OTP Link</span>
-                          </button>
+                          {/* OTP Reset Link: available for all field staff & employees except Admin/Owner */}
+                          {emp.role !== "ADMIN" && emp.role !== "OWNER" && (
+                            <button
+                              type="button"
+                              onClick={() => handleGenerateOtp(emp)}
+                              disabled={actionLoading}
+                              className="px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 font-bold text-[11px] transition-colors flex items-center gap-1"
+                              title="Generate 6-digit OTP reset link for employee mobile"
+                            >
+                              <KeyRound className="h-3 w-3" />
+                              <span>OTP Link</span>
+                            </button>
+                          )}
 
                           <button
                             type="button"

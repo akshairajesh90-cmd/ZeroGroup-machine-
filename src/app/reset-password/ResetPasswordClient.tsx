@@ -24,7 +24,7 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
 
   const handleRequestOtp = async () => {
     if (!identifier.trim()) {
-      setError("Please enter your registered phone number or email.");
+      setError("Please enter your registered mobile number (or email).");
       return;
     }
     setError(null);
@@ -50,7 +50,7 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
     setError(null);
 
     if (!identifier.trim()) {
-      setError("Phone number or email is required.");
+      setError("Mobile number or email is required.");
       return;
     }
     if (!otp.trim() || otp.trim().length !== 6) {
