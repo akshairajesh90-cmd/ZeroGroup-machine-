@@ -3,14 +3,24 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import "dotenv/config";
 
-import { parse } from "pg-connection-string";
+const rawConnectionString =
+  process.env.DATABASE_URL ||
+  "postgresql://postgres:Akshai%402005@localhost:5432/postgres?schema=public";
 
-const connectionString = process.env.DATABASE_URL || "postgresql://postgres:Akshai%402005@localhost:5432/postgres?schema=public";
-const config = typeof connectionString === 'string' ? parse(connectionString) : {};
+const isCloud =
+  rawConnectionString.includes("neon.tech") ||
+  rawConnectionString.includes("aws") ||
+  rawConnectionString.includes("supabase") ||
+  rawConnectionString.includes("sslmode=require");
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
-} as any);
+  connectionString: rawConnectionString,
+  ssl: isCloud ? { rejectUnauthorized: false } : undefined,
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 10,
+});
+
 const adapter = new PrismaPg(pool);
 
 const globalForPrisma = globalThis as unknown as {
@@ -24,4 +34,4 @@ export const prisma =
     log: ["error", "warn"],
   });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+globalForPrisma.prisma = prisma;
