@@ -2,6 +2,7 @@
 
 import { signIn, signOut } from "@/lib/auth";
 import { AuthError } from "next-auth";
+import { headers } from "next/headers";
 
 export async function authenticate(
   prevState: string | undefined,
@@ -15,7 +16,18 @@ export async function authenticate(
       return "Please enter both email and password.";
     }
 
-    console.log(`[AUTH] Attempting to sign in with email: ${email}`);
+    // Dynamically align AUTH_URL / NEXTAUTH_URL to the real incoming host (never localhost on deployment)
+    const reqHeaders = headers();
+    const host = reqHeaders.get("x-forwarded-host") || reqHeaders.get("host") || "";
+    const proto = reqHeaders.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
+
+    if (host && !host.includes("localhost")) {
+      const dynamicOrigin = `${proto}://${host}`;
+      process.env.AUTH_URL = dynamicOrigin;
+      process.env.NEXTAUTH_URL = dynamicOrigin;
+    }
+
+    console.log(`[AUTH] Attempting to sign in with email: ${email} on host: ${host}`);
     await signIn("credentials", {
       email,
       password,
@@ -52,5 +64,13 @@ export async function authenticate(
 }
 
 export async function handleSignOut() {
+  const reqHeaders = headers();
+  const host = reqHeaders.get("x-forwarded-host") || reqHeaders.get("host") || "";
+  const proto = reqHeaders.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
+  if (host && !host.includes("localhost")) {
+    const dynamicOrigin = `${proto}://${host}`;
+    process.env.AUTH_URL = dynamicOrigin;
+    process.env.NEXTAUTH_URL = dynamicOrigin;
+  }
   await signOut({ redirectTo: "/" });
 }

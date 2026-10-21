@@ -2,6 +2,22 @@
 import type { NextAuthConfig } from "next-auth";
 import type { Role } from "@prisma/client";
 
+// Normalize AUTH_URL and NEXTAUTH_URL for Vercel and production deployments
+if (process.env.VERCEL || process.env.NODE_ENV === "production") {
+  const prodHost =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    process.env.VERCEL_URL ||
+    "zero-group-machine.vercel.app";
+  const prodUrl = `https://${prodHost.replace(/^https?:\/\//, "")}`;
+
+  if (!process.env.AUTH_URL || process.env.AUTH_URL.includes("localhost")) {
+    process.env.AUTH_URL = prodUrl;
+  }
+  if (!process.env.NEXTAUTH_URL || process.env.NEXTAUTH_URL.includes("localhost")) {
+    process.env.NEXTAUTH_URL = prodUrl;
+  }
+}
+
 const authSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
 if (!authSecret) {
   throw new Error("AUTH_SECRET or NEXTAUTH_SECRET environment variable is missing. Refusing to start.");
@@ -41,7 +57,6 @@ export const authConfig = {
         token.id = token.originalAdminId;
         token.role = "OWNER";
       } else if (trigger === "update" && session?.updateTokenVersion) {
-        // When kill switch is activated, we update our local token version to match DB
         token.sessionTokenVersion = (token.sessionTokenVersion as number) + 1;
       }
 
@@ -59,14 +74,27 @@ export const authConfig = {
           (session.user as any).originalAdminId = token.originalAdminId;
         }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
         (session.user as any).operatorType = token.operatorType;
         (session.user as any).isCrewLeader = token.isCrewLeader;
       }
       return session;
     },
-    authorized({ auth, request: { nextUrl } }) {
-      console.log(`[MIDDLEWARE] Running for ${nextUrl.pathname}. auth:`, JSON.stringify(auth));
+    authorized({ auth, request }) {
+      const nextUrl = request.nextUrl;
+      const host =
+        request.headers.get("x-forwarded-host") ||
+        request.headers.get("host") ||
+        nextUrl.host;
+      const proto =
+        request.headers.get("x-forwarded-proto") ||
+        (host.includes("localhost") ? "http" : "https");
+      const safeOrigin = `${proto}://${host}`;
+
+      const safeRedirect = (targetPath: string) => {
+        return Response.redirect(new URL(targetPath, safeOrigin));
+      };
+
+      console.log(`[MIDDLEWARE] Running for ${nextUrl.pathname} on ${safeOrigin}. auth:`, JSON.stringify(auth));
       const isLoggedIn = !!auth?.user;
       const role = auth?.user?.role;
       const pathname = nextUrl.pathname;
@@ -74,7 +102,14 @@ export const authConfig = {
       // ── NOT LOGGED IN ────────────────────────────────────────────────────────
       if (!isLoggedIn) {
         // Allow public paths without a session
-        if (pathname === "/" || pathname === "/operator/login" || pathname.startsWith("/reset-password") || pathname.startsWith("/api/")) return true;
+        if (
+          pathname === "/" ||
+          pathname === "/operator/login" ||
+          pathname.startsWith("/reset-password") ||
+          pathname.startsWith("/api/")
+        ) {
+          return true;
+        }
         // Everything else requires login
         return false;
       }
@@ -90,18 +125,18 @@ export const authConfig = {
       if (isGodMode) {
         // Only redirect away from the bare root "/" or "/redirecting" to their home
         if (pathname === "/" || pathname === "/redirecting") {
-          return Response.redirect(new URL("/admin/dashboard", nextUrl));
+          return safeRedirect("/admin/dashboard");
         }
         return true;
       }
 
       // ── LOGGED IN, NON-ADMIN ROLE ─────────────────────────────────────────────
 
-      // Redirect root based on role
+      // Redirect root or /redirecting based on role
       if (pathname === "/" || pathname === "/redirecting") {
-        if (role === "STAFF") return Response.redirect(new URL("/staff/dashboard", nextUrl));
-        if (role === "OPERATOR") return Response.redirect(new URL("/operator/home", nextUrl));
-        return Response.redirect(new URL("/driver/home", nextUrl));
+        if (role === "STAFF") return safeRedirect("/staff/dashboard");
+        if (role === "OPERATOR") return safeRedirect("/operator/home");
+        return safeRedirect("/driver/home");
       }
 
       // Block /admin and /owner from non-admins
@@ -111,33 +146,33 @@ export const authConfig = {
             "/admin/live/map",
             "/admin/billing",
             "/admin/advances",
-            "/admin/adjustments"
+            "/admin/adjustments",
           ];
-          if (allowedAdminPathsForStaff.some(p => pathname.startsWith(p))) {
+          if (allowedAdminPathsForStaff.some((p) => pathname.startsWith(p))) {
             return true;
           }
-          return Response.redirect(new URL("/staff/dashboard", nextUrl));
+          return safeRedirect("/staff/dashboard");
         }
-        if (role === "OPERATOR") return Response.redirect(new URL("/operator/home", nextUrl));
-        return Response.redirect(new URL("/driver/home", nextUrl));
+        if (role === "OPERATOR") return safeRedirect("/operator/home");
+        return safeRedirect("/driver/home");
       }
 
       // /staff → STAFF only
       if (pathname.startsWith("/staff")) {
         if (role === "STAFF") return true;
-        return Response.redirect(new URL("/", nextUrl));
+        return safeRedirect("/");
       }
 
       // /driver → DRIVER only
       if (pathname.startsWith("/driver")) {
         if (role === "DRIVER") return true;
-        return Response.redirect(new URL("/", nextUrl));
+        return safeRedirect("/");
       }
 
       // /operator → OPERATOR only
       if (pathname.startsWith("/operator")) {
         if (role === "OPERATOR") return true;
-        return Response.redirect(new URL("/", nextUrl));
+        return safeRedirect("/");
       }
 
       return true;
