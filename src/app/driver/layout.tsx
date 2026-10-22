@@ -85,8 +85,8 @@ export default async function DriverLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                prefetch={false}
-                className="flex flex-col items-center gap-1 py-1 px-3 text-slate-400 hover:text-cyan-400 transition-colors"
+                prefetch={true}
+                className="flex flex-col items-center gap-1 py-1 px-3 text-slate-400 hover:text-cyan-400 active:text-cyan-400 active:scale-95 transition-all touch-manipulation select-none"
               >
                 <Icon className="h-5 w-5" />
                 <span className="text-[10px] font-medium">{item.label}</span>

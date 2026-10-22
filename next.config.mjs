@@ -14,7 +14,12 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react", "date-fns"],
     serverActions: {
-      allowedOrigins: ["localhost:3000"],
+      allowedOrigins: [
+        "localhost:3000",
+        "127.0.0.1:3000",
+        "*.vercel.app",
+        "zero-group-machine.vercel.app",
+      ],
     },
   },
   images: {

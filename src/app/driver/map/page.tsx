@@ -22,16 +22,16 @@ export default async function DriverLiveMapPage() {
   }
 
   return (
-    <div className="bg-zinc-950 min-h-screen font-sans">
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-zinc-900/60 border-b border-zinc-800/80 p-4">
+    <div className="space-y-4">
+      <div className="pt-2">
         <h1 className="text-xl font-black text-white">Live Route Map</h1>
-        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-0.5">
+        <p className="text-xs text-slate-500 mt-0.5">
           Crew Tracking & Operations
         </p>
-      </header>
+      </div>
       
-      {/* We reuse the admin map engine here */}
-      <div className="h-[calc(100vh-theme(spacing.20))]">
+      {/* Map Container */}
+      <div className="h-[calc(100dvh-13rem)] min-h-[380px] w-full rounded-2xl overflow-hidden border border-slate-800 shadow-xl">
         <LiveMap sites={[]} />
       </div>
     </div>

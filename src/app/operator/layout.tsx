@@ -155,8 +155,8 @@ export default function OperatorLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                prefetch={false}
-                className="flex flex-col items-center justify-center gap-1 w-full h-full min-h-[48px] min-w-[48px] text-zinc-400 active:text-orange-500 transition-colors"
+                prefetch={true}
+                className="flex flex-col items-center justify-center gap-1 w-full h-full min-h-[48px] min-w-[48px] text-zinc-400 active:text-orange-500 active:scale-95 transition-all touch-manipulation select-none"
               >
                 <Icon className="h-6 w-6" />
                 <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>

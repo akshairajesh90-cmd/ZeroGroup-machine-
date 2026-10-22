@@ -74,8 +74,8 @@ export default function DriversClientPage({ Drivers }: { Drivers: any[] }) {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl p-6 max-h-[90dvh] overflow-y-auto overscroll-contain">
             <h2 className="text-xl font-bold text-white mb-4">{mode === "CREATE" ? "Add Field Driver" : "Edit Driver"}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div><label className="block text-xs font-semibold text-slate-400 mb-1">Full Name</label><input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-amber-500"/></div>

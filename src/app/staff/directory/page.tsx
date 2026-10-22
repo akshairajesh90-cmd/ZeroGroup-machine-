@@ -48,7 +48,7 @@ export default async function CrewDirectoryPage() {
   }));
 
   return (
-    <div className="h-[calc(100vh-6rem)] overflow-hidden">
+    <div className="h-full min-h-[500px] overflow-hidden flex flex-col">
       <ChatClient employees={serialized} currentUserEmployeeId={currentUser.employeeId} />
     </div>
   );

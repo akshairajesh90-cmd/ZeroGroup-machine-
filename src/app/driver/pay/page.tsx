@@ -28,7 +28,7 @@ export default async function DriverPayPage() {
   });
 
   return (
-    <div className="space-y-6 bg-zinc-950 min-h-screen pb-20">
+    <div className="space-y-6">
       <div className="pt-4 px-4">
         <h1 className="text-2xl font-black text-white">My Pay 💰</h1>
         <p className="text-xs text-slate-500 mt-1">

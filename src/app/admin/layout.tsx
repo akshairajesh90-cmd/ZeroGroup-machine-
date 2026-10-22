@@ -19,7 +19,7 @@ export default async function AdminLayout({
   const role = session.user.role;
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans">
+    <div className="flex h-screen h-[100dvh] overflow-hidden bg-slate-950 text-slate-100 font-sans">
       {role === "STAFF" ? (
         <StaffSidebar userName={session.user.name || "Staff"} userEmail={session.user.email || ""} />
       ) : (
@@ -27,9 +27,9 @@ export default async function AdminLayout({
       )}
 
       {/* Main Content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden min-h-0 min-w-0">
         {/* Top Bar */}
-        <header className="flex h-16 items-center justify-between border-b border-slate-800/80 bg-slate-900/50 px-6 backdrop-blur-md shrink-0">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-800/80 bg-slate-900/50 px-4 sm:px-6 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-4">
             <span className="lg:hidden font-bold text-indigo-400">ZERO GROUP</span>
             <div className="hidden sm:flex items-center gap-2 rounded-full bg-slate-800/60 px-3 py-1 text-xs text-slate-400 border border-slate-700/50">
@@ -52,7 +52,7 @@ export default async function AdminLayout({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 lg:p-8 overscroll-y-contain [webkit-overflow-scrolling:touch]">
           {children}
         </main>
       </div>

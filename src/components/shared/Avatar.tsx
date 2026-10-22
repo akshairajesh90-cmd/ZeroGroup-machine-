@@ -43,6 +43,7 @@ export default function Avatar({ name, photoUrl, size = "md" }: AvatarProps) {
         alt={name}
         width={px}
         height={px}
+        unoptimized
         className="rounded-full object-cover shrink-0"
         style={{ width: px, height: px }}
       />

@@ -88,6 +88,11 @@
   }
   html {
     @apply font-sans;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  button, a, input, select, textarea {
+    touch-action: manipulation;
   }
 }
 
@@ -152,4 +157,29 @@
 }
 .rbc-off-range-bg {
   background-color: #f8fafc !important;
+}
+
+/* Mobile Safe Area & Smooth Touch Scrolling */
+html, body {
+  -webkit-overflow-scrolling: touch;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
 }

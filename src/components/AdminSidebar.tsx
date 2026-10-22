@@ -94,7 +94,7 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
       {/* Mobile Hamburger Button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed bottom-6 left-6 z-[99999] p-3 rounded-full bg-indigo-600 border border-indigo-500 text-white hover:bg-indigo-500 shadow-2xl flex items-center justify-center"
+        className="lg:hidden fixed bottom-6 left-6 z-[99999] p-3 rounded-full bg-indigo-600 border border-indigo-500 text-white hover:bg-indigo-500 active:scale-90 transition-transform shadow-2xl flex items-center justify-center touch-manipulation select-none"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}></path></svg>
       </button>
@@ -138,9 +138,9 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
                     <Link
                       key={item.href}
                       href={item.href}
-                      prefetch={false}
+                      prefetch={true}
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all ${
+                      className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all active:scale-[0.98] active:opacity-80 ${
                         isActive 
                           ? (isDanger ? "bg-rose-500/20 text-rose-400" : "bg-indigo-500/20 text-indigo-400")
                           : (isDanger ? "text-rose-400 hover:bg-rose-500/10 hover:text-rose-300" : "text-slate-300 hover:bg-slate-800/80 hover:text-white")

@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { Camera, Loader2, Check } from "lucide-react";
 import Avatar from "@/components/shared/Avatar";
+import { compressCameraPhoto } from "@/lib/imageCompression";
 
 interface ProfilePhotoUploaderProps {
   employeeId?: string; // if provided and user is admin/staff, uploads for that employee
@@ -24,25 +25,32 @@ export default function ProfilePhotoUploader({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    let file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
     setStatus("idle");
     setErrorMsg("");
 
-    const formData = new FormData();
-    formData.append("file", file);
-    if (employeeId) formData.append("employeeId", employeeId);
-
     try {
+      try {
+        const compressedBlob = await compressCameraPhoto(file);
+        file = new File([compressedBlob], file.name, { type: compressedBlob.type || "image/jpeg" });
+      } catch (cErr) {
+        console.warn("Client compression skipped:", cErr);
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+      if (employeeId) formData.append("employeeId", employeeId);
+
       const res = await fetch("/api/upload/profile-photo", {
         method: "POST",
         body: formData,
       });
       const data = await res.json();
       if (data.success) {
-        setPhotoUrl(data.url + "?t=" + Date.now()); // cache-bust
+        setPhotoUrl(data.url);
         setStatus("success");
       } else {
         setErrorMsg(data.error ?? "Upload failed");

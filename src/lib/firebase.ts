@@ -1,6 +1,7 @@
 // Firebase Client SDK Configuration - ZERO GROUP
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -23,6 +24,11 @@ export function getFirebaseApp() {
 export function getFirebaseAuth() {
   const app = getFirebaseApp();
   return app ? getAuth(app) : null;
+}
+
+export function getFirebaseStorage() {
+  const app = getFirebaseApp();
+  return app ? getStorage(app) : null;
 }
 
 export { RecaptchaVerifier, signInWithPhoneNumber };

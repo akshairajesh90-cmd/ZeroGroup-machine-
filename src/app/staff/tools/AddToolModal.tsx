@@ -41,8 +41,8 @@ export function AddToolModal() {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl max-h-[90dvh] overflow-y-auto overscroll-contain">
             <div className="flex justify-between items-center p-4 border-b border-zinc-800 bg-zinc-950/50">
               <h3 className="font-bold text-white flex items-center gap-2">
                 <Plus className="w-4 h-4 text-rose-400" /> Add New Asset

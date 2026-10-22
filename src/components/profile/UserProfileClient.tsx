@@ -8,6 +8,7 @@ import {
   Briefcase, Sparkles, Check, ChevronRight, Eye, ArrowLeft, ShieldCheck
 } from "lucide-react";
 import { updateOwnProfile, linkOfficialDocument, changeOwnPassword } from "@/actions/profile";
+import { compressCameraPhoto } from "@/lib/imageCompression";
 
 type DocumentItem = {
   id: string;
@@ -102,13 +103,20 @@ export default function UserProfileClient({ initialProfile, backUrl, portalTitle
 
   // 1. Upload Avatar Photo
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    let file = e.target.files?.[0];
     if (!file) return;
 
     setAvatarUploading(true);
     setProfileMsg(null);
 
     try {
+      try {
+        const compressedBlob = await compressCameraPhoto(file);
+        file = new File([compressedBlob], file.name, { type: compressedBlob.type || "image/jpeg" });
+      } catch (cErr) {
+        console.warn("Client compression skipped:", cErr);
+      }
+
       const formData = new FormData();
       formData.append("file", file);
 
@@ -128,20 +136,29 @@ export default function UserProfileClient({ initialProfile, backUrl, portalTitle
       setProfileMsg({ type: "error", text: err.message || "Upload error" });
     } finally {
       setAvatarUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
     }
   };
 
   // 2. Upload Document Scan
   const handleDocFileUpload = async (type: "LICENSE" | "ID_PROOF", e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    let file = e.target.files?.[0];
     if (!file) return;
 
     setUploadingDocType(type);
     setDocUploadMsg(null);
 
     try {
+      try {
+        const compressedBlob = await compressCameraPhoto(file);
+        file = new File([compressedBlob], file.name, { type: compressedBlob.type || "image/jpeg" });
+      } catch (cErr) {
+        console.warn("Client compression skipped:", cErr);
+      }
+
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("isDocument", "true");
 
       const res = await fetch("/api/upload/profile-photo", {
         method: "POST",
@@ -176,6 +193,8 @@ export default function UserProfileClient({ initialProfile, backUrl, portalTitle
       setDocUploadMsg({ type: "error", text: err.message || "Upload error" });
     } finally {
       setUploadingDocType(null);
+      if (type === "LICENSE" && licenseInputRef.current) licenseInputRef.current.value = "";
+      if (type === "ID_PROOF" && aadhaarInputRef.current) aadhaarInputRef.current.value = "";
     }
   };
 

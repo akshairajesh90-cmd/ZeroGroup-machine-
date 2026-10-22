@@ -1,11 +1,10 @@
 // src/app/api/upload/profile-photo/route.ts
+// Handles profile photo and KYC document uploads directly via database storage.
+// Zero filesystem dependency — 100% compatible with Vercel serverless (immutable /var/task).
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import path from "path";
-import fs from "fs/promises";
 
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "profiles");
 const MAX_SIZE_MB = 5;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -16,74 +15,62 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const role = session.user.role as string;
+    const role = (session.user.role as string) || "";
     const isAdminOrStaff = ["ADMIN", "STAFF", "OWNER"].includes(role);
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
-    // targetEmployeeId is optional – if omitted, update own profile
     const targetEmployeeId = formData.get("employeeId") as string | null;
+    const isDocument = formData.get("isDocument") === "true";
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json({ error: "Only JPG, PNG, or WebP allowed" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Only JPG, PNG, or WebP images are allowed." },
+        { status: 400 }
+      );
     }
 
     if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-      return NextResponse.json({ error: `Max ${MAX_SIZE_MB}MB allowed` }, { status: 400 });
+      return NextResponse.json(
+        { error: `File too large. Maximum ${MAX_SIZE_MB}MB allowed.` },
+        { status: 400 }
+      );
     }
 
-    // Determine which employee record to update
-    let employeeId: string;
-    if (targetEmployeeId && isAdminOrStaff) {
-      employeeId = targetEmployeeId;
-    } else {
-      // update own
-      const employee = await prisma.employee.findUnique({
-        where: { userId: session.user.id as string },
-        select: { id: true },
-      });
-      if (!employee) {
-        return NextResponse.json({ error: "Employee record not found" }, { status: 404 });
-      }
-      employeeId = employee.id;
-    }
-
-    // Ensure upload directory exists
-    await fs.mkdir(UPLOAD_DIR, { recursive: true });
-
-    // Unique filename
-    const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-    const filename = `${employeeId}-${Date.now()}.${ext}`;
-    const filePath = path.join(UPLOAD_DIR, filename);
-
+    // Convert uploaded image to Base64 data URL
     const buffer = Buffer.from(await file.arrayBuffer());
-    await fs.writeFile(filePath, buffer);
+    const mimeType = file.type || "image/jpeg";
+    const dataUrl = `data:${mimeType};base64,${buffer.toString("base64")}`;
 
-    const publicUrl = `/uploads/profiles/${filename}`;
+    // If this is an avatar upload, persist it directly to the employee's profile
+    if (!isDocument) {
+      let employeeId: string;
+      if (targetEmployeeId && isAdminOrStaff) {
+        employeeId = targetEmployeeId;
+      } else {
+        const employee = await prisma.employee.findUnique({
+          where: { userId: session.user.id as string },
+          select: { id: true },
+        });
+        if (!employee) {
+          return NextResponse.json({ error: "Employee record not found" }, { status: 404 });
+        }
+        employeeId = employee.id;
+      }
 
-    // Remove old photo file if exists
-    const existing = await prisma.employee.findUnique({
-      where: { id: employeeId },
-      select: { profilePhotoUrl: true },
-    });
-    if (existing?.profilePhotoUrl?.startsWith("/uploads/")) {
-      const oldPath = path.join(process.cwd(), "public", existing.profilePhotoUrl);
-      fs.unlink(oldPath).catch(() => {}); // silently ignore if missing
+      await prisma.employee.update({
+        where: { id: employeeId },
+        data: { profilePhotoUrl: dataUrl },
+      });
     }
 
-    // Update DB
-    await prisma.employee.update({
-      where: { id: employeeId },
-      data: { profilePhotoUrl: publicUrl },
-    });
-
-    return NextResponse.json({ success: true, url: publicUrl });
+    return NextResponse.json({ success: true, url: dataUrl });
   } catch (err: any) {
-    console.error("Photo upload failed:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("[Profile Upload] Upload failed:", err);
+    return NextResponse.json({ error: err.message || "Upload failed." }, { status: 500 });
   }
 }

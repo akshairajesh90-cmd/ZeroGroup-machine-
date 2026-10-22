@@ -45,7 +45,7 @@ export default async function OperatorLedgerPage() {
   });
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-slate-950 p-4 md:p-6 pb-24">
+    <div className="space-y-6">
       <h1 className="text-2xl font-black text-white mb-6">Personal Ledger</h1>
       <LedgerClient 
         workerSummary={workerSummary} 

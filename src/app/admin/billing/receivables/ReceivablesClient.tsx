@@ -20,6 +20,7 @@ export default function ReceivablesClient({ initialInvoices }: { initialInvoices
   return (
     <>
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto [webkit-overflow-scrolling:touch]">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-xs">
             <tr>
@@ -88,6 +89,7 @@ export default function ReceivablesClient({ initialInvoices }: { initialInvoices
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       {selectedInvoice && (

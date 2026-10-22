@@ -17,7 +17,7 @@ export default async function StaffLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-zinc-950 text-slate-100 font-sans">
+    <div className="flex h-screen h-[100dvh] overflow-hidden bg-zinc-950 text-slate-100 font-sans">
       <AdminReturnBanner userRole={session.user.role} />
       {/* Staff Sidebar */}
       <StaffSidebar
@@ -26,9 +26,9 @@ export default async function StaffLayout({
       />
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden min-h-0 min-w-0">
         {/* Topbar */}
-        <header className="flex h-16 items-center justify-between border-b border-zinc-800/80 bg-zinc-900/50 px-6 backdrop-blur-md">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-zinc-800/80 bg-zinc-900/50 px-4 sm:px-6 backdrop-blur-md">
           <div className="flex items-center gap-4">
             <span className="lg:hidden font-bold text-emerald-400">ZERO GROUP</span>
             <div className="hidden sm:flex items-center gap-2 rounded-full bg-zinc-800/60 px-3 py-1 text-xs text-zinc-400 border border-zinc-700/50">
@@ -43,7 +43,7 @@ export default async function StaffLayout({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8 bg-zinc-950">
+        <main className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 lg:p-8 bg-zinc-950 overscroll-y-contain [webkit-overflow-scrolling:touch]">
           {children}
         </main>
       </div>

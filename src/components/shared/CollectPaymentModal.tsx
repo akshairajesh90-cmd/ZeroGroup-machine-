@@ -44,8 +44,8 @@ export function CollectPaymentModal({ dispatchId, isOpen, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-md overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-md shadow-2xl max-h-[90dvh] overflow-y-auto overscroll-contain">
         <div className="p-6">
           <h2 className="text-xl font-bold text-white mb-2">Collect Payment</h2>
           <p className="text-zinc-400 text-sm mb-6">Log field payment collections to reconcile with the office.</p>

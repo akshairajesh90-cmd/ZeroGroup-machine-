@@ -29,7 +29,7 @@ export default async function DriverChatPage() {
   });
 
   return (
-    <div className="h-[calc(100dvh-10.5rem)] min-h-[500px] w-full overflow-hidden flex flex-col">
+    <div className="h-[calc(100dvh-11.5rem)] w-full overflow-hidden flex flex-col">
       <ChatClient
         employees={employees}
         currentUserEmployeeId={currentUser.employeeId || ""}

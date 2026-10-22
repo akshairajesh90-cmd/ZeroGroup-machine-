@@ -55,7 +55,7 @@ export default function JobPoolClient({
   const otherJobs = jobs.filter(j => j.driverId !== currentEmployeeId);
 
   return (
-    <div className="min-h-screen bg-zinc-950 font-sans text-white p-6 pb-24">
+    <div className="space-y-6">
       {/* Header */}
       <header className="mb-6">
         <h1 className="text-2xl font-black tracking-tight text-white">Job Pool</h1>

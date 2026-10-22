@@ -55,6 +55,7 @@ export default function MaintenanceClient({ tickets, vehicles, machines }: any) 
       </div>
 
       <div className="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+        <div className="overflow-x-auto [webkit-overflow-scrolling:touch]">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -97,6 +98,7 @@ export default function MaintenanceClient({ tickets, vehicles, machines }: any) 
             })}
           </tbody>
         </table>
+        </div>
         {tickets.length === 0 && (
           <div className="p-6 text-center text-gray-500">
             No maintenance tickets found.
