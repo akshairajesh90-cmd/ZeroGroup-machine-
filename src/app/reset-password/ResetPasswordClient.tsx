@@ -20,6 +20,16 @@ import {
   ConfirmationResult
 } from "@/lib/firebase";
 
+function maskPhoneNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length >= 10) {
+    const last4 = digits.slice(-4);
+    const first2 = digits.slice(-10, -8);
+    return `+91 ${first2}••••••${last4}`;
+  }
+  return phone;
+}
+
 export default function ResetPasswordClient({ prefilledIdentifier }: { prefilledIdentifier: string }) {
   const router = useRouter();
 
@@ -54,7 +64,6 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
   const [loadingOtp, setLoadingOtp] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
-  const [demoOtpHint, setDemoOtpHint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [firebaseStatus, setFirebaseStatus] = useState<string | null>(null);
@@ -106,10 +115,8 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
       const res = await requestPasswordResetOtp(phoneToTarget);
       if (res.success) {
         setOtpSent(true);
-        if (res.demoOtp) {
-          setDemoOtpHint(res.demoOtp);
-          setOtp(res.demoOtp);
-        }
+        // Clean professional user experience: do not auto-fill OTP into the user input
+        setOtp("");
       } else {
         setError(res.error || "Failed to generate OTP.");
       }
@@ -226,7 +233,7 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 sm:p-6 font-sans">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 sm:p-6 pb-28 font-sans">
       <div className="w-full max-w-md space-y-6">
         
         {/* Top Back Link */}
@@ -410,49 +417,32 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
             /* STEP 2: ENTER OTP & NEW PASSWORD (UNLOCKED ONCE VERIFIED & OTP SENT) */
             <form onSubmit={handleResetPassword} className="space-y-4">
               
-              {/* Verified Identity Badge */}
-              <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs space-y-1">
+              {/* Verified Identity Badge with masked phone */}
+              <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="font-bold flex items-center gap-1.5 text-indigo-200">
                     <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                    Identity Verified ✓
+                    Identity Verified
                   </span>
                   {verifiedEmployee && (
-                    <span className="text-[10px] uppercase font-bold tracking-wider bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30">
+                    <span className="text-[10px] uppercase font-bold tracking-wider bg-indigo-500/20 text-indigo-300 px-2.5 py-0.5 rounded-full border border-indigo-500/30">
                       {verifiedEmployee.role}
                     </span>
                   )}
                 </div>
-                {verifiedEmployee ? (
-                  <p className="text-slate-300">
-                    Employee: <strong>{verifiedEmployee.name}</strong> • Auto-selected Mobile:{" "}
-                    <strong className="text-emerald-300 font-mono">{verifiedEmployee.phone}</strong>
-                  </p>
-                ) : (
-                  <p className="text-slate-300">
-                    Target Mobile: <strong className="text-emerald-300 font-mono">{selectedPhone}</strong>
-                  </p>
-                )}
+                <p className="text-slate-300 text-xs">
+                  Account: <strong className="text-white">{verifiedEmployee?.name || "Verified User"}</strong> • Mobile:{" "}
+                  <strong className="text-emerald-300 font-mono tracking-wider">
+                    {maskPhoneNumber(verifiedEmployee?.phone || selectedPhone)}
+                  </strong>
+                </p>
               </div>
 
-              {/* Firebase SMS Status Pill */}
+              {/* Status Message */}
               {firebaseStatus && (
                 <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs flex items-center gap-2">
                   <Smartphone className="h-4 w-4 shrink-0 text-blue-400" />
                   <p>{firebaseStatus}</p>
-                </div>
-              )}
-
-              {/* Demo OTP Hint if in dev fallback */}
-              {demoOtpHint && (
-                <div className="flex items-center justify-between p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs">
-                  <span className="flex items-center gap-1">
-                    <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
-                    Development Test Code:
-                  </span>
-                  <span className="font-mono font-bold text-sm bg-cyan-500/20 px-2 py-0.5 rounded border border-cyan-500/40">
-                    {demoOtpHint}
-                  </span>
                 </div>
               )}
 
@@ -475,9 +465,12 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
                   maxLength={6}
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                  placeholder="e.g. 582914"
-                  className="w-full tracking-widest text-center font-mono text-xl font-black rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-white placeholder-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                  placeholder="• • • • • •"
+                  className="w-full tracking-[0.5em] text-center font-mono text-2xl font-black rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-white placeholder-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
                 />
+                <p className="text-[11px] text-slate-500 mt-1 text-center">
+                  Enter the 6-digit verification code sent to your registered mobile
+                </p>
               </div>
 
               {/* New Password */}
@@ -563,12 +556,12 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
 
           {/* Footer Badge */}
           <div className="border-t border-slate-800/60 pt-4 flex flex-col items-center justify-center text-[11px] text-slate-500 font-medium gap-1 text-center">
-            <span className="flex items-center gap-1.5">
-              <Shield className="h-3.5 w-3.5 text-emerald-500" />
-              <span>Secure 15-Minute Verified Handshake</span>
+            <span className="flex items-center gap-1.5 text-slate-400">
+              <Shield className="h-3.5 w-3.5 text-emerald-400" />
+              <span>Zero Group Identity & Access Management</span>
             </span>
-            <span className="text-[10px] text-indigo-400 font-medium">
-              ⚡ Google Firebase Automated Carrier SMS Gateway (10,000 Free SMS/Month)
+            <span className="text-[10px] text-slate-600">
+              Protected by 256-bit SSL encryption
             </span>
           </div>
         </div>
