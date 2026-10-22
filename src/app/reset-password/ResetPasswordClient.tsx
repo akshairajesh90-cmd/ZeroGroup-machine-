@@ -97,7 +97,12 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
               callback: () => {},
             });
           }
-          const confirmation = await signInWithPhoneNumber(auth, formatted, recaptchaVerifierRef.current);
+          const confirmation = await Promise.race([
+            signInWithPhoneNumber(auth, formatted, recaptchaVerifierRef.current),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("Firebase SMS verification timeout")), 6000)
+            ),
+          ]);
           setConfirmationResult(confirmation);
           setOtpSent(true);
           setFirebaseStatus(`Google Firebase SMS sent to ${formatted}! Check your phone.`);
