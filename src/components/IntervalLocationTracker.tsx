@@ -2,51 +2,59 @@
 
 import { useEffect, useRef } from "react";
 import { updateEmployeeLocation } from "@/actions/location";
+import { captureCurrentPosition } from "@/lib/geoCapture";
 
-// Track last ping globally across route navigation to avoid re-pinging on every page mount
 let globalLastPingTime = 0;
+let isPingingInProgress = false;
 
 export default function IntervalLocationTracker({ intervalMs = 300000 }: { intervalMs?: number }) {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !navigator.geolocation) {
-      return;
-    }
+    if (typeof window === "undefined") return;
 
-    const pingLocation = () => {
+    const pingLocation = async () => {
+      if (isPingingInProgress) return;
+
       const now = Date.now();
-      // If we pinged recently (within intervalMs), skip
       if (globalLastPingTime > 0 && now - globalLastPingTime < intervalMs) {
         return;
       }
-      globalLastPingTime = now;
 
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          updateEmployeeLocation(position.coords.latitude, position.coords.longitude)
-            .catch((err) => console.error("Location sync failed:", err));
-        },
-        (error) => {
-          console.warn("Interval GPS capture notice:", error.message);
-        },
-        {
-          // enableHighAccuracy: false prevents mobile OS from freezing UI to spin up cold satellite GPS
-          enableHighAccuracy: false,
-          timeout: 15000,
-          maximumAge: 60000, // Reuse cached position within 60s
+      isPingingInProgress = true;
+      try {
+        const pos = await captureCurrentPosition({
+          timeout: 10000,
+          maximumAge: 30000,
+          allowSimulationFallback: true,
+        });
+
+        const res = await updateEmployeeLocation(
+          pos.latitude,
+          pos.longitude,
+          pos.accuracy,
+          pos.source
+        );
+
+        if (res?.success) {
+          globalLastPingTime = Date.now();
+        } else {
+          console.warn("[IntervalLocationTracker] Server location sync warning:", res?.error);
         }
-      );
+      } catch (err: any) {
+        console.warn("[IntervalLocationTracker] Location capture warning:", err.message);
+      } finally {
+        isPingingInProgress = false;
+      }
     };
 
-    // Defer initial ping by 3 seconds so page navigation & initial UI rendering is 100% instant
+    // First ping after 2 seconds so page navigation is instant, then repeat on intervalMs
     const now = Date.now();
     if (globalLastPingTime === 0 || now - globalLastPingTime >= intervalMs) {
-      timeoutRef.current = setTimeout(pingLocation, 3000);
+      timeoutRef.current = setTimeout(pingLocation, 2000);
     }
 
-    // Then ping periodically on the specified interval
     intervalRef.current = setInterval(pingLocation, intervalMs);
 
     return () => {
@@ -55,5 +63,5 @@ export default function IntervalLocationTracker({ intervalMs = 300000 }: { inter
     };
   }, [intervalMs]);
 
-  return null; // Silent component
+  return null;
 }

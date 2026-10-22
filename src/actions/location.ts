@@ -1,44 +1,128 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/serverAuth";
+import { auth } from "@/lib/auth";
 
-export async function updateEmployeeLocation(latitude: number, longitude: number) {
+export async function updateEmployeeLocation(
+  latitude: number,
+  longitude: number,
+  accuracy?: number,
+  source?: string
+) {
   try {
-    const { employeeId } = await requireAuth();
-    if (!employeeId) return { success: false, error: "No employee linked to user" };
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: "Unauthenticated" };
+    }
 
+    const empId = session.user.employeeId;
+    const employee = await prisma.employee.findFirst({
+      where: {
+        OR: [
+          ...(empId ? [{ id: empId }] : []),
+          { userId: session.user.id },
+          ...(session.user.email ? [{ user: { email: session.user.email } }] : [])
+        ],
+      },
+    });
+
+    if (!employee) {
+      return { success: false, error: "No employee profile found for user" };
+    }
+
+    const now = new Date();
+
+    // 1. Update Employee record for LiveMap markers and status
     await prisma.employee.update({
-      where: { id: employeeId },
+      where: { id: employee.id },
       data: {
         lastLatitude: latitude,
         lastLongitude: longitude,
-        lastLocationUpdate: new Date(),
-        lastSeenAt: new Date()
-      }
+        lastLocationUpdate: now,
+        lastSeenAt: now,
+        lastSyncStatus: "ONLINE",
+      },
     });
+
+    // 2. Insert into LocationPing for telemetry trail & live breadcrumbs
+    await prisma.locationPing.create({
+      data: {
+        employeeId: employee.id,
+        latitude,
+        longitude,
+        accuracy: accuracy ? Number(accuracy) : null,
+        source: source || "BROWSER",
+        timestamp: now,
+      },
+    });
+
     return { success: true };
   } catch (err: any) {
-    console.error("Failed to update location:", err);
+    console.error("Failed to update employee location:", err);
     return { success: false, error: err.message };
   }
 }
 
-export async function updateDispatchLocation(dispatchId: string, latitude: number, longitude: number) {
+export async function updateDispatchLocation(
+  dispatchId: string,
+  latitude: number,
+  longitude: number,
+  accuracy?: number
+) {
   try {
-    const { employeeId } = await requireAuth();
-    if (!employeeId) return { success: false, error: "Unauthorized" };
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: "Unauthorized" };
+    }
 
     const mapLink = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+    const now = new Date();
 
+    // 1. Update Dispatch coordinates and Google Maps link
     await prisma.dailyDispatch.update({
       where: { id: dispatchId },
       data: {
         latitude,
         longitude,
-        mapLink
-      }
+        mapLink,
+      },
     });
+
+    // 2. Also update the reporting employee's coordinates (they are physically at the site)
+    const empId = session.user.employeeId;
+    const employee = await prisma.employee.findFirst({
+      where: {
+        OR: [
+          ...(empId ? [{ id: empId }] : []),
+          { userId: session.user.id },
+        ],
+      },
+    });
+
+    if (employee) {
+      await prisma.employee.update({
+        where: { id: employee.id },
+        data: {
+          lastLatitude: latitude,
+          lastLongitude: longitude,
+          lastLocationUpdate: now,
+          lastSeenAt: now,
+          lastSyncStatus: "ONLINE",
+        },
+      });
+
+      await prisma.locationPing.create({
+        data: {
+          employeeId: employee.id,
+          dispatchId,
+          latitude,
+          longitude,
+          accuracy: accuracy ? Number(accuracy) : null,
+          source: "SITE_UPDATE",
+          timestamp: now,
+        },
+      });
+    }
 
     return { success: true, mapLink };
   } catch (err: any) {

@@ -13,6 +13,7 @@ import {
   Check,
 } from "lucide-react";
 import { pingDriverLocationAction } from "@/app/driver/actions";
+import { captureCurrentPosition } from "@/lib/geoCapture";
 
 interface DriverSitePingerProps {
   dispatchId?: string;
@@ -71,104 +72,45 @@ export default function DriverSitePinger({
   const gmapNavUrl = `https://www.google.com/maps/dir/?api=1&destination=${navQuery}`;
 
   // Execute Ping
-  const handlePingLocation = (isAutomatic = false) => {
+  const handlePingLocation = async (isAutomatic = false) => {
     if (!isAutomatic) {
       setLoading(true);
       setError(null);
     }
 
-    if (typeof window === "undefined" || !navigator.geolocation) {
-      fallbackSimulation("GPS not supported by browser. Sent standard telemetry ping.", isAutomatic);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const acc = Math.round(pos.coords.accuracy || 10);
-
-        try {
-          const res = await pingDriverLocationAction({
-            dispatchId,
-            latitude: lat,
-            longitude: lng,
-            accuracy: acc,
-            siteAddress,
-          });
-
-          setCurrentLat(lat);
-          setCurrentLng(lng);
-          setAccuracy(acc);
-          setLastPinged(formatPingTime(new Date()));
-          if (res.distanceMeters != null) {
-            setDistanceToSite(res.distanceMeters);
-          }
-          if (!isAutomatic) {
-            setSuccess(true);
-            setTimeout(() => setSuccess(false), 4000);
-          }
-        } catch (err: any) {
-          if (!isAutomatic) {
-            setError(err?.message || "Failed to broadcast location ping");
-          } else {
-            console.warn("Auto-ping error:", err);
-          }
-        } finally {
-          if (!isAutomatic) {
-            setLoading(false);
-          }
-        }
-      },
-      (err) => {
-        console.warn("Geolocation browser error:", err);
-        fallbackSimulation(
-          err.code === 1
-            ? "Location permission denied. Pinged current scheduled waypoint."
-            : "GPS signal search timed out. Recorded verified site waypoint.",
-          isAutomatic
-        );
-      },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-    );
-  };
-
-  // Graceful fallback for simulator / permission-blocked localhost
-  const fallbackSimulation = async (notice?: string, isAutomatic = false) => {
-    const baseLat = siteLatitude || currentLat || 9.5916;
-    const baseLng = siteLongitude || currentLng || 76.5222;
-    const simLat = parseFloat((baseLat + (Math.random() - 0.5) * 0.005).toFixed(6));
-    const simLng = parseFloat((baseLng + (Math.random() - 0.5) * 0.005).toFixed(6));
-    const simAcc = 15;
-
     try {
+      const pos = await captureCurrentPosition({
+        timeout: 10000,
+        maximumAge: 30000,
+        allowSimulationFallback: true,
+        fallbackLatitude: siteLatitude || currentLat || 9.5916,
+        fallbackLongitude: siteLongitude || currentLng || 76.5222,
+      });
+
       const res = await pingDriverLocationAction({
         dispatchId,
-        latitude: simLat,
-        longitude: simLng,
-        accuracy: simAcc,
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        accuracy: pos.accuracy,
         siteAddress,
       });
 
-      setCurrentLat(simLat);
-      setCurrentLng(simLng);
-      setAccuracy(simAcc);
+      setCurrentLat(pos.latitude);
+      setCurrentLng(pos.longitude);
+      setAccuracy(pos.accuracy);
       setLastPinged(formatPingTime(new Date()));
-      if (res.distanceMeters != null) {
+      if (res?.distanceMeters != null) {
         setDistanceToSite(res.distanceMeters);
       }
       if (!isAutomatic) {
         setSuccess(true);
         setTimeout(() => setSuccess(false), 4000);
       }
-      if (notice) {
-        console.log("[Telemetry Waypoint]", notice);
-      }
     } catch (err: any) {
       if (!isAutomatic) {
-        setError(err?.message || "Failed to ping server");
+        setError(err?.message || "Failed to broadcast location ping");
       } else {
-        console.warn("Auto fallback error:", err);
+        console.warn("Auto-ping error:", err);
       }
     } finally {
       if (!isAutomatic) {
@@ -191,9 +133,9 @@ export default function DriverSitePinger({
   return (
     <div className="rounded-2xl bg-slate-900/90 border border-cyan-500/30 p-4.5 shadow-xl shadow-cyan-950/20 backdrop-blur-md space-y-4">
       {/* ── Destination Site Card ─────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-3.5">
-        <div className="space-y-1 min-w-0">
-          <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 border-b border-white/10 pb-3.5">
+        <div className="space-y-1.5 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
               <MapPin className="w-3 h-3 text-cyan-400" /> Site Destination
             </span>
@@ -202,7 +144,7 @@ export default function DriverSitePinger({
             </span>
           </div>
 
-          <h3 className="text-base font-black text-white truncate leading-snug">
+          <h3 className="text-base font-black text-white leading-snug break-words">
             {siteAddress}
           </h3>
 

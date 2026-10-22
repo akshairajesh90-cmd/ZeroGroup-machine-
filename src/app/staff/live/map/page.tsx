@@ -27,7 +27,7 @@ export default async function LiveMapPage() {
   const activeDispatches = await prisma.dailyDispatch.findMany({
     where: {
       dateOfService: { gte: todayStart, lte: todayEnd },
-      status: { in: ["PENDING", "DELIVERED"] }, // EN_ROUTE and IN_PROGRESS equivalents
+      status: { in: ["PENDING", "DELIVERED", "IN_PROGRESS", "ACCEPTED", "COMPLETED"] },
       latitude: { not: null },
       longitude: { not: null }
     },
@@ -49,10 +49,10 @@ export default async function LiveMapPage() {
     operatorName: dispatch.operator?.name || "No Operator"
   }));
 
-  // 4. Fetch Active Employees
+  // 4. Fetch Field Employees with known GPS positions
   const activeEmployees = await prisma.employee.findMany({
     where: {
-      lastLocationUpdate: { gte: todayStart },
+      role: { in: ["DRIVER", "OPERATOR", "WORKER"] },
       lastLatitude: { not: null },
       lastLongitude: { not: null }
     }

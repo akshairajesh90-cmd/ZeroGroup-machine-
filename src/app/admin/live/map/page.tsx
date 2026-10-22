@@ -74,13 +74,9 @@ export default async function LiveMapPage({
   // ── 1. Employee GPS pins (Drivers & Operators with recent pings) ──────────
   const fieldEmployees = await prisma.employee.findMany({
     where: {
-      role: { in: ["DRIVER", "OPERATOR"] },
+      role: { in: ["DRIVER", "OPERATOR", "WORKER"] },
       lastLatitude: { not: null },
       lastLongitude: { not: null },
-      lastLocationUpdate: {
-        gte: view === "today" ? new Date(Date.now() - 24 * 60 * 60 * 1000) : rangeStart,
-        lte: rangeEnd,
-      },
     },
     include: {
       operatorDispatches: {

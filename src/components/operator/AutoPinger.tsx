@@ -1,80 +1,85 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { captureCurrentPosition } from "@/lib/geoCapture";
 
-// Track last auto ping globally
 let globalLastAutoPingTime = 0;
+let isAutoPingingInProgress = false;
 
-export default function AutoPinger({ dispatchId, employeeId }: { dispatchId: string; employeeId: string }) {
-  const isPinging = useRef(false);
+export default function AutoPinger({
+  dispatchId,
+  employeeId,
+}: {
+  dispatchId: string;
+  employeeId: string;
+}) {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !navigator.geolocation) return;
+    if (typeof window === "undefined") return;
 
     const pingLocation = async () => {
-      if (isPinging.current) return;
-      
+      if (isAutoPingingInProgress) return;
+
       const now = Date.now();
       if (globalLastAutoPingTime > 0 && now - globalLastAutoPingTime < 300000) {
         return;
       }
 
-      isPinging.current = true;
-      globalLastAutoPingTime = now;
+      isAutoPingingInProgress = true;
+      try {
+        const pos = await captureCurrentPosition({
+          timeout: 10000,
+          maximumAge: 30000,
+          allowSimulationFallback: true,
+        });
 
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          try {
-            const requestBody = JSON.stringify({
-              employeeId: employeeId,
-              dispatchId: dispatchId,
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              accuracy: position.coords.accuracy,
-              source: "AUTO_5MIN"
-            });
+        const requestBody = JSON.stringify({
+          employeeId: employeeId,
+          dispatchId: dispatchId,
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+          accuracy: pos.accuracy,
+          source: pos.source,
+          timestamp: pos.timestamp,
+        });
 
-            if (navigator.onLine) {
-              await fetch("/api/location/ping", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: requestBody
-              });
-            } else {
-              const { offlineDb } = await import("@/lib/offlineDb");
-              await offlineDb.queuedRequests.add({
-                url: "/api/location/ping",
-                method: "POST",
-                body: requestBody,
-                headers: { "Content-Type": "application/json" },
-                createdAt: Date.now(),
-                retries: 0,
-                tag: "location-ping-auto"
-              });
-            }
-          } catch (e) {
-            console.warn("Auto ping failed", e);
-          } finally {
-            isPinging.current = false;
+        if (navigator.onLine) {
+          const res = await fetch("/api/location/ping", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: requestBody,
+          });
+          if (res.ok) {
+            globalLastAutoPingTime = Date.now();
           }
-        },
-        (error) => {
-          console.warn("Auto ping GPS notice:", error.message);
-          isPinging.current = false;
-        },
-        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
-      );
+        } else {
+          const { offlineDb } = await import("@/lib/offlineDb");
+          await offlineDb.queuedRequests.add({
+            url: "/api/location/ping",
+            method: "POST",
+            body: requestBody,
+            headers: { "Content-Type": "application/json" },
+            createdAt: Date.now(),
+            retries: 0,
+            tag: "location-ping-auto",
+          });
+          globalLastAutoPingTime = Date.now();
+        }
+      } catch (err: any) {
+        console.warn("[AutoPinger] GPS notice:", err.message);
+      } finally {
+        isAutoPingingInProgress = false;
+      }
     };
 
-    // Defer initial ping by 5 seconds to guarantee zero UI interference on mount
+    // First auto-ping after 4 seconds to stagger network requests
     const now = Date.now();
     if (globalLastAutoPingTime === 0 || now - globalLastAutoPingTime >= 300000) {
-      timeoutRef.current = setTimeout(pingLocation, 5000);
+      timeoutRef.current = setTimeout(pingLocation, 4000);
     }
 
-    // Ping every 5 minutes (300,000 ms)
     intervalRef.current = setInterval(pingLocation, 300000);
 
     return () => {
@@ -83,5 +88,5 @@ export default function AutoPinger({ dispatchId, employeeId }: { dispatchId: str
     };
   }, [dispatchId, employeeId]);
 
-  return null; // Silent component
+  return null;
 }
