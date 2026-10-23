@@ -56,6 +56,20 @@ const ALL_CREW_ROLES: { value: CrewRole; label: string }[] = [
   { value: "PANI_HELPER", label: "Pani Helper" },
 ];
 
+function formatResetTime(isoString?: string | null) {
+  if (!isoString) return "Just now";
+  try {
+    const d = new Date(isoString);
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
+    return `${String(hours).padStart(2, "0")}:${minutes} ${ampm}`;
+  } catch {
+    return "Recently";
+  }
+}
+
 export default function CredentialsHubClient({
   initialEmployees,
   currentUserRole,
@@ -282,6 +296,9 @@ export default function CredentialsHubClient({
               : e
           )
         );
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("reset-requests-updated"));
+        }
         setIsEditOpen(false);
       } else {
         setActionError(res.error || "Failed to update employee.");
@@ -342,7 +359,13 @@ export default function CredentialsHubClient({
               : e
           )
         );
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("reset-requests-updated"));
+        }
         setIsSetPassOpen(false);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("reset-requests-updated"));
+        }
       } else {
         setActionError(res.error || "Failed to set password.");
       }
@@ -375,6 +398,9 @@ export default function CredentialsHubClient({
               : e
           )
         );
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("reset-requests-updated"));
+        }
       } else {
         setActionError(res.error || "Failed to dismiss request.");
       }
@@ -528,11 +554,12 @@ export default function CredentialsHubClient({
                         {req.role}
                       </span>
                     </div>
-                    <span className="text-[10px] text-amber-400 font-medium flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 shrink-0">
+                    <span
+                      suppressHydrationWarning
+                      className="text-[10px] text-amber-400 font-medium flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 shrink-0"
+                    >
                       <Clock className="w-3 h-3" />
-                      {req.resetRequestedAt
-                        ? new Date(req.resetRequestedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                        : "Just now"}
+                      {formatResetTime(req.resetRequestedAt)}
                     </span>
                   </div>
 

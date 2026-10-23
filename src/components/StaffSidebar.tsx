@@ -58,9 +58,16 @@ export default function StaffSidebar({ userName, userEmail }: StaffSidebarProps)
 
     fetchCount();
     const interval = setInterval(fetchCount, 20000);
+
+    const handleUpdate = () => {
+      fetchCount();
+    };
+    window.addEventListener("reset-requests-updated", handleUpdate);
+
     return () => {
       isMounted = false;
       clearInterval(interval);
+      window.removeEventListener("reset-requests-updated", handleUpdate);
     };
   }, [pathname]);
 
