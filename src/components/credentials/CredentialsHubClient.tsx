@@ -545,6 +545,18 @@ export default function CredentialsHubClient({
                       <Mail className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                       <span className="truncate text-slate-400">{req.email}</span>
                     </div>
+                    {req.capableRoles && req.capableRoles.length > 0 && (
+                      <div className="pt-1 flex flex-wrap gap-1">
+                        {req.capableRoles.map((skill) => (
+                          <span
+                            key={skill}
+                            className="text-[9px] font-bold bg-slate-950 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded"
+                          >
+                            {skill.replace(/_/g, " ")}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {req.resetRequestNotes && (
                       <div className="mt-2 p-2 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] text-slate-300 italic">
                         "{req.resetRequestNotes}"

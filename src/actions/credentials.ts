@@ -642,13 +642,69 @@ export async function verifyNameAndEmailAction(data: { name: string; email: stri
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Helper to test if a candidate employee matches the requested role,
+ * considering their primary Role, defaultCrewRole, and multiple capableRoles from crew allocation.
+ */
+function checkCrewRoleMatch(emp: any, requestedRole: string): boolean {
+  const norm = requestedRole.toUpperCase().trim();
+
+  // 1. Exact match with primary Role (e.g. "DRIVER", "OPERATOR", "WORKER", "STAFF")
+  if (emp.role === norm) return true;
+
+  // 2. Exact match with defaultCrewRole
+  if (emp.defaultCrewRole === norm) return true;
+
+  // 3. Match with any tagged capableRoles from crew allocation
+  if (Array.isArray(emp.capableRoles) && emp.capableRoles.includes(norm)) {
+    return true;
+  }
+
+  // 4. Operator crew roles group mapping
+  const OPERATOR_ROLES = [
+    "OPERATOR",
+    "MIXER_OPERATOR",
+    "HYDRAULIC_OPERATOR",
+    "LIFT_OPERATOR",
+    "VIBRATOR_OPERATOR",
+    "P_VIBRATOR",
+  ];
+  if (emp.role === "OPERATOR" && OPERATOR_ROLES.includes(norm)) return true;
+  if (norm === "OPERATOR" && (emp.role === "OPERATOR" || (Array.isArray(emp.capableRoles) && emp.capableRoles.some((r: string) => OPERATOR_ROLES.includes(r))))) {
+    return true;
+  }
+
+  // 5. Worker crew roles group mapping
+  const WORKER_ROLES = [
+    "WORKER",
+    "WORKER_LEADER",
+    "SUB_LEADER",
+    "HELPER",
+    "PANI_HELPER",
+    "TROLLY_1_WHEEL",
+    "TROLLY_2_WHEEL",
+  ];
+  if (emp.role === "WORKER" && WORKER_ROLES.includes(norm)) return true;
+  if (norm === "WORKER" && (emp.role === "WORKER" || (Array.isArray(emp.capableRoles) && emp.capableRoles.some((r: string) => WORKER_ROLES.includes(r))))) {
+    return true;
+  }
+
+  // 6. Driver match
+  if (norm === "DRIVER" && (emp.role === "DRIVER" || (Array.isArray(emp.capableRoles) && emp.capableRoles.includes("DRIVER")))) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Public action: Submit password reset request with Name, Phone Number, and Role verification.
- * Confirms that the provided credentials match an active employee record before flagging the account.
+ * Confirms that the provided credentials match an active employee record before flagging the account,
+ * supporting multiple capable crew roles from dispatch and crew allocation.
  */
 export async function submitPasswordResetRequestAction(data: {
   name?: string;
   phone?: string;
-  role?: Role;
+  role?: string;
   identifier?: string;
   notes?: string;
 }): Promise<{
@@ -657,21 +713,21 @@ export async function submitPasswordResetRequestAction(data: {
   error?: string;
   employeeName?: string;
   employeeRole?: string;
+  capableRoles?: string[];
   phone?: string;
 }> {
   try {
     const cleanName = (data.name || "").trim();
     const rawPhone = (data.phone || data.identifier || "").trim();
-    const role = data.role;
+    const requestedRole = (data.role || "").trim();
 
     // 1. If Name, Phone, and Role are provided: perform verified matching
-    if (cleanName && rawPhone && role) {
+    if (cleanName && rawPhone && requestedRole) {
       const cleanPhoneDigits = rawPhone.replace(/\D/g, "");
       const last10 = cleanPhoneDigits.length >= 10 ? cleanPhoneDigits.slice(-10) : cleanPhoneDigits;
 
       const candidates = await prisma.employee.findMany({
         where: {
-          role: role,
           isPendingDelete: false,
           OR: [
             { phone: rawPhone },
@@ -690,13 +746,13 @@ export async function submitPasswordResetRequestAction(data: {
       if (candidates.length === 0) {
         return {
           success: false,
-          error: "No employee record found matching this Phone Number and Role. Please verify your details.",
+          error: "No employee record found matching this Phone Number. Please verify your registered mobile number.",
         };
       }
 
       // Match name (case-insensitive, exact or substring match)
       const inputLower = cleanName.toLowerCase();
-      const matchedEmp = candidates.find((emp) => {
+      const matchedNameEmp = candidates.find((emp) => {
         const dbLower = emp.name.trim().toLowerCase();
         return (
           dbLower === inputLower ||
@@ -705,21 +761,30 @@ export async function submitPasswordResetRequestAction(data: {
         );
       });
 
-      if (!matchedEmp) {
+      if (!matchedNameEmp) {
         return {
           success: false,
-          error: `The name "${cleanName}" does not match the registered records for this phone number and role.`,
+          error: `The name "${cleanName}" does not match the registered records for this phone number.`,
         };
       }
 
-      if (matchedEmp.role === "ADMIN" || matchedEmp.role === "OWNER" || matchedEmp.user?.role === "ADMIN" || matchedEmp.user?.role === "OWNER") {
+      // Check role match against primary Role, defaultCrewRole, and capableRoles (crew allocation)
+      const isRoleValid = checkCrewRoleMatch(matchedNameEmp, requestedRole);
+      if (!isRoleValid) {
+        return {
+          success: false,
+          error: `The selected role "${requestedRole.replace(/_/g, " ")}" does not match the registered or crew allocation roles for ${matchedNameEmp.name}.`,
+        };
+      }
+
+      if (matchedNameEmp.role === "ADMIN" || matchedNameEmp.role === "OWNER" || matchedNameEmp.user?.role === "ADMIN" || matchedNameEmp.user?.role === "OWNER") {
         return {
           success: false,
           error: "Password reset for Admin or Owner accounts must be requested directly with senior management.",
         };
       }
 
-      if (!matchedEmp.user) {
+      if (!matchedNameEmp.user) {
         return {
           success: false,
           error: "No portal user login account exists for this employee. Please contact Office Staff.",
@@ -728,11 +793,11 @@ export async function submitPasswordResetRequestAction(data: {
 
       // Flag user for staff reset
       await prisma.user.update({
-        where: { id: matchedEmp.user.id },
+        where: { id: matchedNameEmp.user.id },
         data: {
           resetRequested: true,
           resetRequestedAt: new Date(),
-          resetRequestNotes: data.notes?.trim() || `Verified Request: ${matchedEmp.name} (${matchedEmp.role})`,
+          resetRequestNotes: data.notes?.trim() || `Verified Request: ${matchedNameEmp.name} (Role: ${requestedRole})`,
         },
       });
 
@@ -741,10 +806,11 @@ export async function submitPasswordResetRequestAction(data: {
 
       return {
         success: true,
-        message: `Password reset request verified and forwarded to Office Staff for ${matchedEmp.name}.`,
-        employeeName: matchedEmp.name,
-        employeeRole: matchedEmp.role,
-        phone: matchedEmp.phone || undefined,
+        message: `Password reset request verified and forwarded to Office Staff for ${matchedNameEmp.name}.`,
+        employeeName: matchedNameEmp.name,
+        employeeRole: matchedNameEmp.role,
+        capableRoles: matchedNameEmp.capableRoles || [],
+        phone: matchedNameEmp.phone || undefined,
       };
     }
 
@@ -853,6 +919,8 @@ export async function getPendingPasswordResetRequestsAction() {
         email: u.email,
         phone: u.employee?.phone || "",
         role: u.employee?.role || u.role,
+        capableRoles: u.employee?.capableRoles || [],
+        defaultCrewRole: u.employee?.defaultCrewRole || null,
         employeeCode: u.employee?.employeeCode || `ZG-${u.id.slice(-4).toUpperCase()}`,
         resetRequestedAt: u.resetRequestedAt?.toISOString() || null,
         resetRequestNotes: u.resetRequestNotes || null,

@@ -15,15 +15,46 @@ import {
   Building2,
   FileText,
   BadgeCheck,
+  Tag,
 } from "lucide-react";
 import { submitPasswordResetRequestAction } from "@/actions/credentials";
-import { Role } from "@prisma/client";
 
-const ROLE_OPTIONS: { value: Role; label: string; description: string }[] = [
-  { value: "DRIVER", label: "Fleet Driver", description: "Transit mixer & truck drivers" },
-  { value: "OPERATOR", label: "Machine / Plant Operator", description: "Mixer, pump & lift operators" },
-  { value: "WORKER", label: "Site Worker / Trolly Crew", description: "Helpers, trolly crew, site crew" },
-  { value: "STAFF", label: "Office Staff", description: "Depot & administration staff" },
+export const CREW_ALLOCATION_GROUPS = [
+  {
+    category: "Drivers & Transport",
+    roles: [
+      { value: "DRIVER", label: "Fleet Driver" },
+    ],
+  },
+  {
+    category: "Machine & Equipment Operators",
+    roles: [
+      { value: "MIXER_OPERATOR", label: "Concrete Mixer Operator" },
+      { value: "HYDRAULIC_OPERATOR", label: "Hydraulic Machine Operator" },
+      { value: "LIFT_OPERATOR", label: "Lift / Hoist Operator" },
+      { value: "VIBRATOR_OPERATOR", label: "Vibrator Operator" },
+      { value: "P_VIBRATOR", label: "Petrol Vibrator Operator" },
+      { value: "OPERATOR", label: "General Plant / Machine Operator" },
+    ],
+  },
+  {
+    category: "Site & Trolly Crew",
+    roles: [
+      { value: "WORKER_LEADER", label: "Site Leader / Mason Lead" },
+      { value: "SUB_LEADER", label: "Sub Leader" },
+      { value: "TROLLY_1_WHEEL", label: "1-Wheel Trolly Operator" },
+      { value: "TROLLY_2_WHEEL", label: "2-Wheel Trolly Operator" },
+      { value: "HELPER", label: "General Helper" },
+      { value: "PANI_HELPER", label: "Pani / Water Helper" },
+      { value: "WORKER", label: "General Site Crew / Worker" },
+    ],
+  },
+  {
+    category: "Office & Operations Support",
+    roles: [
+      { value: "STAFF", label: "Office Staff / Depot Assistant" },
+    ],
+  },
 ];
 
 export default function ResetPasswordClient({
@@ -31,11 +62,10 @@ export default function ResetPasswordClient({
 }: {
   prefilledIdentifier?: string;
 }) {
-  // If prefilled is numeric, use as phone; otherwise use as name
   const isNumeric = /^\+?\d+$/.test(prefilledIdentifier.trim());
   const [name, setName] = useState(isNumeric ? "" : prefilledIdentifier);
   const [phone, setPhone] = useState(isNumeric ? prefilledIdentifier : "");
-  const [role, setRole] = useState<Role>("DRIVER");
+  const [role, setRole] = useState<string>("DRIVER");
   const [notes, setNotes] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,6 +74,7 @@ export default function ResetPasswordClient({
     name: string;
     role: string;
     phone: string;
+    capableRoles?: string[];
   } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,6 +104,7 @@ export default function ResetPasswordClient({
           name: res.employeeName || name.trim(),
           role: res.employeeRole || role,
           phone: res.phone || phone.trim(),
+          capableRoles: res.capableRoles || [],
         });
       } else {
         setErrorMsg(res.error || "Details verification failed. Please check your Name, Phone Number, and Role.");
@@ -106,7 +138,7 @@ export default function ResetPasswordClient({
             </span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Employee Password Reset Request • Internal Verification
+            Employee Password Reset Request • Crew & Role Verified
           </p>
         </div>
 
@@ -120,7 +152,7 @@ export default function ResetPasswordClient({
                   <span>Verify Identity & Request Reset</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  Enter your registered Name, Mobile Number, and Role. Once verified against company records, Office Staff will update your password.
+                  Enter your registered Name, Mobile Number, and Role (including crew allocation roles). Once verified, Office Staff will set your password.
                 </p>
               </div>
 
@@ -170,37 +202,30 @@ export default function ResetPasswordClient({
                   </p>
                 </div>
 
-                {/* Designated Role Selection */}
+                {/* Designated Role / Crew Allocation Selection */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
                     <Shield className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Your Company Role</span>
+                    <span>Your Role / Crew Allocation</span>
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {ROLE_OPTIONS.map((opt) => {
-                      const isSelected = role === opt.value;
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setRole(opt.value)}
-                          className={`text-left p-3 rounded-xl border text-xs transition-all ${
-                            isSelected
-                              ? "bg-emerald-500/15 border-emerald-500 text-white shadow-sm ring-1 ring-emerald-500/50"
-                              : "bg-slate-950/70 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-300"
-                          }`}
-                        >
-                          <div className="font-bold flex items-center justify-between">
-                            <span>{opt.label}</span>
-                            {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
-                          </div>
-                          <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">
-                            {opt.description}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-semibold"
+                  >
+                    {CREW_ALLOCATION_GROUPS.map((group) => (
+                      <optgroup key={group.category} label={`── ${group.category} ──`} className="bg-slate-900 text-slate-400 font-bold">
+                        {group.roles.map((r) => (
+                          <option key={r.value} value={r.value} className="bg-slate-950 text-white font-normal py-1">
+                            {r.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Select your primary designation or any of your allocated capable crew roles.
+                  </p>
                 </div>
 
                 {/* Optional Note */}
@@ -222,10 +247,10 @@ export default function ResetPasswordClient({
                 <div className="rounded-xl bg-slate-950/60 border border-slate-800/80 p-3 text-[11px] text-slate-400 space-y-1">
                   <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
                     <Shield className="w-3.5 h-3.5" />
-                    <span>Identity Verification:</span>
+                    <span>Crew Allocation Verification:</span>
                   </div>
                   <p className="leading-relaxed">
-                    Your request will be validated against database records before alerting office staff. Once approved, staff will set your new password.
+                    Matches your name, phone, and any of your designated dispatch or capable crew skills. Once verified, office staff will update your credentials.
                   </p>
                 </div>
 
@@ -260,7 +285,7 @@ export default function ResetPasswordClient({
                   Request Verified & Forwarded!
                 </h2>
                 <p className="text-xs text-slate-400 mt-1.5">
-                  Your identity has been confirmed against company records and queued for Office Staff.
+                  Your identity and crew role have been confirmed against company records.
                 </p>
               </div>
 
@@ -268,13 +293,13 @@ export default function ResetPasswordClient({
               <div className="bg-slate-950/80 border border-emerald-500/30 rounded-2xl p-4 text-left space-y-2 shadow-md">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
-                    <BadgeCheck className="w-3.5 h-3.5" /> Verified Employee
+                    <BadgeCheck className="w-3.5 h-3.5" /> Verified Crew Member
                   </span>
                   <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
                     {submittedData.role}
                   </span>
                 </div>
-                <div className="space-y-1 text-xs">
+                <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between py-0.5">
                     <span className="text-slate-500">Employee Name:</span>
                     <strong className="text-white">{submittedData.name}</strong>
@@ -283,7 +308,22 @@ export default function ResetPasswordClient({
                     <span className="text-slate-500">Registered Mobile:</span>
                     <span className="font-mono text-slate-300">{submittedData.phone}</span>
                   </div>
-                  <div className="flex justify-between py-0.5">
+                  {submittedData.capableRoles && submittedData.capableRoles.length > 0 && (
+                    <div className="pt-1">
+                      <span className="text-slate-500 block text-[11px] mb-1">Crew Allocation Capabilities:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {submittedData.capableRoles.map((skill) => (
+                          <span
+                            key={skill}
+                            className="text-[9px] font-bold bg-slate-900 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded"
+                          >
+                            {skill.replace(/_/g, " ")}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-0.5 pt-1 border-t border-slate-900">
                     <span className="text-slate-500">Queue Status:</span>
                     <span className="text-amber-400 font-semibold flex items-center gap-1">
                       <Clock className="w-3 h-3" /> Waiting for Staff Approval
