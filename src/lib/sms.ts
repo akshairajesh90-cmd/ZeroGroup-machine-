@@ -54,10 +54,17 @@ export async function sendOtpSms(rawPhone: string, otp: string): Promise<SmsSend
     }
   }
 
-  // 2. ALTERNATIVE ANDROID SIM GATEWAY (sms-gate.app)
-  const simGatewayUrl = process.env.SIM_GATEWAY_URL;
-  const simGatewayToken = process.env.SIM_GATEWAY_TOKEN;
-  if (simGatewayUrl && simGatewayToken) {
+  // 2. ANDROID SMS GATEWAY (sms-gate.app / android-sms-gateway.com)
+  const simGatewayUrl = process.env.SIM_GATEWAY_URL || "https://api.sms-gate.app/3rdparty/v1/message";
+  const simGatewayLogin = process.env.SIM_GATEWAY_LOGIN;
+  const simGatewayPassword = process.env.SIM_GATEWAY_PASSWORD;
+  const simGatewayToken =
+    process.env.SIM_GATEWAY_TOKEN ||
+    (simGatewayLogin && simGatewayPassword
+      ? Buffer.from(`${simGatewayLogin}:${simGatewayPassword}`).toString("base64")
+      : null);
+
+  if (simGatewayToken) {
     try {
       const res = await fetch(simGatewayUrl, {
         method: "POST",
@@ -70,12 +77,12 @@ export async function sendOtpSms(rawPhone: string, otp: string): Promise<SmsSend
           message: otpMessage,
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
       if (res.ok) {
         console.log(`[SMS-SIM] Android SMS Gateway dispatched via SIM to ${internationalPhone}:`, data);
-        return { success: true, provider: "sim_gateway", messageId: "sim-gate-ok", whatsappUrl };
+        return { success: true, provider: "sim_gateway", messageId: data?.id || "sim-gate-ok", whatsappUrl };
       }
-      console.warn(`[SMS-SIM] Android SMS Gateway error:`, data);
+      console.warn(`[SMS-SIM] Android SMS Gateway error HTTP ${res.status}:`, data);
     } catch (err: any) {
       console.error(`[SMS-SIM] Android SMS Gateway network error:`, err);
     }

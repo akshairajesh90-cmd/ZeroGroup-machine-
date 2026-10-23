@@ -85,7 +85,7 @@ export default function LoginPage() {
                   className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1 font-medium"
                 >
                   <KeyRound className="h-3 w-3" />
-                  Reset with OTP
+                  Forgot Password?
                 </Link>
               </div>
               <div className="relative">

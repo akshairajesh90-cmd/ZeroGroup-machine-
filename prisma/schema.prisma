@@ -13,6 +13,9 @@ model User {
   displayPassword     String?
   resetOtp            String?
   resetOtpExpires     DateTime?
+  resetRequested      Boolean   @default(false)
+  resetRequestedAt    DateTime?
+  resetRequestNotes   String?
   role                Role      @default(DRIVER)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -20,6 +23,7 @@ model User {
   employee            Employee?
 
   @@index([email])
+  @@index([resetRequested])
   @@map("users")
 }
 

@@ -9,7 +9,8 @@ import {
 } from "lucide-react";
 import {
   createManagedEmployee, updateManagedEmployee, verifyOfficialIdAction,
-  revokeOfficialIdAction, adminSetPasswordAction, adminGenerateOtpAction
+  revokeOfficialIdAction, adminSetPasswordAction, adminGenerateOtpAction,
+  resolvePasswordResetRequestAction
 } from "@/actions/credentials";
 import { Role, CrewRole } from "@prisma/client";
 
@@ -32,6 +33,9 @@ type CredentialEmployee = {
   displayPassword: string;
   resetOtp: string | null;
   resetOtpExpires: string | null;
+  resetRequested?: boolean;
+  resetRequestedAt?: string | null;
+  resetRequestNotes?: string | null;
   documents: { id: string; type: string; documentNumber: string; attachmentUrl: string; status: string }[];
   profilePhotoUrl: string | null;
   baseDailyWage: number | null;
@@ -211,6 +215,9 @@ export default function CredentialsHubClient({
             displayPassword: formPassword,
             resetOtp: null,
             resetOtpExpires: null,
+            resetRequested: false,
+            resetRequestedAt: null,
+            resetRequestNotes: null,
             documents: [],
             profilePhotoUrl: null,
             baseDailyWage: null,
@@ -317,15 +324,62 @@ export default function CredentialsHubClient({
     setActionLoading(true);
     setActionError(null);
     try {
-      const res = await adminSetPasswordAction(selectedEmp.id, formPassword);
+      const res = await resolvePasswordResetRequestAction({
+        employeeId: selectedEmp.id,
+        newPassword: formPassword,
+      });
       if (res.success) {
         setEmployees((prev) =>
-          prev.map((e) => (e.id === selectedEmp.id ? { ...e, displayPassword: formPassword } : e))
+          prev.map((e) =>
+            e.id === selectedEmp.id
+              ? {
+                  ...e,
+                  displayPassword: formPassword,
+                  resetRequested: false,
+                  resetRequestedAt: null,
+                  resetRequestNotes: null,
+                }
+              : e
+          )
         );
         setIsSetPassOpen(false);
       } else {
         setActionError(res.error || "Failed to set password.");
       }
+    } catch {
+      setActionError("Failed to set password.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // 6. Dismiss Pending Reset Request
+  const handleDismissResetRequest = async (employeeId: string) => {
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      const res = await resolvePasswordResetRequestAction({
+        employeeId,
+        dismissOnly: true,
+      });
+      if (res.success) {
+        setEmployees((prev) =>
+          prev.map((e) =>
+            e.id === employeeId
+              ? {
+                  ...e,
+                  resetRequested: false,
+                  resetRequestedAt: null,
+                  resetRequestNotes: null,
+                }
+              : e
+          )
+        );
+      } else {
+        setActionError(res.error || "Failed to dismiss request.");
+      }
+    } catch {
+      setActionError("Failed to dismiss request.");
     } finally {
       setActionLoading(false);
     }
@@ -352,6 +406,7 @@ export default function CredentialsHubClient({
 
   const verifiedCount = employees.filter((e) => e.isIdVerified).length;
   const pendingCount = employees.length - verifiedCount;
+  const pendingResetRequests = employees.filter((e) => e.resetRequested);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20 font-sans">
@@ -414,16 +469,114 @@ export default function CredentialsHubClient({
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-          <div className="text-xs font-mono font-bold text-indigo-400 uppercase tracking-widest">Access Mode</div>
-          <div className="text-sm font-black text-white mt-1.5">
-            {isAdminOrOwner ? "Universal Admin Access" : "Staff Operations Access"}
+        <div className={`border rounded-2xl p-4 transition-all ${
+          pendingResetRequests.length > 0
+            ? "bg-amber-500/10 border-amber-500/40"
+            : "bg-slate-900 border-slate-800"
+        }`}>
+          <div className={`text-2xl font-black ${pendingResetRequests.length > 0 ? "text-amber-400 animate-pulse" : "text-white"}`}>
+            {pendingResetRequests.length}
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">
-            {isAdminOrOwner ? "All personnel manageable" : "Field crew manageable"}
+          <div className="text-xs text-slate-400 font-semibold mt-1 flex items-center gap-1.5">
+            <KeyRound className={`h-3.5 w-3.5 ${pendingResetRequests.length > 0 ? "text-amber-400" : "text-slate-500"}`} />
+            Reset Requests Pending
           </div>
         </div>
       </div>
+
+      {/* ── Active Password Reset Requests Queue Panel ───────────────── */}
+      {pendingResetRequests.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border-2 border-amber-500/40 rounded-2xl p-4 sm:p-5 shadow-xl shadow-amber-500/5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-500/20 pb-3">
+            <div className="flex items-center gap-2.5">
+              <span className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <KeyRound className="h-5 w-5 animate-pulse" />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                    Pending Password Reset Requests
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-500 text-slate-950 shadow-sm animate-pulse">
+                    {pendingResetRequests.length} ACTION REQUIRED
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Employees submitted password reset requests via the portal. Set a new password in 1 click or dismiss.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Request Items Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {pendingResetRequests.map((req) => (
+              <div
+                key={req.id}
+                className="bg-slate-900/90 border border-amber-500/30 rounded-xl p-4 space-y-3 shadow-md flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="font-bold text-sm text-white flex items-center gap-1.5">
+                        <span>{req.name}</span>
+                        <span className="text-[10px] font-mono font-bold bg-slate-800 text-slate-300 px-1.5 py-0.2 rounded border border-slate-700">
+                          {req.employeeCode}
+                        </span>
+                      </h3>
+                      <span className="inline-block mt-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                        {req.role}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-amber-400 font-medium flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 shrink-0">
+                      <Clock className="w-3 h-3" />
+                      {req.resetRequestedAt
+                        ? new Date(req.resetRequestedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                        : "Just now"}
+                    </span>
+                  </div>
+
+                  <div className="mt-2.5 space-y-1 text-xs text-slate-300">
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <span className="font-mono text-slate-200">{req.phone || "No phone"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <span className="truncate text-slate-400">{req.email}</span>
+                    </div>
+                    {req.resetRequestNotes && (
+                      <div className="mt-2 p-2 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] text-slate-300 italic">
+                        "{req.resetRequestNotes}"
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-800 flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    onClick={() => openSetPassModal(req)}
+                    className="flex-1 py-1.5 px-3 rounded-lg font-bold text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <KeyRound className="w-3.5 h-3.5" />
+                    <span>Set Password</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    onClick={() => handleDismissResetRequest(req.id)}
+                    className="py-1.5 px-3 rounded-lg font-bold text-xs bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-500/40 active:scale-95 transition-all"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Search & Filter Controls ──────────────────────────────── */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-3">
@@ -498,11 +651,16 @@ export default function CredentialsHubClient({
                           )}
                         </div>
                         <div>
-                          <div className="font-bold text-white flex items-center gap-1.5">
+                          <div className="font-bold text-white flex items-center gap-1.5 flex-wrap">
                             <span>{emp.name}</span>
                             <span className="text-[10px] font-mono font-bold bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded border border-slate-700">
                               {emp.employeeCode}
                             </span>
+                            {emp.resetRequested && (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.5 rounded animate-pulse">
+                                <KeyRound className="h-2.5 w-2.5" /> Reset Requested
+                              </span>
+                            )}
                           </div>
                           <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
                             <span>{emp.phone || "No phone"}</span>

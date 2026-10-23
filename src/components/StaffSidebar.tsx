@@ -28,8 +28,9 @@ import {
   User,
 } from "lucide-react";
 import { handleSignOut } from "@/actions/auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MyProfileModal from "./MyProfileModal";
+import { getPendingPasswordResetCountAction } from "@/actions/credentials";
 
 interface StaffSidebarProps {
   userName: string;
@@ -40,6 +41,28 @@ export default function StaffSidebar({ userName, userEmail }: StaffSidebarProps)
   const pathname = usePathname();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [pendingResetCount, setPendingResetCount] = useState<number>(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCount = async () => {
+      try {
+        const res = await getPendingPasswordResetCountAction();
+        if (isMounted && res.success && typeof res.count === "number") {
+          setPendingResetCount(res.count);
+        }
+      } catch {
+        // Silently catch background polling errors
+      }
+    };
+
+    fetchCount();
+    const interval = setInterval(fetchCount, 20000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [pathname]);
 
   const navGroups = [
     {
@@ -126,7 +149,12 @@ export default function StaffSidebar({ userName, userEmail }: StaffSidebarProps)
                       }`}
                     >
                       <Icon className={`h-4 w-4 ${isActive ? "text-emerald-400" : "text-zinc-500"}`} />
-                      <span>{item.label}</span>
+                      <span className="flex-1">{item.label}</span>
+                      {item.href === "/staff/credentials" && pendingResetCount > 0 && (
+                        <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-500 text-slate-950 shadow-sm shadow-amber-500/30 animate-pulse">
+                          {pendingResetCount}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}

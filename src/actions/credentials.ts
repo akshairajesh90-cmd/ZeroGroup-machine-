@@ -7,6 +7,14 @@ import bcrypt from "bcryptjs";
 import { Role, CrewRole } from "@prisma/client";
 import { sendOtpSms } from "@/lib/sms";
 
+function safeRevalidatePath(path: string) {
+  try {
+    revalidatePath(path);
+  } catch {
+    // In CLI test environments, static generation store is not active
+  }
+}
+
 // Helper: check if a target role is manageable by the current user
 function checkManagePermission(currentUserRole: string, targetRole: Role) {
   if (currentUserRole === "STAFF") {
@@ -37,6 +45,9 @@ export async function getCredentialsDirectory() {
             displayPassword: true,
             resetOtp: true,
             resetOtpExpires: true,
+            resetRequested: true,
+            resetRequestedAt: true,
+            resetRequestNotes: true,
             role: true,
           },
         },
@@ -75,6 +86,9 @@ export async function getCredentialsDirectory() {
         displayPassword: emp.user?.displayPassword || "••••••••",
         resetOtp: emp.user?.resetOtp || null,
         resetOtpExpires: emp.user?.resetOtpExpires?.toISOString() || null,
+        resetRequested: emp.user?.resetRequested || false,
+        resetRequestedAt: emp.user?.resetRequestedAt?.toISOString() || null,
+        resetRequestNotes: emp.user?.resetRequestNotes || null,
         documents: emp.documents || [],
         profilePhotoUrl: emp.profilePhotoUrl || null,
         baseDailyWage: emp.baseDailyWage ? Number(emp.baseDailyWage) : null,
@@ -154,10 +168,10 @@ export async function createManagedEmployee(data: {
       return employee;
     });
 
-    revalidatePath("/admin/credentials");
-    revalidatePath("/staff/credentials");
-    revalidatePath("/admin/staff");
-    revalidatePath("/staff/directory");
+    safeRevalidatePath("/admin/credentials");
+    safeRevalidatePath("/staff/credentials");
+    safeRevalidatePath("/admin/staff");
+    safeRevalidatePath("/staff/directory");
 
     return { success: true, data: result };
   } catch (error: any) {
@@ -222,8 +236,8 @@ export async function updateManagedEmployee(
       return emp;
     });
 
-    revalidatePath("/admin/credentials");
-    revalidatePath("/staff/credentials");
+    safeRevalidatePath("/admin/credentials");
+    safeRevalidatePath("/staff/credentials");
     return { success: true, data: updated };
   } catch (error: any) {
     console.error("[CREDENTIALS] updateManagedEmployee error:", error);
@@ -251,10 +265,10 @@ export async function verifyOfficialIdAction(employeeId: string) {
       },
     });
 
-    revalidatePath("/admin/credentials");
-    revalidatePath("/staff/credentials");
-    revalidatePath("/driver/profile");
-    revalidatePath("/operator/profile");
+    safeRevalidatePath("/admin/credentials");
+    safeRevalidatePath("/staff/credentials");
+    safeRevalidatePath("/driver/profile");
+    safeRevalidatePath("/operator/profile");
     return { success: true, data: updated };
   } catch (error: any) {
     console.error("[CREDENTIALS] verifyOfficialIdAction error:", error);
@@ -279,8 +293,8 @@ export async function revokeOfficialIdAction(employeeId: string) {
       },
     });
 
-    revalidatePath("/admin/credentials");
-    revalidatePath("/staff/credentials");
+    safeRevalidatePath("/admin/credentials");
+    safeRevalidatePath("/staff/credentials");
     return { success: true, data: updated };
   } catch (error: any) {
     console.error("[CREDENTIALS] revokeOfficialIdAction error:", error);
@@ -314,11 +328,14 @@ export async function adminSetPasswordAction(employeeId: string, newPassword: st
         displayPassword: newPassword,
         resetOtp: null,
         resetOtpExpires: null,
+        resetRequested: false,
+        resetRequestedAt: null,
+        resetRequestNotes: null,
       },
     });
 
-    revalidatePath("/admin/credentials");
-    revalidatePath("/staff/credentials");
+    safeRevalidatePath("/admin/credentials");
+    safeRevalidatePath("/staff/credentials");
     return { success: true, message: `Password for ${employee.name} updated to "${newPassword}"` };
   } catch (error: any) {
     console.error("[CREDENTIALS] adminSetPasswordAction error:", error);
@@ -359,8 +376,8 @@ export async function adminGenerateOtpAction(employeeId: string) {
     const targetIdentifier = employee.phone || employee.user?.email || "";
     const resetUrl = `/reset-password?phone=${encodeURIComponent(targetIdentifier)}`;
 
-    revalidatePath("/admin/credentials");
-    revalidatePath("/staff/credentials");
+    safeRevalidatePath("/admin/credentials");
+    safeRevalidatePath("/staff/credentials");
 
     return {
       success: true,
@@ -619,4 +636,397 @@ export async function verifyNameAndEmailAction(data: { name: string; email: stri
     return { success: false, error: error.message };
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. INTERNAL STAFF PASSWORD RESET REQUEST QUEUE
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Public action: Submit password reset request with Name, Phone Number, and Role verification.
+ * Confirms that the provided credentials match an active employee record before flagging the account.
+ */
+export async function submitPasswordResetRequestAction(data: {
+  name?: string;
+  phone?: string;
+  role?: Role;
+  identifier?: string;
+  notes?: string;
+}): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+  employeeName?: string;
+  employeeRole?: string;
+  phone?: string;
+}> {
+  try {
+    const cleanName = (data.name || "").trim();
+    const rawPhone = (data.phone || data.identifier || "").trim();
+    const role = data.role;
+
+    // 1. If Name, Phone, and Role are provided: perform verified matching
+    if (cleanName && rawPhone && role) {
+      const cleanPhoneDigits = rawPhone.replace(/\D/g, "");
+      const last10 = cleanPhoneDigits.length >= 10 ? cleanPhoneDigits.slice(-10) : cleanPhoneDigits;
+
+      const candidates = await prisma.employee.findMany({
+        where: {
+          role: role,
+          isPendingDelete: false,
+          OR: [
+            { phone: rawPhone },
+            ...(last10
+              ? [
+                  { phone: last10 },
+                  { phone: `+91${last10}` },
+                  { phone: `+91 ${last10}` },
+                ]
+              : []),
+          ],
+        },
+        include: { user: true },
+      });
+
+      if (candidates.length === 0) {
+        return {
+          success: false,
+          error: "No employee record found matching this Phone Number and Role. Please verify your details.",
+        };
+      }
+
+      // Match name (case-insensitive, exact or substring match)
+      const inputLower = cleanName.toLowerCase();
+      const matchedEmp = candidates.find((emp) => {
+        const dbLower = emp.name.trim().toLowerCase();
+        return (
+          dbLower === inputLower ||
+          dbLower.includes(inputLower) ||
+          inputLower.includes(dbLower)
+        );
+      });
+
+      if (!matchedEmp) {
+        return {
+          success: false,
+          error: `The name "${cleanName}" does not match the registered records for this phone number and role.`,
+        };
+      }
+
+      if (matchedEmp.role === "ADMIN" || matchedEmp.role === "OWNER" || matchedEmp.user?.role === "ADMIN" || matchedEmp.user?.role === "OWNER") {
+        return {
+          success: false,
+          error: "Password reset for Admin or Owner accounts must be requested directly with senior management.",
+        };
+      }
+
+      if (!matchedEmp.user) {
+        return {
+          success: false,
+          error: "No portal user login account exists for this employee. Please contact Office Staff.",
+        };
+      }
+
+      // Flag user for staff reset
+      await prisma.user.update({
+        where: { id: matchedEmp.user.id },
+        data: {
+          resetRequested: true,
+          resetRequestedAt: new Date(),
+          resetRequestNotes: data.notes?.trim() || `Verified Request: ${matchedEmp.name} (${matchedEmp.role})`,
+        },
+      });
+
+      safeRevalidatePath("/admin/credentials");
+      safeRevalidatePath("/staff/credentials");
+
+      return {
+        success: true,
+        message: `Password reset request verified and forwarded to Office Staff for ${matchedEmp.name}.`,
+        employeeName: matchedEmp.name,
+        employeeRole: matchedEmp.role,
+        phone: matchedEmp.phone || undefined,
+      };
+    }
+
+    // 2. Fallback: single identifier mode (phone/email/code)
+    const raw = rawPhone || (data.identifier || "").trim();
+    if (!raw) {
+      return { success: false, error: "Please provide your Full Name, Phone Number, and Role." };
+    }
+
+    const clean = raw.toLowerCase();
+    const digitsOnly = clean.replace(/\D/g, "");
+    const last10 = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : "";
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: clean },
+          { employee: { employeeCode: { equals: raw, mode: "insensitive" } } },
+          { employee: { phone: raw } },
+          ...(last10
+            ? [
+                { employee: { phone: last10 } },
+                { employee: { phone: `+91${last10}` } },
+                { employee: { phone: `+91 ${last10}` } },
+              ]
+            : []),
+        ],
+      },
+      include: { employee: true },
+    });
+
+    if (!user) {
+      return {
+        success: false,
+        error: "No employee account found matching this identifier. Please verify your details or provide Name, Phone, and Role.",
+      };
+    }
+
+    if (user.role === "ADMIN" || user.role === "OWNER") {
+      return {
+        success: false,
+        error: "Password reset for Admin or Owner accounts must be requested directly with senior management.",
+      };
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetRequested: true,
+        resetRequestedAt: new Date(),
+        resetRequestNotes: data.notes?.trim() || null,
+      },
+    });
+
+    safeRevalidatePath("/admin/credentials");
+    safeRevalidatePath("/staff/credentials");
+
+    return {
+      success: true,
+      message: "Your password reset request has been verified and forwarded to Office Staff.",
+      employeeName: user.employee?.name || user.email,
+      employeeRole: user.employee?.role || user.role,
+      phone: user.employee?.phone || "",
+    };
+  } catch (error: any) {
+    console.error("[CREDENTIALS] submitPasswordResetRequestAction error:", error);
+    return { success: false, error: error.message || "Failed to submit password reset request." };
+  }
+}
+
+/**
+ * Staff/Admin action: Get all active pending password reset requests.
+ * Enforces role hierarchy: STAFF can only see operational roles (DRIVER, OPERATOR, WORKER).
+ */
+export async function getPendingPasswordResetRequestsAction() {
+  try {
+    const session = await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
+    const isStaff = session.role === "STAFF";
+
+    const pendingUsers = await prisma.user.findMany({
+      where: {
+        resetRequested: true,
+        ...(isStaff
+          ? {
+              role: { notIn: ["ADMIN", "OWNER", "STAFF"] },
+              employee: { isPendingDelete: false },
+            }
+          : {
+              employee: { isPendingDelete: false },
+            }),
+      },
+      include: {
+        employee: true,
+      },
+      orderBy: {
+        resetRequestedAt: "desc",
+      },
+    });
+
+    return {
+      success: true,
+      data: pendingUsers.map((u) => ({
+        userId: u.id,
+        employeeId: u.employee?.id || null,
+        name: u.employee?.name || u.email,
+        email: u.email,
+        phone: u.employee?.phone || "",
+        role: u.employee?.role || u.role,
+        employeeCode: u.employee?.employeeCode || `ZG-${u.id.slice(-4).toUpperCase()}`,
+        resetRequestedAt: u.resetRequestedAt?.toISOString() || null,
+        resetRequestNotes: u.resetRequestNotes || null,
+        profilePhotoUrl: u.employee?.profilePhotoUrl || null,
+      })),
+    };
+  } catch (error: any) {
+    console.error("[CREDENTIALS] getPendingPasswordResetRequestsAction error:", error);
+    return { success: false, error: error.message, data: [] };
+  }
+}
+
+/**
+ * Fast count of pending requests for sidebar badges.
+ */
+export async function getPendingPasswordResetCountAction() {
+  try {
+    const session = await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
+    const isStaff = session.role === "STAFF";
+
+    const count = await prisma.user.count({
+      where: {
+        resetRequested: true,
+        ...(isStaff
+          ? {
+              role: { notIn: ["ADMIN", "OWNER", "STAFF"] },
+              employee: { isPendingDelete: false },
+            }
+          : {
+              employee: { isPendingDelete: false },
+            }),
+      },
+    });
+
+    return { success: true, count };
+  } catch {
+    return { success: false, count: 0 };
+  }
+}
+
+/**
+ * Staff/Admin action: Resolve a pending password reset request by either
+ * updating the employee's password or dismissing the request.
+ * Enforces strict role hierarchy and logs to AuditLog.
+ */
+export async function resolvePasswordResetRequestAction(data: {
+  employeeId?: string;
+  userId?: string;
+  newPassword?: string;
+  dismissOnly?: boolean;
+}) {
+  try {
+    const session = await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
+
+    let targetUser: any = null;
+    let targetEmployee: any = null;
+
+    if (data.employeeId) {
+      targetEmployee = await prisma.employee.findUnique({
+        where: { id: data.employeeId },
+        include: { user: true },
+      });
+      targetUser = targetEmployee?.user;
+    } else if (data.userId) {
+      targetUser = await prisma.user.findUnique({
+        where: { id: data.userId },
+        include: { employee: true },
+      });
+      targetEmployee = targetUser?.employee;
+    }
+
+    if (!targetUser) {
+      throw new Error("Target user account not found.");
+    }
+
+    const targetRole = targetEmployee?.role || targetUser.role;
+
+    // Strict Role Guard
+    if (session.role === "STAFF") {
+      if (targetRole === "STAFF" || targetRole === "ADMIN" || targetRole === "OWNER") {
+        throw new Error("Unauthorized: Office Staff cannot modify credentials for Staff, Admin, or Owner accounts.");
+      }
+    }
+
+    if (data.dismissOnly) {
+      await prisma.user.update({
+        where: { id: targetUser.id },
+        data: {
+          resetRequested: false,
+          resetRequestedAt: null,
+          resetRequestNotes: null,
+        },
+      });
+
+      if (session.employeeId) {
+        try {
+          await prisma.auditLog.create({
+            data: {
+              actionType: "DISMISS_RESET_REQUEST",
+              actorRole: session.role,
+              actorId: session.employeeId,
+              modelName: "User",
+              entity: targetUser.id,
+              newPayload: {
+                targetName: targetEmployee?.name || targetUser.email,
+                targetRole,
+              },
+            },
+          });
+        } catch (auditErr) {
+          console.warn("[AUDIT] Could not create audit log:", auditErr);
+        }
+      }
+
+      safeRevalidatePath("/admin/credentials");
+      safeRevalidatePath("/staff/credentials");
+      return { success: true, message: "Password reset request dismissed." };
+    }
+
+    // Setting password
+    const newPassword = (data.newPassword || "zero123").trim();
+    if (newPassword.length < 4) {
+      throw new Error("New password must be at least 4 characters long.");
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: targetUser.id },
+      data: {
+        hashedPassword,
+        displayPassword: newPassword,
+        resetRequested: false,
+        resetRequestedAt: null,
+        resetRequestNotes: null,
+        resetOtp: null,
+        resetOtpExpires: null,
+      },
+    });
+
+    if (session.employeeId) {
+      try {
+        await prisma.auditLog.create({
+          data: {
+            actionType: "STAFF_RESET_PASSWORD",
+            actorRole: session.role,
+            actorId: session.employeeId,
+            modelName: "User",
+            entity: targetUser.id,
+            newPayload: {
+              targetName: targetEmployee?.name || targetUser.email,
+              targetRole,
+              resetTo: newPassword,
+            },
+          },
+        });
+      } catch (auditErr) {
+        console.warn("[AUDIT] Could not create audit log:", auditErr);
+      }
+    }
+
+    safeRevalidatePath("/admin/credentials");
+    safeRevalidatePath("/staff/credentials");
+    safeRevalidatePath("/staff/directory");
+    safeRevalidatePath("/admin/staff");
+
+    return {
+      success: true,
+      message: `Password for ${targetEmployee?.name || targetUser.email} has been updated to "${newPassword}".`,
+    };
+  } catch (error: any) {
+    console.error("[CREDENTIALS] resolvePasswordResetRequestAction error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 

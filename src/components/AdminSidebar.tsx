@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -28,6 +28,7 @@ import {
   User,
 } from "lucide-react";
 import { handleSignOut } from "@/actions/auth";
+import { getPendingPasswordResetCountAction } from "@/actions/credentials";
 
 interface AdminSidebarProps {
   userName: string;
@@ -38,6 +39,28 @@ interface AdminSidebarProps {
 export default function AdminSidebar({ userName, userEmail, role }: AdminSidebarProps) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [pendingResetCount, setPendingResetCount] = useState<number>(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCount = async () => {
+      try {
+        const res = await getPendingPasswordResetCountAction();
+        if (isMounted && res.success && typeof res.count === "number") {
+          setPendingResetCount(res.count);
+        }
+      } catch {
+        // Silently catch polling errors
+      }
+    };
+
+    fetchCount();
+    const interval = setInterval(fetchCount, 20000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [pathname]);
 
   const navGroups = [
     {
@@ -147,7 +170,12 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
                       }`}
                     >
                       <Icon className={`h-4 w-4 ${isActive ? (isDanger ? "text-rose-500" : "text-indigo-400") : (isDanger ? "text-rose-500" : "text-slate-400")}`} />
-                      <span>{item.label}</span>
+                      <span className="flex-1">{item.label}</span>
+                      {item.href === "/admin/credentials" && pendingResetCount > 0 && (
+                        <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-500 text-slate-950 shadow-sm shadow-amber-500/30 animate-pulse">
+                          {pendingResetCount}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
