@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/serverAuth";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { Role, CrewRole } from "@prisma/client";
+import { sendOtpSms } from "@/lib/sms";
 
 // Helper: check if a target role is manageable by the current user
 function checkManagePermission(currentUserRole: string, targetRole: Role) {
@@ -422,10 +423,35 @@ export async function requestPasswordResetOtp(phoneOrEmail: string) {
 
     console.log(`[AUTH OTP] Generated OTP for ${clean}: ${otp}`);
 
+    const digits = (user.employee?.phone || "").replace(/\D/g, "");
+    const maskedPhone =
+      digits.length >= 10
+        ? `+91 ${digits.slice(-10, -7)}•••••${digits.slice(-2)}`
+        : user.employee?.phone || user.email;
+
+    // Dispatch SMS via configured gateways (Fast2SMS / Twilio) or prepare WhatsApp fallback
+    let smsResult: any = null;
+    const phoneToTarget = user.employee?.phone || (clean.includes("@") ? "" : clean);
+    if (phoneToTarget) {
+      try {
+        smsResult = await sendOtpSms(phoneToTarget, otp);
+      } catch (smsErr) {
+        console.warn("[CREDENTIALS] SMS dispatch error:", smsErr);
+      }
+    }
+
     return {
       success: true,
-      message: "6-digit OTP has been generated. Use it within 15 minutes.",
+      message: smsResult?.provider === "fast2sms" || smsResult?.provider === "twilio"
+        ? `SMS OTP sent directly to ${maskedPhone}.`
+        : "6-digit OTP has been generated. Use it within 15 minutes.",
       demoOtp: otp, // Surfaced for easy testing in development/demo
+      employeeName: user.employee?.name || user.email,
+      employeeRole: user.employee?.role || user.role,
+      phone: user.employee?.phone || user.email,
+      maskedPhone,
+      smsProvider: smsResult?.provider || "dev_mode",
+      whatsappUrl: smsResult?.whatsappUrl || null,
     };
   } catch (error: any) {
     console.error("[CREDENTIALS] requestPasswordResetOtp error:", error);

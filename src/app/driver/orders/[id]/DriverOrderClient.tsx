@@ -266,6 +266,12 @@ export default function DriverOrderClient({ dispatch: initialDispatch, userRole,
             <User className="w-4 h-4 text-amber-400 shrink-0" />
             <span>Customer: <strong className="text-white font-bold">{dispatch.customer?.name}</strong></span>
           </div>
+          {dispatch.vehicle && (
+            <div className="flex items-center gap-2.5">
+              <Truck className="w-4 h-4 text-cyan-400 shrink-0" />
+              <span>Assigned Vehicle: <strong className="text-cyan-300 font-bold font-mono">{dispatch.vehicle.licensePlate}</strong> ({dispatch.vehicle.type})</span>
+            </div>
+          )}
           <div className="flex items-center gap-2.5">
             <MapPin className="w-4 h-4 text-blue-400 shrink-0" />
             <span>Location: <strong className="text-white font-bold">{dispatch.location}</strong></span>

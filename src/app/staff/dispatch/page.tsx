@@ -15,11 +15,12 @@ export default async function DispatchPage() {
   }
 
   // Fetch all required data for the dispatch board
-  const [dispatches, customers, machines, employees, tools, subLeaders] = await Promise.all([
+  const [dispatches, customers, machines, employees, tools, subLeaders, vehicles] = await Promise.all([
     prisma.dailyDispatch.findMany({
       include: {
         customer: true,
         machine: true,
+        vehicle: true,
         driver: true,
         operator: true,
         worker: true,
@@ -49,6 +50,7 @@ export default async function DispatchPage() {
     }),
     prisma.tool.findMany({ where: { status: 'AVAILABLE' }, orderBy: { toolId: 'asc' } }),
     prisma.externalSubLeader.findMany({ orderBy: { name: 'asc' } }),
+    prisma.vehicle.findMany({ where: { isPendingDelete: false, status: { not: "RETIRED" } }, orderBy: { licensePlate: 'asc' } }),
   ]);
 
   return (
@@ -74,6 +76,7 @@ export default async function DispatchPage() {
           employees={JSON.parse(JSON.stringify(employees))}
           tools={JSON.parse(JSON.stringify(tools))}
           subLeaders={JSON.parse(JSON.stringify(subLeaders))}
+          vehicles={JSON.parse(JSON.stringify(vehicles))}
           userRole={session.user.role}
         />
       </div>

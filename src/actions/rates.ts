@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 // WorkTypeRate actions
 export async function getWorkTypeRates() {
-  await requireAuth({ allowedRoles: ["OWNER", "ADMIN"] });
+  await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
   return await prisma.workTypeRate.findMany({
     orderBy: [{ machineType: "asc" }, { workType: "asc" }]
   });
@@ -41,7 +41,7 @@ export async function upsertWorkTypeRate(data: { machineType: any, workType: any
 // For now we'll allow fetching/updating EmployeeRoleRates if needed, or just standard fallback logic.
 
 export async function getEmployeeRoleRates() {
-  await requireAuth({ allowedRoles: ["OWNER", "ADMIN"] });
+  await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
   return await prisma.employeeRoleRate.findMany({
     include: { employee: true },
     orderBy: { crewRole: "asc" }

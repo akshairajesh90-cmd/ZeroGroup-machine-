@@ -56,6 +56,8 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
 
   // OTP & Reset state
   const [otp, setOtp] = useState("");
+  const [generatedOtpCode, setGeneratedOtpCode] = useState<string | null>(null);
+  const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -67,6 +69,20 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [firebaseStatus, setFirebaseStatus] = useState<string | null>(null);
+
+  // Prevent browser password manager autofill (e.g. 'staff@') from corrupting the numeric OTP input
+  React.useEffect(() => {
+    if (otp && /\D/.test(otp)) {
+      const sanitized = otp.replace(/\D/g, "");
+      if (sanitized.length === 6) {
+        setOtp(sanitized);
+      } else if (generatedOtpCode) {
+        setOtp(generatedOtpCode);
+      } else {
+        setOtp(sanitized);
+      }
+    }
+  }, [otp, generatedOtpCode]);
 
   // Firebase Phone Auth
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
@@ -84,10 +100,37 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
     setFirebaseStatus(null);
     setError(null);
 
-    const formatted = formatPhoneNumber(phoneToTarget);
+    const isEmail = phoneToTarget.includes("@");
+    const formatted = isEmail ? phoneToTarget : formatPhoneNumber(phoneToTarget);
 
-    // 1. Attempt Google Firebase Carrier SMS
-    if (isFirebaseConfigured) {
+    // 1. Always generate server-side verification OTP in parallel as primary/failsafe
+    let serverOtpResult: any = null;
+    try {
+      serverOtpResult = await requestPasswordResetOtp(phoneToTarget);
+      if (serverOtpResult?.success) {
+        setOtpSent(true);
+        if (serverOtpResult.demoOtp) {
+          setOtp(serverOtpResult.demoOtp);
+          setGeneratedOtpCode(serverOtpResult.demoOtp);
+        }
+        if (serverOtpResult.whatsappUrl) {
+          setWhatsappUrl(serverOtpResult.whatsappUrl);
+        }
+        if (serverOtpResult.employeeName && !verifiedEmployee) {
+          setVerifiedEmployee({
+            name: serverOtpResult.employeeName,
+            role: serverOtpResult.employeeRole || "Employee",
+            phone: serverOtpResult.phone || phoneToTarget,
+            maskedPhone: serverOtpResult.maskedPhone || phoneToTarget,
+          });
+        }
+      }
+    } catch (sErr) {
+      console.warn("[AUTH] Server OTP pre-generation error:", sErr);
+    }
+
+    // 2. Attempt Google Firebase Carrier SMS (if configured and target is a telephone number)
+    if (isFirebaseConfigured && !isEmail) {
       try {
         const auth = getFirebaseAuth();
         if (auth) {
@@ -100,34 +143,29 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
           const confirmation = await Promise.race([
             signInWithPhoneNumber(auth, formatted, recaptchaVerifierRef.current),
             new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error("Firebase SMS verification timeout")), 6000)
+              setTimeout(() => reject(new Error("Firebase SMS verification timeout")), 7000)
             ),
           ]);
           setConfirmationResult(confirmation);
           setOtpSent(true);
-          setFirebaseStatus(`Google Firebase SMS sent to ${formatted}! Check your phone.`);
+          setFirebaseStatus(`Google Firebase SMS triggered for ${formatted}. Check your phone or use the auto-created code.`);
           setLoadingOtp(false);
           return;
         }
       } catch (fbErr: any) {
-        console.warn("[FIREBASE] SMS error, falling back to server OTP:", fbErr);
-        // Fallback to internal server-generated OTP if reCAPTCHA or quotas hit issue
+        console.warn("[FIREBASE] SMS error, active with server OTP:", fbErr);
+        // Seamless fallback to server-generated OTP
       }
     }
 
-    // 2. Server built-in fallback OTP
-    try {
-      const res = await requestPasswordResetOtp(phoneToTarget);
-      if (res.success) {
-        setOtpSent(true);
-        // Clean professional user experience: do not auto-fill OTP into the user input
-        setOtp("");
-      } else {
-        setError(res.error || "Failed to generate OTP.");
-      }
-    } finally {
-      setLoadingOtp(false);
+    if (serverOtpResult?.success) {
+      setFirebaseStatus("Verification code automatically generated and applied! Ready to reset.");
+    } else if (serverOtpResult?.error) {
+      setError(serverOtpResult.error);
+    } else {
+      setError("Failed to generate verification OTP. Please check your phone or email.");
     }
+    setLoadingOtp(false);
   };
 
   // Step 1: Verify Name & Email -> Automatically Select Phone -> Send SMS OTP
@@ -211,9 +249,8 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
           await confirmationResult.confirm(otp.trim());
           isFirebaseVerified = true;
         } catch (verifyErr: any) {
-          setError("Invalid or expired SMS code from Google Firebase. Please try again.");
-          setSubmitting(false);
-          return;
+          console.warn("[FIREBASE] Firebase confirmation failed, checking server DB OTP fallback:", verifyErr);
+          // If Firebase code fails or wasn't used, allow fallback verification against server database OTP
         }
       }
 
@@ -377,16 +414,16 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
               <form onSubmit={handleDirectPhoneSubmit} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Registered Mobile Number
+                    Registered Mobile Number or Email
                   </label>
                   <div className="relative">
                     <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                     <input
-                      type="tel"
+                      type="text"
                       required
                       value={directPhone}
                       onChange={(e) => setDirectPhone(e.target.value)}
-                      placeholder="9876543210 or +919876543210"
+                      placeholder="9876543210 or staff@zerogroup.in"
                       className="w-full rounded-xl border border-slate-800 bg-slate-950 pl-10 pr-4 py-3 text-sm text-white placeholder-slate-600 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                     />
                   </div>
@@ -422,6 +459,18 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
             /* STEP 2: ENTER OTP & NEW PASSWORD (UNLOCKED ONCE VERIFIED & OTP SENT) */
             <form onSubmit={handleResetPassword} className="space-y-4">
               
+              {/* Hidden username anchor prevents browsers from autofilling saved email into the OTP input */}
+              <input
+                type="text"
+                name="username"
+                autoComplete="username"
+                value={selectedPhone || verifiedEmployee?.name || "staff"}
+                readOnly
+                tabIndex={-1}
+                aria-hidden="true"
+                className="sr-only hidden"
+              />
+
               {/* Verified Identity Badge with masked phone */}
               <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs space-y-1.5">
                 <div className="flex items-center justify-between">
@@ -436,15 +485,55 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
                   )}
                 </div>
                 <p className="text-slate-300 text-xs">
-                  Account: <strong className="text-white">{verifiedEmployee?.name || "Verified User"}</strong> • Mobile:{" "}
+                  Account: <strong className="text-white">{verifiedEmployee?.name || "Verified User"}</strong> • Target:{" "}
                   <strong className="text-emerald-300 font-mono tracking-wider">
                     {maskPhoneNumber(verifiedEmployee?.phone || selectedPhone)}
                   </strong>
                 </p>
               </div>
 
+              {/* Auto-Created OTP Ready Banner */}
+              {generatedOtpCode && (
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-emerald-500/15 border border-emerald-500/30 text-emerald-200 text-xs space-y-2.5 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold flex items-center gap-1.5 text-emerald-300">
+                      <Sparkles className="h-4 w-4 text-emerald-400" />
+                      Verification Code Ready
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setOtp(generatedOtpCode)}
+                      className="text-[11px] font-bold text-emerald-300 hover:text-white underline underline-offset-2"
+                    >
+                      Auto-Fill Code
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-emerald-300/80">
+                    Your 6-digit OTP code is{" "}
+                    <span className="font-mono text-sm font-black text-white bg-slate-950/80 px-2 py-0.5 rounded border border-emerald-500/40 tracking-wider">
+                      {generatedOtpCode}
+                    </span>
+                    . It has been automatically populated into the code field below.
+                  </p>
+                  {whatsappUrl && (
+                    <div className="pt-2 border-t border-emerald-500/20 flex items-center justify-between">
+                      <span className="text-[11px] text-slate-300">Didn&apos;t receive carrier SMS?</span>
+                      <a
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all active:scale-95"
+                      >
+                        <span>Send via WhatsApp</span>
+                        <span>↗</span>
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Status Message */}
-              {firebaseStatus && (
+              {firebaseStatus && !generatedOtpCode && (
                 <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs flex items-center gap-2">
                   <Smartphone className="h-4 w-4 shrink-0 text-blue-400" />
                   <p>{firebaseStatus}</p>
@@ -461,17 +550,24 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
                     disabled={loadingOtp}
                     className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
                   >
-                    {loadingOtp ? "Resending..." : "Resend SMS"}
+                    {loadingOtp ? "Creating..." : "Resend / Regenerate OTP"}
                   </button>
                 </label>
                 <input
                   type="text"
+                  name="one-time-code"
+                  id="one-time-code"
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
                   required
                   maxLength={6}
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                   placeholder="• • • • • •"
-                  className="w-full tracking-[0.5em] text-center font-mono text-2xl font-black rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-white placeholder-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  className="w-full tracking-[0.5em] text-center font-mono text-2xl font-black rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-white placeholder-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all selection:bg-indigo-500/30"
                 />
                 <p className="text-[11px] text-slate-500 mt-1 text-center">
                   Enter the 6-digit verification code sent to your registered mobile
@@ -487,6 +583,8 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
                     type="password"
+                    name="new-password"
+                    autoComplete="new-password"
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
@@ -505,6 +603,8 @@ export default function ResetPasswordClient({ prefilledIdentifier }: { prefilled
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
                     type="password"
+                    name="confirm-new-password"
+                    autoComplete="new-password"
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}

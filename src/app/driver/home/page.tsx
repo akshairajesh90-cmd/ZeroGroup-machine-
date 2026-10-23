@@ -57,6 +57,7 @@ export default async function DriverHomePage() {
       include: {
         customer: { select: { name: true, phone: true } },
         machine:  { select: { machineId: true, type: true, notes: true } },
+        vehicle:  { select: { id: true, licensePlate: true, type: true } },
         dispatchAssets: { include: { machine: true } },
         dispatchTools: { include: { tool: true } },
       },
@@ -159,6 +160,14 @@ export default async function DriverHomePage() {
               </span>
             ))}
           </h2>
+          {todayJob.vehicle && (
+            <div className="flex items-center gap-2 my-2 px-3 py-1.5 rounded-lg bg-cyan-950/60 border border-cyan-500/30 w-fit">
+              <Truck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span className="text-xs font-mono font-bold text-cyan-300">
+                Transport: {todayJob.vehicle.licensePlate} ({todayJob.vehicle.type})
+              </span>
+            </div>
+          )}
           <p className="text-sm text-amber-300 font-semibold mt-0.5">
             {todayJob.machine?.type ?? "LABOUR"} · {todayJob.machine?.notes?.split("(")[0].trim() ?? ""}
           </p>

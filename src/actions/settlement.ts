@@ -259,7 +259,7 @@ export async function createManualAdjustment(input: z.infer<typeof createAdjustm
  */
 export async function approveManualAdjustment(input: z.infer<typeof approveAdjustmentSchema>) {
   try {
-    const { employeeId } = await requireAuth({ allowedRoles: ["OWNER"] });
+    const { employeeId } = await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
     const parsed = approveAdjustmentSchema.parse(input);
 
     const updated = await prisma.manualAdjustment.update({
@@ -411,7 +411,7 @@ export async function updateSettlement(input: z.infer<typeof updateSettlementSch
  */
 export async function finalizeSettlement(input: z.infer<typeof finalizeSettlementSchema>) {
   try {
-    const { employeeId } = await requireAuth({ allowedRoles: ["OWNER"] });
+    const { employeeId } = await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
     const parsed = finalizeSettlementSchema.parse(input);
 
     const settlement = await prisma.settlement.findUnique({
@@ -915,7 +915,7 @@ const finalizeWeeklySettlementSchema = z.object({
  */
 export async function finalizeWeeklySettlement(input: z.infer<typeof finalizeWeeklySettlementSchema>) {
   try {
-    const { employeeId: actorEmployeeId, role } = await requireAuth({ allowedRoles: ["OWNER"] });
+    const { employeeId: actorEmployeeId, role } = await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
 
     const parsed = finalizeWeeklySettlementSchema.parse(input);
     const weekEndingDate = new Date(parsed.weekEnding);

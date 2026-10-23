@@ -69,6 +69,7 @@ interface DispatchClientProps {
   employees: any[];
   tools: any[];
   subLeaders?: any[];
+  vehicles?: any[];
   userRole: string;
 }
 
@@ -78,6 +79,7 @@ export default function DispatchBoardClient({
   machines,
   employees,
   tools,
+  vehicles = [],
   userRole,
 }: DispatchClientProps) {
   const router = useRouter();
@@ -1008,6 +1010,11 @@ export default function DispatchBoardClient({
                             <span className="font-bold text-slate-300 text-xs block truncate">
                               {d.publicTransportUsed ? "Public Transport / Outside" : (d.driver?.name || "Company Driver")}
                             </span>
+                            {d.vehicle && (
+                              <span className="text-[10px] text-cyan-400 font-mono block truncate mt-0.5">
+                                🚚 {d.vehicle.licensePlate} ({d.vehicle.type})
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -1191,6 +1198,7 @@ export default function DispatchBoardClient({
                     <div key={d.id} className="pt-2 border-t border-slate-800 first:pt-0 first:border-0">
                       <div><strong>Machine:</strong> {d.machine?.machineId || "Independent"}</div>
                       <div><strong>Driver:</strong> {d.driver?.name || "N/A"}</div>
+                      {d.vehicle && <div><strong>Vehicle:</strong> {d.vehicle.licensePlate} ({d.vehicle.type})</div>}
                       <div><strong>Main Caller:</strong> {d.mainHelperName || d.mainHelper?.name || "Direct"}</div>
                     </div>
                   ))}
@@ -1242,6 +1250,7 @@ export default function DispatchBoardClient({
           machines={machines}
           employees={employees}
           tools={tools}
+          vehicles={vehicles}
           customers={customersList}
         />
       )}

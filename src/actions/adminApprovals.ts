@@ -43,11 +43,11 @@ export async function rejectItem(type: "FUEL" | "ADJUSTMENT", id: string) {
  * Sets isPendingDelete = true and logs the staff member's ID.
  */
 export async function softDelete(
-  model: "DISPATCH" | "FUEL" | "EXPENSE" | "MACHINE" | "EMPLOYEE" | "TOOL",
+  model: "DISPATCH" | "FUEL" | "EXPENSE" | "MACHINE" | "VEHICLE" | "EMPLOYEE" | "TOOL",
   id: string,
   staffId: string
 ) {
-  const session = await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN, Role.STAFF] });
+  await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN, Role.STAFF] });
 
   const updateData = { isPendingDelete: true, markedForDeleteBy: staffId };
 
@@ -64,6 +64,9 @@ export async function softDelete(
     case "MACHINE":
       await prisma.machine.update({ where: { id }, data: updateData });
       break;
+    case "VEHICLE":
+      await prisma.vehicle.update({ where: { id }, data: updateData });
+      break;
     case "EMPLOYEE":
       await prisma.employee.update({ where: { id }, data: updateData });
       break;
@@ -78,7 +81,7 @@ export async function softDelete(
  * Called by Admin to permanently delete a record that was soft-deleted.
  */
 export async function hardDelete(
-  model: "DISPATCH" | "FUEL" | "EXPENSE" | "MACHINE" | "EMPLOYEE" | "TOOL",
+  model: "DISPATCH" | "FUEL" | "EXPENSE" | "MACHINE" | "VEHICLE" | "EMPLOYEE" | "TOOL",
   id: string
 ) {
   await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN] });
@@ -96,6 +99,9 @@ export async function hardDelete(
     case "MACHINE":
       await prisma.machine.delete({ where: { id } });
       break;
+    case "VEHICLE":
+      await prisma.vehicle.delete({ where: { id } });
+      break;
     case "EMPLOYEE":
       await prisma.employee.delete({ where: { id } });
       break;
@@ -110,7 +116,7 @@ export async function hardDelete(
  * Called by Admin to restore a soft-deleted record.
  */
 export async function restoreRecord(
-  model: "DISPATCH" | "FUEL" | "EXPENSE" | "MACHINE" | "EMPLOYEE" | "TOOL",
+  model: "DISPATCH" | "FUEL" | "EXPENSE" | "MACHINE" | "VEHICLE" | "EMPLOYEE" | "TOOL",
   id: string
 ) {
   await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN] });
@@ -129,6 +135,9 @@ export async function restoreRecord(
       break;
     case "MACHINE":
       await prisma.machine.update({ where: { id }, data: updateData });
+      break;
+    case "VEHICLE":
+      await prisma.vehicle.update({ where: { id }, data: updateData });
       break;
     case "EMPLOYEE":
       await prisma.employee.update({ where: { id }, data: updateData });

@@ -30,6 +30,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
       vibrator: true,
       operator: { select: { name: true } },
       driver:   { select: { name: true } },
+      vehicle:  true,
       crewAssignments: { include: { employee: true } },
       dispatchTools: { include: { tool: true } },
     },
@@ -38,7 +39,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
   if (!dispatch) notFound();
 
   // Security: only allow the assigned operator/driver (or OWNER/STAFF) to view
-  const isAdmin = role === "OWNER" || role === "STAFF";
+  const isAdmin = role === "OWNER" || role === "STAFF" || role === "ADMIN";
   const isAssigned = dispatch.operatorId === empId || dispatch.driverId === empId || dispatch.crewAssignments.some(mo => mo.employee?.id === empId);
   if (!isAdmin && !isAssigned) redirect("/driver/dispatches");
 

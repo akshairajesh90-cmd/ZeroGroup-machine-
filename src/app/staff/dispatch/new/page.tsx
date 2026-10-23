@@ -25,12 +25,18 @@ export default async function AdminNewDispatchPage() {
     where: { 
       isPendingDelete: false,
       OR: [
-        { role: { in: ["DRIVER", "OPERATOR", "WORKER", "STAFF"] } },
+        { role: { in: ["DRIVER", "OPERATOR", "WORKER", "STAFF", "OWNER", "ADMIN"] } },
         { isOwner_ExcludeFromPayroll: true }
       ]
     },
     select: { id: true, name: true, role: true },
     orderBy: { name: 'asc' }
+  });
+
+  const vehicles = await prisma.vehicle.findMany({
+    where: { isPendingDelete: false, status: { not: "RETIRED" } },
+    select: { id: true, licensePlate: true, type: true, status: true },
+    orderBy: { licensePlate: 'asc' }
   });
 
   const tools = await prisma.tool.findMany({
@@ -44,6 +50,7 @@ export default async function AdminNewDispatchPage() {
         customers={customers}
         machines={machines}
         employees={employees}
+        vehicles={vehicles}
         tools={tools}
       />
     </div>

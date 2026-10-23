@@ -13,6 +13,8 @@ import { logAudit } from "@/lib/auditLogger";
 
 const dispatchSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
+  vehicleId: z.string().nullable().optional(),
+  routeStopOrder: z.number().int().min(1).default(1).optional(),
   machineId: z.string().nullable().optional(), // Primary machine or nullable for independent labor
   machineIds: z.array(z.string()).optional(), // Site-Job V6.0: Multiple machines/assets
   driverId: z.string().nullable().optional(), // Nullable if public transport or outside conveyance
@@ -65,6 +67,8 @@ const updateDailyDispatchSchema = z.object({
   id: z.string().min(1, "Dispatch ID required"),
   version: z.number().int(),
   customerId: z.string().min(1, "Customer is required"),
+  vehicleId: z.string().nullable().optional(),
+  routeStopOrder: z.number().int().min(1).default(1).optional(),
   machineId: z.string().nullable().optional(),
   machineIds: z.array(z.string()).optional(),
   driverId: z.string().nullable().optional(),
@@ -178,6 +182,8 @@ export async function createDailyDispatch(formData: unknown) {
       const newDispatch = await tx.dailyDispatch.create({
         data: {
           customerId: data.customerId,
+          vehicleId: data.vehicleId || null,
+          routeStopOrder: data.routeStopOrder || 1,
           machineId: allMachineIds[0] || null,
           driverId: data.driverId || null,
           operatorId: data.operatorId || null,
@@ -575,6 +581,7 @@ export async function getDispatches(filter?: { status?: DispatchStatus; isFlagge
           include: { machine: true },
         },
         driver: true,
+        vehicle: true,
         operator: true,
         worker: true,
         crewAssignments: {
@@ -645,6 +652,7 @@ export async function fetchDispatchesByRange(startDate: string, endDate: string)
           include: { machine: true },
         },
         driver: true,
+        vehicle: true,
         operator: true,
         worker: true,
         crewAssignments: {
@@ -718,6 +726,8 @@ export async function updateDailyDispatch(formData: unknown) {
         where: { id: dispatchId, version: data.version },
         data: {
           customerId: data.customerId,
+          vehicleId: data.vehicleId || null,
+          routeStopOrder: data.routeStopOrder || 1,
           machineId: allMachineIds[0] || null,
           driverId: data.driverId || null,
           operatorId: data.operatorId || null,

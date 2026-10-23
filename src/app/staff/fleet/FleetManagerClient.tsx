@@ -8,7 +8,7 @@ import {
   CheckCircle2, Clock, Hammer, FileWarning, ChevronRight, MapPin,
 } from "lucide-react";
 
-import { retireMachine, retireVehicle } from "./actions";
+import { softDeleteMachine, softDeleteVehicle } from "./actions";
 import AddMachineModal from "./components/AddMachineModal";
 import AddVehicleModal from "./components/AddVehicleModal";
 import type { MachineType, MachineStatus, VehicleStatus } from "@prisma/client";
@@ -176,7 +176,7 @@ function MachineCard({ machine, onRetire }: { machine: SerializedMachine; onReti
           onClick={() => onRetire(machine.id)}
           className="w-full py-2 rounded-xl text-[11px] font-bold text-slate-500 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all"
         >
-          Retire Asset
+          Delete Asset (Soft Delete)
         </button>
       </div>
     </div>
@@ -261,7 +261,7 @@ function VehicleCard({ vehicle, onRetire }: { vehicle: SerializedVehicle; onReti
           onClick={() => onRetire(vehicle.id)}
           className="w-full py-2 rounded-xl text-[11px] font-bold text-slate-500 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all"
         >
-          Retire Vehicle
+          Delete Vehicle (Soft Delete)
         </button>
       </div>
     </div>
@@ -274,14 +274,15 @@ export default function FleetManagerClient({ initialMachines, initialVehicles }:
   const [activeTab, setActiveTab] = useState<"machines" | "vehicles">("machines");
   const [machineModalOpen, setMachineModalOpen] = useState(false);
   const [vehicleModalOpen, setVehicleModalOpen] = useState(false);
-  const [machines] = useState(initialMachines);
-  const [vehicles] = useState(initialVehicles);
+  const [machines, setMachines] = useState(initialMachines);
+  const [vehicles, setVehicles] = useState(initialVehicles);
 
   const handleRetireMachine = async (id: string) => {
     if (!confirm("Retire this machine? All historical data will be preserved (soft-delete).")) return;
     try {
-      await retireMachine(id);
-      toast.success("Machine retired. It will disappear from active inventory.");
+      await softDeleteMachine(id);
+      setMachines(prev => prev.filter(m => m.id !== id));
+      toast.success("Machine deleted from project. Admin can undo from Trash.");
     } catch (e: any) {
       toast.error(e.message ?? "Failed to retire machine.");
     }
@@ -290,8 +291,9 @@ export default function FleetManagerClient({ initialMachines, initialVehicles }:
   const handleRetireVehicle = async (id: string) => {
     if (!confirm("Retire this vehicle? All historical data will be preserved (soft-delete).")) return;
     try {
-      await retireVehicle(id);
-      toast.success("Vehicle retired successfully.");
+      await softDeleteVehicle(id);
+      setVehicles(prev => prev.filter(v => v.id !== id));
+      toast.success("Vehicle deleted from project. Admin can undo from Trash.");
     } catch (e: any) {
       toast.error(e.message ?? "Failed to retire vehicle.");
     }

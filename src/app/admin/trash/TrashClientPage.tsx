@@ -1,13 +1,27 @@
 "use client";
 
 import React, { useState } from "react";
-import { AlertTriangle, RotateCcw, Trash2, Clock, ShieldAlert, Receipt, UserRound } from "lucide-react";
+import {
+  AlertTriangle,
+  RotateCcw,
+  Trash2,
+  Clock,
+  ShieldAlert,
+  Receipt,
+  UserRound,
+  Truck,
+  Wrench,
+  Cog
+} from "lucide-react";
 import { hardDeleteEmployee, restoreEmployee } from "@/actions/employees";
 import { hardDeletePaymentReceipt, restorePaymentReceipt } from "@/actions/receipts";
+import { restoreRecord, hardDelete } from "@/actions/adminApprovals";
+
+export type TrashModelType = "EMPLOYEE" | "RECEIPT" | "MACHINE" | "VEHICLE" | "TOOL";
 
 interface TrashItem {
   id: string;
-  type: "EMPLOYEE" | "RECEIPT";
+  type: TrashModelType;
   title: string;
   subtitle: string;
   deletedAt: string;
@@ -21,10 +35,19 @@ export default function TrashClientPage({ trashItems }: Props) {
   const [items, setItems] = useState(trashItems);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  const handleRestore = async (id: string, type: "EMPLOYEE" | "RECEIPT") => {
+  const handleRestore = async (id: string, type: TrashModelType) => {
     if (!confirm("Are you sure you want to restore this record? It will reappear in all portals instantly.")) return;
     setLoadingId(id);
-    const res = type === "EMPLOYEE" ? await restoreEmployee(id) : await restorePaymentReceipt(id);
+
+    let res: { success?: boolean; error?: string } = { success: false };
+    if (type === "EMPLOYEE") {
+      res = await restoreEmployee(id);
+    } else if (type === "RECEIPT") {
+      res = await restorePaymentReceipt(id);
+    } else if (type === "MACHINE" || type === "VEHICLE" || type === "TOOL") {
+      res = await restoreRecord(type, id);
+    }
+
     if (res.success) {
       setItems(items.filter(item => item.id !== id));
     } else {
@@ -33,16 +56,55 @@ export default function TrashClientPage({ trashItems }: Props) {
     setLoadingId(null);
   };
 
-  const handleHardDelete = async (id: string, type: "EMPLOYEE" | "RECEIPT") => {
+  const handleHardDelete = async (id: string, type: TrashModelType) => {
     if (!confirm("CRITICAL WARNING: This will permanently delete this record from the database. It cannot be undone. Are you absolutely sure?")) return;
     setLoadingId(id);
-    const res = type === "EMPLOYEE" ? await hardDeleteEmployee(id) : await hardDeletePaymentReceipt(id);
+
+    let res: { success?: boolean; error?: string } = { success: false };
+    if (type === "EMPLOYEE") {
+      res = await hardDeleteEmployee(id);
+    } else if (type === "RECEIPT") {
+      res = await hardDeletePaymentReceipt(id);
+    } else if (type === "MACHINE" || type === "VEHICLE" || type === "TOOL") {
+      res = await hardDelete(type, id);
+    }
+
     if (res.success) {
       setItems(items.filter(item => item.id !== id));
     } else {
       alert(res.error || "Failed to delete");
     }
     setLoadingId(null);
+  };
+
+  const getItemIcon = (type: TrashModelType) => {
+    switch (type) {
+      case "EMPLOYEE":
+        return <UserRound className="h-5 w-5 text-red-400" />;
+      case "RECEIPT":
+        return <Receipt className="h-5 w-5 text-amber-400" />;
+      case "MACHINE":
+        return <Cog className="h-5 w-5 text-blue-400" />;
+      case "VEHICLE":
+        return <Truck className="h-5 w-5 text-emerald-400" />;
+      case "TOOL":
+        return <Wrench className="h-5 w-5 text-purple-400" />;
+    }
+  };
+
+  const getBadgeColor = (type: TrashModelType) => {
+    switch (type) {
+      case "EMPLOYEE":
+        return "bg-red-500/10 text-red-400 border-red-500/20";
+      case "RECEIPT":
+        return "bg-amber-500/10 text-amber-400 border-amber-500/20";
+      case "MACHINE":
+        return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+      case "VEHICLE":
+        return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+      case "TOOL":
+        return "bg-purple-500/10 text-purple-400 border-purple-500/20";
+    }
   };
 
   return (
@@ -87,18 +149,14 @@ export default function TrashClientPage({ trashItems }: Props) {
 
               return (
                 <div key={item.id} className="flex items-center gap-4 px-6 py-5 hover:bg-zinc-800/30 transition-colors">
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-black text-sm ${
-                    item.type === "EMPLOYEE" ? "bg-red-500/10 text-red-400" : "bg-amber-500/10 text-amber-400"
-                  }`}>
-                    {item.type === "EMPLOYEE" ? <UserRound className="h-5 w-5" /> : <Receipt className="h-5 w-5" />}
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-zinc-800/80 font-black text-sm">
+                    {getItemIcon(item.type)}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-white text-sm truncate">{item.title}</p>
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
-                        item.type === "EMPLOYEE" ? "bg-red-500/10 text-red-400 border-red-500/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                      }`}>
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${getBadgeColor(item.type)}`}>
                         {item.type}
                       </span>
                     </div>

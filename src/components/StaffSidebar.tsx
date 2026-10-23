@@ -43,51 +43,31 @@ export default function StaffSidebar({ userName, userEmail }: StaffSidebarProps)
 
   const navGroups = [
     {
-      group: "Morning Briefing",
+      group: "Daily Operations & Money Flow",
       links: [
         { label: "Dashboard", href: "/staff/dashboard", icon: LayoutDashboard },
-        { label: "Analytics and Projects", href: "/staff/projects", icon: Activity },
-        { label: "Crew Directory", href: "/staff/directory", icon: MessageCircle },
-      ]
-    },
-    {
-      group: "Dispatch & Ops",
-      links: [
         { label: "Dispatch Board", href: "/staff/orders", icon: Briefcase },
         { label: "Daily Dispatches", href: "/staff/dispatch", icon: CalendarDays },
-        { label: "Live Operations", href: "/admin/live/map", icon: MapPin },
-      ]
-    },
-    {
-      group: "Fleet & Logistics",
-      links: [
-        { label: "Fleet and Machines", href: "/staff/fleet", icon: Truck },
-        { label: "Tools Inventory", href: "/staff/tools", icon: Wrench },
-        { label: "Asset Maintenance", href: "/staff/maintenance", icon: PenTool },
-      ]
-    },
-    {
-      group: "Closing & Finance",
-      links: [
-        { label: "Expenses and Store", href: "/staff/expenses", icon: Receipt },
-        { label: "Weekly Cash Flow", href: "/owner/ledger", icon: BookOpen },
         { label: "Cash Collections", href: "/staff/cash", icon: Wallet },
-        { label: "Billing", href: "/admin/billing", icon: Receipt },
-        { label: "Invoices", href: "/staff/invoices", icon: FileText },
+        { label: "Expenses & Store", href: "/staff/expenses", icon: Receipt },
+        { label: "Billing & Invoices", href: "/staff/invoices", icon: FileText },
         { label: "Weekly Settlements", href: "/staff/settlements", icon: BookOpen },
-        { label: "Salary Advances", href: "/admin/advances", icon: PiggyBank },
-        { label: "Manual Adjustments", href: "/admin/adjustments", icon: SlidersHorizontal },
       ]
     },
     {
-      group: "HR Roster",
+      group: "Tools & Fleet Assets",
+      links: [
+        { label: "Tools Inventory", href: "/staff/tools", icon: Wrench },
+        { label: "Fleet & Machines", href: "/staff/fleet", icon: Truck },
+      ]
+    },
+    {
+      group: "Others & Operations Support",
       links: [
         { label: "ID & Passwords Hub", href: "/staff/credentials", icon: KeyRound },
-        { label: "Office Employees", href: "/staff/employees", icon: Shield },
-        { label: "Field Workers", href: "/staff/workers", icon: Users },
-        { label: "Drivers", href: "/staff/drivers", icon: Truck },
-        { label: "Field Operators", href: "/staff/operators", icon: HardHat },
-        { label: "External Sub-Leaders", href: "/staff/sub-leaders", icon: Users },
+        { label: "Crew Directory & Rates", href: "/staff/crew", icon: Users },
+        { label: "Asset Maintenance", href: "/staff/maintenance", icon: PenTool },
+        { label: "Live Operations Map", href: "/staff/live/map", icon: MapPin },
         { label: "Compliance Docs", href: "/staff/documents", icon: FileText },
       ]
     }

@@ -14,7 +14,7 @@ export default async function FleetPage() {
 
   const [rawMachines, rawVehicles] = await Promise.all([
     prisma.machine.findMany({
-      where: { status: { not: "RETIRED" } },
+      where: { status: { not: "RETIRED" }, isPendingDelete: false },
       orderBy: { createdAt: "desc" },
       include: {
         maintenanceTickets: {
@@ -35,7 +35,7 @@ export default async function FleetPage() {
       },
     }),
     prisma.vehicle.findMany({
-      where: { status: { not: "RETIRED" } },
+      where: { status: { not: "RETIRED" }, isPendingDelete: false },
       orderBy: { createdAt: "desc" },
       include: {
         maintenanceTickets: {

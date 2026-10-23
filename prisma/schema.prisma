@@ -235,6 +235,7 @@ model Vehicle {
   maintenanceTickets MaintenanceTicket[]
   shiftLogs          ShiftLog[]
   documents          VehicleDocument[]
+  dispatches         DailyDispatch[]
 
   @@index([status])
   @@map("vehicles")
@@ -259,6 +260,8 @@ model DailyDispatch {
   machineId             String?
   liftId                String?
   vibratorId            String?
+  vehicleId             String?
+  routeStopOrder        Int?                    @default(1)
   driverId              String?
   operatorId            String?
   workerId              String?
@@ -313,6 +316,7 @@ model DailyDispatch {
   paymentRecords        PaymentRecord[]
   cashCollections       CashCollection[]
   customer              Customer                @relation(fields: [customerId], references: [id])
+  vehicle               Vehicle?                @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
   driver                Employee?               @relation("DriverDispatches", fields: [driverId], references: [id], onDelete: Restrict)
   invoice               Invoice?                @relation(fields: [invoiceId], references: [id])
   lift                  Machine?                @relation("SecondaryLift", fields: [liftId], references: [id], onDelete: Restrict)
@@ -338,6 +342,7 @@ model DailyDispatch {
   @@index([status])
   @@index([operatorId])
   @@index([driverId])
+  @@index([vehicleId])
   @@index([dateOfService])
   @@index([invoiceId])
   @@index([siteBundleId])

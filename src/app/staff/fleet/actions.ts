@@ -33,12 +33,13 @@ export async function createMachine(data: {
       actionType: "CREATE_MACHINE",
       entity: "MACHINE",
       actorRole: "ADMIN",
-      newPayload: { id: machine.id, delta:  data as any, },
+      newPayload: { id: machine.id, delta: data as any },
       actorId: employeeId
     }
   });
 
   revalidatePath("/admin/fleet");
+  revalidatePath("/staff/fleet");
   return { success: true, machine };
 }
 
@@ -79,12 +80,13 @@ export async function updateMachine(id: string, data: {
       actionType: "UPDATE_MACHINE",
       entity: "MACHINE",
       actorRole: "ADMIN",
-      newPayload: { id: machine.id, delta:  data as any, },
+      newPayload: { id: machine.id, delta: data as any },
       actorId: auth.employeeId
     }
   });
 
   revalidatePath("/admin/fleet");
+  revalidatePath("/staff/fleet");
   revalidatePath("/admin/dispatch");
   revalidatePath("/admin/live");
   return { success: true, machine };
@@ -103,14 +105,42 @@ export async function retireMachine(id: string) {
       actionType: "RETIRE_MACHINE",
       entity: "MACHINE",
       actorRole: "ADMIN",
-      newPayload: { id: machine.id, delta:  { status: "RETIRED" } },
+      newPayload: { id: machine.id, delta: { status: "RETIRED" } },
       actorId: employeeId
     }
   });
 
   revalidatePath("/admin/fleet");
+  revalidatePath("/staff/fleet");
   revalidatePath("/admin/dispatch");
   revalidatePath("/admin/live");
+  return { success: true };
+}
+
+export async function softDeleteMachine(id: string) {
+  const { employeeId } = await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN, Role.STAFF] });
+
+  const machine = await prisma.machine.update({
+    where: { id },
+    data: {
+      isPendingDelete: true,
+      markedForDeleteBy: employeeId
+    }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      actionType: "SOFT_DELETE_MACHINE",
+      entity: "MACHINE",
+      actorRole: "STAFF",
+      newPayload: { id: machine.id, machineId: machine.machineId },
+      actorId: employeeId
+    }
+  });
+
+  revalidatePath("/staff/fleet");
+  revalidatePath("/admin/fleet");
+  revalidatePath("/admin/trash");
   return { success: true };
 }
 
@@ -139,12 +169,13 @@ export async function createVehicle(data: {
       actionType: "CREATE_VEHICLE",
       entity: "VEHICLE",
       actorRole: "ADMIN",
-      newPayload: { id: vehicle.id, delta:  data as any, },
+      newPayload: { id: vehicle.id, delta: data as any },
       actorId: employeeId
     }
   });
 
   revalidatePath("/admin/fleet");
+  revalidatePath("/staff/fleet");
   return { success: true, vehicle };
 }
 
@@ -170,12 +201,13 @@ export async function updateVehicle(id: string, data: {
       actionType: "UPDATE_VEHICLE",
       entity: "VEHICLE",
       actorRole: "ADMIN",
-      newPayload: { id: vehicle.id, delta:  data as any, },
+      newPayload: { id: vehicle.id, delta: data as any },
       actorId: employeeId
     }
   });
 
   revalidatePath("/admin/fleet");
+  revalidatePath("/staff/fleet");
   revalidatePath("/admin/dispatch");
   revalidatePath("/admin/live");
   return { success: true, vehicle };
@@ -194,13 +226,41 @@ export async function retireVehicle(id: string) {
       actionType: "RETIRE_VEHICLE",
       entity: "VEHICLE",
       actorRole: "ADMIN",
-      newPayload: { id: vehicle.id, delta:  { status: "RETIRED" } },
+      newPayload: { id: vehicle.id, delta: { status: "RETIRED" } },
       actorId: employeeId
     }
   });
 
   revalidatePath("/admin/fleet");
+  revalidatePath("/staff/fleet");
   revalidatePath("/admin/dispatch");
   revalidatePath("/admin/live");
+  return { success: true };
+}
+
+export async function softDeleteVehicle(id: string) {
+  const { employeeId } = await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN, Role.STAFF] });
+
+  const vehicle = await prisma.vehicle.update({
+    where: { id },
+    data: {
+      isPendingDelete: true,
+      markedForDeleteBy: employeeId
+    }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      actionType: "SOFT_DELETE_VEHICLE",
+      entity: "VEHICLE",
+      actorRole: "STAFF",
+      newPayload: { id: vehicle.id, licensePlate: vehicle.licensePlate },
+      actorId: employeeId
+    }
+  });
+
+  revalidatePath("/staff/fleet");
+  revalidatePath("/admin/fleet");
+  revalidatePath("/admin/trash");
   return { success: true };
 }

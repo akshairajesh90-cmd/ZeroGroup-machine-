@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,7 @@ type Props = {
   customers: { id: string; name: string; phone: string }[];
   machines: { id: string; name: string; type: string }[];
   employees: { id: string; name: string; role: string }[];
+  vehicles?: { id: string; licensePlate: string; type: string; status: string }[];
   tools: Tool[];
 };
 
@@ -17,7 +18,7 @@ type CrewAssignment = {
   role: string;
 };
 
-export default function NewDispatchForm({ customers, machines, employees, tools }: Props) {
+export default function NewDispatchForm({ customers, machines, employees, vehicles = [], tools }: Props) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -36,11 +37,12 @@ export default function NewDispatchForm({ customers, machines, employees, tools 
 
   // Form State - Step 3: Dynamic Crew
   const [driverId, setDriverId] = useState("");
+  const [vehicleId, setVehicleId] = useState("");
   const [crewAssignments, setCrewAssignments] = useState<CrewAssignment[]>([]);
   const [externalSubLeaderName, setExternalSubLeaderName] = useState("");
   const [helperCount, setHelperCount] = useState(0);
 
-  const drivers = employees.filter(e => e.role === "DRIVER");
+  const drivers = employees.filter(e => e.role === "DRIVER" || e.role === "OWNER" || e.role === "ADMIN");
 
   const toggleSecondaryMachine = (id: string) => {
     setSecondaryMachineIds(prev => 
@@ -93,6 +95,7 @@ export default function NewDispatchForm({ customers, machines, employees, tools 
         machineIds: [primaryMachineId, ...secondaryMachineIds].filter(Boolean),
         machineId: primaryMachineId || null,
         driverId: driverId || null,
+        vehicleId: vehicleId || null,
         crewAssignments: crewAssignments.filter(c => c.employeeId),
         externalSubLeaderName: externalSubLeaderName || undefined,
         helperCount,
@@ -246,18 +249,38 @@ export default function NewDispatchForm({ customers, machines, employees, tools 
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
             <h3 className="text-lg font-semibold border-b pb-2">Step 3: Crew Allocation</h3>
             
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Driver</label>
-              <select 
-                value={driverId} 
-                onChange={e => setDriverId(e.target.value)}
-                className="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              >
-                <option value="">Unassigned</option>
-                {drivers.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Driver / Transporter</label>
+                <select 
+                  value={driverId} 
+                  onChange={e => setDriverId(e.target.value)}
+                  className="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                >
+                  <option value="">Unassigned (or Public Transport)</option>
+                  {drivers.map(d => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} {d.role === "OWNER" || d.role === "ADMIN" ? `(${d.role})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Transport Vehicle</label>
+                <select 
+                  value={vehicleId} 
+                  onChange={e => setVehicleId(e.target.value)}
+                  className="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                >
+                  <option value="">No Vehicle Assigned</option>
+                  {vehicles.map(v => (
+                    <option key={v.id} value={v.id}>
+                      {v.licensePlate} ({v.type}) {v.status === "IN_USE" ? "• [In Use]" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div>

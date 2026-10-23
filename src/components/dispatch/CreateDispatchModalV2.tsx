@@ -6,10 +6,11 @@ interface CreateDispatchModalV2Props {
   machines: any[];
   employees: any[];
   tools: any[];
+  vehicles?: any[];
   customers?: any[];
 }
 
-export function CreateDispatchModalV2({ onClose, machines, employees, tools, customers = [] }: CreateDispatchModalV2Props) {
+export function CreateDispatchModalV2({ onClose, machines, employees, tools, vehicles = [], customers = [] }: CreateDispatchModalV2Props) {
   // Global Job Ticket State
   const [customerId, setCustomerId] = useState("");
   const [location, setLocation] = useState("");
@@ -51,6 +52,7 @@ export function CreateDispatchModalV2({ onClose, machines, employees, tools, cus
         category: machine.type || machine.category,
         sn: machine.serialNumber || machine.machineId,
         driverId: "",
+        vehicleId: "",
         leaderId: "",
         staffIds: [],
         tools: defaultTools,
@@ -102,6 +104,7 @@ export function CreateDispatchModalV2({ onClose, machines, employees, tools, cus
           machineId: a.machineId,
           machineIds: [a.machineId],
           driverId: a.driverId || undefined,
+          vehicleId: a.vehicleId || undefined,
           operatorId: a.leaderId || undefined,
           multiWorkerIds: a.staffIds || [],
           toolItems: finalTools.length > 0 ? finalTools : undefined,
@@ -338,15 +341,33 @@ export function CreateDispatchModalV2({ onClose, machines, employees, tools, cus
                       <h6 className="text-sm font-bold text-slate-300 flex items-center gap-1.5"><Users className="w-4 h-4" /> Role Assignments</h6>
                       
                       <div>
-                        <label className="text-xs font-semibold text-slate-400 block mb-1">Driver (Dashboard Sync)</label>
+                        <label className="text-xs font-semibold text-slate-400 block mb-1">Driver / Transporter</label>
                         <select
                           value={assignment.driverId}
                           onChange={(e) => updateAssignment(assignment.id, "driverId", e.target.value)}
                           className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 px-3 text-sm text-white focus:border-amber-500 outline-none"
                         >
-                          <option value="">-- Select Driver --</option>
-                          {employees.filter(e => e.role === "DRIVER" || e.skills?.includes("DRIVER")).map(e => (
-                            <option key={e.id} value={e.id}>{e.name}</option>
+                          <option value="">-- Select Driver (or Admin) --</option>
+                          {employees.filter(e => e.role === "DRIVER" || e.role === "OWNER" || e.role === "ADMIN" || e.skills?.includes("DRIVER")).map(e => (
+                            <option key={e.id} value={e.id}>
+                              {e.name} {e.role === "OWNER" || e.role === "ADMIN" ? `(${e.role})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-slate-400 block mb-1">Transport Vehicle</label>
+                        <select
+                          value={assignment.vehicleId}
+                          onChange={(e) => updateAssignment(assignment.id, "vehicleId", e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 px-3 text-sm text-white focus:border-amber-500 outline-none"
+                        >
+                          <option value="">-- No Vehicle Assigned --</option>
+                          {vehicles.map(v => (
+                            <option key={v.id} value={v.id}>
+                              {v.licensePlate} ({v.type}) {v.status === "IN_USE" ? "• [In Use]" : ""}
+                            </option>
                           ))}
                         </select>
                       </div>
