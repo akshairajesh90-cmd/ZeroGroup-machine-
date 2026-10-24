@@ -1,16 +1,30 @@
 "use client";
 import React, { useState } from "react";
-import { Plus, Users, Edit2, Shield } from "lucide-react";
+import { Plus, Users, Edit2, Shield, Trash2 } from "lucide-react";
 import { createEmployee, updateEmployee } from "@/actions/hr";
+import { softDeleteEmployee } from "@/actions/employees";
 
 export default function EmployeesClientPage({ employees }: { employees: any[] }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mode, setMode] = useState<"CREATE"|"EDIT">("CREATE");
   const [selectedId, setSelectedId] = useState("");
   const [formData, setFormData] = useState({ name: "", email: "", password: "", phone: "", fixedSalary: "" });
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const openCreate = () => { setMode("CREATE"); setFormData({ name: "", email: "", password: "", phone: "", fixedSalary: "" }); setIsModalOpen(true); };
   const openEdit = (emp: any) => { setMode("EDIT"); setSelectedId(emp.id); setFormData({ name: emp.name, email: emp.email || "", password: "", phone: emp.phone || "", fixedSalary: emp.fixedSalary?.toString() || "" }); setIsModalOpen(true); };
+
+  const handleDelete = async (emp: any) => {
+    if (!confirm(`Are you sure you want to deactivate ${emp.name}? This account will be moved to the Trash Hub.`)) return;
+    setIsDeleting(emp.id);
+    const res = await softDeleteEmployee(emp.id);
+    if (res.success) {
+      window.location.reload();
+    } else {
+      alert(res.error || "Failed to delete employee.");
+      setIsDeleting(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +67,21 @@ export default function EmployeesClientPage({ employees }: { employees: any[] })
                 <td className="px-6 py-4 text-slate-400">{emp.email || "�"}</td>
                 <td className="px-6 py-4 text-slate-400">{emp.phone || "�"}</td>
                 <td className="px-6 py-4 text-right font-mono text-cyan-400 font-bold">{emp.fixedSalary}</td>
-                <td className="px-6 py-4 text-center"><button onClick={() => openEdit(emp)} className="text-slate-400 hover:text-white"><Edit2 className="w-4 h-4"/></button></td>
+                <td className="px-6 py-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <button onClick={() => openEdit(emp)} className="text-slate-400 hover:text-white" title="Edit">
+                      <Edit2 className="w-4 h-4"/>
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(emp)} 
+                      disabled={isDeleting === emp.id}
+                      className="text-rose-400 hover:text-rose-300 disabled:opacity-50" 
+                      title="Deactivate and move to Trash"
+                    >
+                      <Trash2 className="w-4 h-4"/>
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

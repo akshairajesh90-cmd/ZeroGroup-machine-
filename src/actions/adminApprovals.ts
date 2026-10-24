@@ -38,18 +38,90 @@ export async function rejectItem(type: "FUEL" | "ADJUSTMENT", id: string) {
   return { success: true };
 }
 
+import { revalidatePath } from "next/cache";
+
+function safeRevalidate(path: string) {
+  try {
+    revalidatePath(path);
+  } catch {
+    // Ignored in non-request contexts
+  }
+}
+
 /**
- * Called by Staff to soft-delete a record.
- * Sets isPendingDelete = true and logs the staff member's ID.
+ * Called by Staff or Admin to soft-delete a record.
+ * Sets isPendingDelete = true and logs the actor's ID.
  */
 export async function softDelete(
   model: "DISPATCH" | "FUEL" | "EXPENSE" | "MACHINE" | "VEHICLE" | "EMPLOYEE" | "TOOL",
   id: string,
-  staffId: string
+  staffId?: string
 ) {
-  await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN, Role.STAFF] });
+  const session = await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN, Role.STAFF] });
+  const actorId = staffId || session.employeeId || session.userId;
 
-  const updateData = { isPendingDelete: true, markedForDeleteBy: staffId };
+  // Active Dependency Guards
+  if (model === "TOOL") {
+    const activeToolDispatch = await prisma.dispatchTool.findFirst({
+      where: {
+        toolId: id,
+        dispatch: {
+          isPendingDelete: false,
+          status: { in: ["PENDING", "ACCEPTED", "EN_ROUTE", "IN_PROGRESS", "DELIVERED", "PICKED_UP"] }
+        }
+      }
+    });
+    if (activeToolDispatch) {
+      throw new Error(`Cannot delete tool: Currently deployed on an active on-site dispatch.`);
+    }
+  }
+
+  if (model === "MACHINE") {
+    const activeMachineDispatch = await prisma.dailyDispatch.findFirst({
+      where: {
+        isPendingDelete: false,
+        status: { in: ["PENDING", "ACCEPTED", "EN_ROUTE", "IN_PROGRESS", "DELIVERED", "PICKED_UP"] },
+        OR: [{ machineId: id }, { liftId: id }, { vibratorId: id }]
+      }
+    });
+    if (activeMachineDispatch) {
+      throw new Error(`Cannot delete machine: Currently allocated to an active dispatch.`);
+    }
+  }
+
+  if (model === "VEHICLE") {
+    const activeVehicleDispatch = await prisma.dailyDispatch.findFirst({
+      where: {
+        isPendingDelete: false,
+        status: { in: ["PENDING", "ACCEPTED", "EN_ROUTE", "IN_PROGRESS", "DELIVERED", "PICKED_UP"] },
+        vehicleId: id
+      }
+    });
+    if (activeVehicleDispatch) {
+      throw new Error(`Cannot delete vehicle: Currently assigned to an active dispatch.`);
+    }
+  }
+
+  if (model === "EMPLOYEE") {
+    const activeEmpDispatch = await prisma.dailyDispatch.findFirst({
+      where: {
+        isPendingDelete: false,
+        status: { in: ["PENDING", "ACCEPTED", "EN_ROUTE", "IN_PROGRESS", "DELIVERED", "PICKED_UP"] },
+        OR: [
+          { driverId: id },
+          { operatorId: id },
+          { workerId: id },
+          { mainHelperId: id },
+          { siteLeaderEmployeeId: id }
+        ]
+      }
+    });
+    if (activeEmpDispatch) {
+      throw new Error(`Cannot delete employee: Currently assigned to an active dispatch.`);
+    }
+  }
+
+  const updateData = { isPendingDelete: true, markedForDeleteBy: actorId };
 
   switch (model) {
     case "DISPATCH":
@@ -67,18 +139,34 @@ export async function softDelete(
     case "VEHICLE":
       await prisma.vehicle.update({ where: { id }, data: updateData });
       break;
-    case "EMPLOYEE":
+    case "EMPLOYEE": {
+      const emp = await prisma.employee.findUnique({ where: { id }, select: { userId: true } });
       await prisma.employee.update({ where: { id }, data: updateData });
+      if (emp?.userId) {
+        await prisma.user.update({
+          where: { id: emp.userId },
+          data: { sessionTokenVersion: { increment: 1 } }
+        });
+      }
       break;
+    }
     case "TOOL":
       await prisma.tool.update({ where: { id }, data: updateData });
       break;
   }
+
+  safeRevalidate("/admin/trash");
+  safeRevalidate("/owner/trash");
+  safeRevalidate("/staff/fleet");
+  safeRevalidate("/staff/tools");
+  safeRevalidate("/staff/expenses");
+  safeRevalidate("/staff/employees");
+  safeRevalidate("/staff/credentials");
   return { success: true };
 }
 
 /**
- * Called by Admin to permanently delete a record that was soft-deleted.
+ * Called by Admin or Owner to permanently delete a record that was soft-deleted.
  */
 export async function hardDelete(
   model: "DISPATCH" | "FUEL" | "EXPENSE" | "MACHINE" | "VEHICLE" | "EMPLOYEE" | "TOOL",
@@ -102,13 +190,23 @@ export async function hardDelete(
     case "VEHICLE":
       await prisma.vehicle.delete({ where: { id } });
       break;
-    case "EMPLOYEE":
+    case "EMPLOYEE": {
+      const emp = await prisma.employee.findUnique({ where: { id }, select: { userId: true } });
+      await prisma.employeeRoleRate.deleteMany({ where: { employeeId: id } });
+      await prisma.employeeDocument.deleteMany({ where: { employeeId: id } });
       await prisma.employee.delete({ where: { id } });
+      if (emp?.userId) {
+        await prisma.user.delete({ where: { id: emp.userId } }).catch(() => {});
+      }
       break;
+    }
     case "TOOL":
       await prisma.tool.delete({ where: { id } });
       break;
   }
+
+  safeRevalidate("/admin/trash");
+  safeRevalidate("/owner/trash");
   return { success: true };
 }
 
@@ -146,5 +244,13 @@ export async function restoreRecord(
       await prisma.tool.update({ where: { id }, data: updateData });
       break;
   }
+
+  safeRevalidate("/admin/trash");
+  safeRevalidate("/owner/trash");
+  safeRevalidate("/staff/fleet");
+  safeRevalidate("/staff/tools");
+  safeRevalidate("/staff/expenses");
+  safeRevalidate("/staff/employees");
+  safeRevalidate("/staff/credentials");
   return { success: true };
 }

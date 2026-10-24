@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Shield, Users, Edit2, Plus, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Shield, Users, Edit2, Plus, AlertTriangle, ShieldCheck, Trash2 } from "lucide-react";
 import { createEmployee, updateEmployee, saveEmployeeRoleRates } from "@/actions/hr";
+import { softDeleteEmployee } from "@/actions/employees";
 import { Role } from "@prisma/client";
 
 // All system roles with display labels
@@ -59,9 +60,22 @@ export default function StaffPortalClient({
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const router = useRouter();
 
   const canManageAdmins = currentUserRole === "OWNER" || currentUserRole === "ADMIN";
+
+  const handleDelete = async (emp: any) => {
+    if (!confirm(`Are you sure you want to deactivate ${emp.name}? This account will be moved to the Trash Hub.`)) return;
+    setIsDeleting(emp.id);
+    const res = await softDeleteEmployee(emp.id);
+    if (res.success) {
+      router.refresh();
+    } else {
+      alert(res.error || "Failed to delete employee.");
+      setIsDeleting(null);
+    }
+  };
 
   const visibleSystemRoles = SYSTEM_ROLES.filter(r =>
     canManageAdmins ? true : !["STAFF", "ADMIN", "OWNER"].includes(r.value)
@@ -253,9 +267,19 @@ export default function StaffPortalClient({
                       <td className="px-6 py-4 text-right font-mono text-slate-300 font-bold">{emp.baseDailyWage ? emp.baseDailyWage.toString() : "—"}</td>
                       <td className="px-6 py-4 text-right font-mono text-cyan-400 font-bold">{emp.fixedSalary ? emp.fixedSalary.toString() : "—"}</td>
                       <td className="px-6 py-4 text-center">
-                        <button onClick={() => openEditModal(emp)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-md transition-colors border border-slate-700">
-                          <Edit2 className="w-3.5 h-3.5" /> Edit
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <button onClick={() => openEditModal(emp)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-md transition-colors border border-slate-700">
+                            <Edit2 className="w-3.5 h-3.5" /> Edit
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(emp)} 
+                            disabled={isDeleting === emp.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-medium rounded-md transition-colors border border-rose-500/30 disabled:opacity-50"
+                            title="Deactivate and move to Trash"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -1,9 +1,23 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/serverAuth";
 import { revalidatePath } from "next/cache";
-import { Users, Plus, IndianRupee, Phone, Calendar } from "lucide-react";
+import { Users, Plus, IndianRupee, Phone, Calendar, Trash2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+async function deleteSubLeader(formData: FormData) {
+  "use server";
+  await requireAuth({ allowedRoles: ["STAFF", "OWNER", "ADMIN"] });
+  const id = formData.get("id") as string;
+  if (id) {
+    const count = await prisma.siteLaborDisbursement.count({ where: { subLeaderId: id } });
+    if (count > 0) {
+      throw new Error("Cannot delete sub-leader with existing financial disbursements.");
+    }
+    await prisma.externalSubLeader.delete({ where: { id } });
+    revalidatePath("/staff/sub-leaders");
+  }
+}
 
 async function createSubLeader(formData: FormData) {
   "use server";
@@ -101,12 +115,13 @@ export default async function SubLeadersDirectoryPage() {
                   <th className="p-4 text-xs font-black uppercase tracking-widest text-zinc-500 border-b border-zinc-800">Default Rate</th>
                   <th className="p-4 text-xs font-black uppercase tracking-widest text-zinc-500 border-b border-zinc-800">Disbursements</th>
                   <th className="p-4 text-xs font-black uppercase tracking-widest text-zinc-500 border-b border-zinc-800 text-right">Total Cash Paid</th>
+                  <th className="p-4 text-xs font-black uppercase tracking-widest text-zinc-500 border-b border-zinc-800 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
                 {subLeaders.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-zinc-500 font-bold">No Sub-Leaders found.</td>
+                    <td colSpan={6} className="p-8 text-center text-zinc-500 font-bold">No Sub-Leaders found.</td>
                   </tr>
                 ) : (
                   subLeaders.map(sl => {
@@ -136,6 +151,19 @@ export default async function SubLeadersDirectoryPage() {
                             <IndianRupee className="w-4 h-4" />
                             {totalPaid.toLocaleString("en-IN")}
                           </div>
+                        </td>
+                        <td className="p-4 text-center">
+                          <form action={deleteSubLeader}>
+                            <input type="hidden" name="id" value={sl.id} />
+                            <button
+                              type="submit"
+                              disabled={sl.disbursements.length > 0}
+                              className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                              title={sl.disbursements.length > 0 ? "Cannot delete: Has disbursements" : "Delete Sub-Leader"}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </form>
                         </td>
                       </tr>
                     )

@@ -183,9 +183,16 @@ export async function deleteItemPermanently(id: string, type: string) {
       case "Customer":
         await prisma.customer.delete({ where: { id } });
         break;
-      case "Employee":
+      case "Employee": {
+        const emp = await prisma.employee.findUnique({ where: { id }, select: { userId: true } });
+        await prisma.employeeRoleRate.deleteMany({ where: { employeeId: id } });
+        await prisma.employeeDocument.deleteMany({ where: { employeeId: id } });
         await prisma.employee.delete({ where: { id } });
+        if (emp?.userId) {
+          await prisma.user.delete({ where: { id: emp.userId } }).catch(() => {});
+        }
         break;
+      }
       case "DailyDispatch":
         await prisma.dailyDispatch.delete({ where: { id } });
         break;

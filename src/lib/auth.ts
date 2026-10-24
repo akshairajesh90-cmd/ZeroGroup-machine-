@@ -93,6 +93,13 @@ const nextAuthResult = NextAuth({
           console.log(`🔐 [AUTH] No user found for: ${identifier}`);
           throw new Error("User not found in database for: " + identifier);
         }
+
+        // Security Guard: Check if employee/user account is soft-deleted or marked as pending delete
+        if (user.employee?.isPendingDelete || (user as any).isPendingDelete) {
+          console.log(`🔒 [AUTH] Login rejected: Account for ${identifier} is deactivated/deleted.`);
+          throw new Error("This user account has been deactivated. Please contact your administrator.");
+        }
+
         if (!user.hashedPassword) {
           console.log("🔐 [AUTH] hashedPassword is null/empty");
           throw new Error("User has no hashed password");

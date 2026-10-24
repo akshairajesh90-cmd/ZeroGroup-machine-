@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/serverAuth";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
-import { Role, CrewRole } from "@prisma/client";
+import { Role, CrewRole, OperatorType } from "@prisma/client";
 import { sendOtpSms } from "@/lib/sms";
 
 function safeRevalidatePath(path: string) {
@@ -91,6 +91,7 @@ export async function getCredentialsDirectory() {
         resetRequestNotes: emp.user?.resetRequestNotes || null,
         documents: emp.documents || [],
         profilePhotoUrl: emp.profilePhotoUrl || null,
+        operatorType: emp.operatorType || "INTERNAL",
         baseDailyWage: emp.baseDailyWage ? Number(emp.baseDailyWage) : null,
         fixedSalary: emp.fixedSalary ? Number(emp.fixedSalary) : null,
       })),
@@ -125,6 +126,9 @@ export async function createManagedEmployee(data: {
     const initialPassword = data.password || "zero123";
     const hashedPassword = await bcrypt.hash(initialPassword, 10);
 
+    const operatorType: OperatorType =
+      data.role === Role.WORKER ? OperatorType.SUBCONTRACTOR : OperatorType.INTERNAL;
+
     const result = await prisma.$transaction(async (tx) => {
       // 1. Create User
       const user = await tx.user.create({
@@ -142,6 +146,7 @@ export async function createManagedEmployee(data: {
           name: data.name.trim(),
           phone: data.phone.trim(),
           role: data.role,
+          operatorType,
           address: data.address?.trim() || null,
           drivingLicenseNumber: data.drivingLicenseNumber?.trim() || null,
           officialIdNumber: data.officialIdNumber?.trim() || null,
@@ -219,7 +224,10 @@ export async function updateManagedEmployee(
           ...(data.drivingLicenseNumber !== undefined && { drivingLicenseNumber: data.drivingLicenseNumber?.trim() || null }),
           ...(data.officialIdNumber !== undefined && { officialIdNumber: data.officialIdNumber?.trim() || null }),
           ...(data.employeeCode !== undefined && { employeeCode: data.employeeCode?.trim() || null }),
-          ...(data.role && { role: data.role }),
+          ...(data.role && {
+            role: data.role,
+            operatorType: data.role === Role.WORKER ? OperatorType.SUBCONTRACTOR : OperatorType.INTERNAL,
+          }),
           ...(data.capableRoles && { capableRoles: { set: data.capableRoles } }),
           ...(data.baseDailyWage !== undefined && { baseDailyWage: data.baseDailyWage }),
           ...(data.fixedSalary !== undefined && { fixedSalary: data.fixedSalary }),

@@ -5,13 +5,14 @@ import Link from "next/link";
 import {
   Shield, Users, KeyRound, CheckCircle2, Clock, AlertTriangle, Eye, EyeOff,
   Copy, Check, Plus, Search, Filter, Phone, Mail, MapPin, Sparkles,
-  FileText, ExternalLink, Lock, RefreshCw, X, ShieldCheck, UserCheck, UserX
+  FileText, ExternalLink, Lock, RefreshCw, X, ShieldCheck, UserCheck, UserX, Trash2
 } from "lucide-react";
 import {
   createManagedEmployee, updateManagedEmployee, verifyOfficialIdAction,
   revokeOfficialIdAction, adminSetPasswordAction, adminGenerateOtpAction,
   resolvePasswordResetRequestAction
 } from "@/actions/credentials";
+import { softDeleteEmployee } from "@/actions/employees";
 import { Role, CrewRole } from "@prisma/client";
 
 type CredentialEmployee = {
@@ -38,22 +39,161 @@ type CredentialEmployee = {
   resetRequestNotes?: string | null;
   documents: { id: string; type: string; documentNumber: string; attachmentUrl: string; status: string }[];
   profilePhotoUrl: string | null;
+  operatorType?: "INTERNAL" | "SUBCONTRACTOR";
   baseDailyWage: number | null;
   fixedSalary: number | null;
 };
 
-const ALL_CREW_ROLES: { value: CrewRole; label: string }[] = [
-  { value: "DRIVER", label: "Fleet Driver" },
-  { value: "MIXER_OPERATOR", label: "Mixer Operator" },
-  { value: "HYDRAULIC_OPERATOR", label: "Hydraulic Operator" },
-  { value: "LIFT_OPERATOR", label: "Lift Operator" },
-  { value: "VIBRATOR_OPERATOR", label: "Vibrator Operator" },
-  { value: "P_VIBRATOR", label: "Petrol Vibrator" },
-  { value: "TROLLY_1_WHEEL", label: "1-Wheel Trolly" },
-  { value: "TROLLY_2_WHEEL", label: "2-Wheel Trolly" },
-  { value: "WORKER_LEADER", label: "Site Leader" },
-  { value: "HELPER", label: "General Helper" },
-  { value: "PANI_HELPER", label: "Pani Helper" },
+export interface CrewSkillItem {
+  value: CrewRole;
+  label: string;
+  icon?: string;
+  badge?: string;
+  badgeColor?: string;
+  description?: string;
+}
+
+export interface CrewSkillCategory {
+  title: string;
+  description?: string;
+  skills: CrewSkillItem[];
+}
+
+export const CREW_SKILLS_CATEGORIES: CrewSkillCategory[] = [
+  {
+    title: "Machinery Operations",
+    skills: [
+      { value: "MIXER_OPERATOR", label: "Mixer Operator", icon: "🛠️", description: "Concrete mixer operation" },
+      { value: "HYDRAULIC_OPERATOR", label: "Hydraulic Operator", icon: "🚜", description: "Hydraulic machinery & controls" },
+      { value: "LIFT_OPERATOR", label: "Lift Operator", icon: "🏗️", description: "Material hoist & site lift" },
+      { value: "VIBRATOR_OPERATOR", label: "Vibrator Operator", icon: "⚡", description: "Concrete compaction & leveling" },
+      { value: "P_VIBRATOR", label: "Petrol Vibrator", icon: "⛽", description: "Engine vibrator handling" },
+    ],
+  },
+  {
+    title: "Site Leadership",
+    skills: [
+      {
+        value: "WORKER_LEADER",
+        label: "Company Site Leader",
+        icon: "👷",
+        badge: "Our Company Leader",
+        badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+        description: "Company lead supervisor managing site pouring & crew",
+      },
+      {
+        value: "SUB_LEADER",
+        label: "Sub Leader",
+        icon: "👥",
+        badge: "Worker Provider",
+        badgeColor: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+        description: "Labour contractor lead managing external workforce",
+      },
+    ],
+  },
+  {
+    title: "Site Helpers",
+    description: "Complementary field support roles",
+    skills: [
+      {
+        value: "HELPER",
+        label: "General Helper",
+        icon: "🤝",
+        description: "Material handling, aggregate shoveling & site cleanup",
+      },
+      {
+        value: "PANI_HELPER",
+        label: "Pani Helper",
+        icon: "💧",
+        description: "Water hose supply, curing & mixer washout",
+      },
+    ],
+  },
+  {
+    title: "Transport & Material Handling",
+    skills: [
+      {
+        value: "DRIVER",
+        label: "Fleet Driver",
+        icon: "🚚",
+        badge: "Requires DL",
+        badgeColor: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
+        description: "Logistics truck and transit mixer driver",
+      },
+      { value: "TROLLY_1_WHEEL", label: "1-Wheel Trolly", icon: "🛞", description: "Single-wheel aggregate transit" },
+      { value: "TROLLY_2_WHEEL", label: "2-Wheel Trolly", icon: "🛞", description: "Double-wheel concrete cart" },
+    ],
+  },
+];
+
+// Flat list for fast lookup
+export const ALL_CREW_ROLES: { value: CrewRole; label: string }[] = CREW_SKILLS_CATEGORIES.flatMap(
+  (c) => c.skills.map((s) => ({ value: s.value, label: s.label }))
+);
+
+export const SYSTEM_ROLE_DEFINITIONS: {
+  value: Role;
+  label: string;
+  subtitle: string;
+  badge: string;
+  badgeColor: string;
+  bannerColor: string;
+  info: string;
+}[] = [
+  {
+    value: "OPERATOR",
+    label: "Operator / Company Worker (Our Internal Worker)",
+    subtitle: "Internal payroll employee / machine technician",
+    badge: "Company Internal",
+    badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+    bannerColor: "bg-emerald-950/40 border-emerald-800/60 text-emerald-300",
+    info: "Internal ZERO GROUP Worker: Directly on company payroll with role-specific daily or monthly wages.",
+  },
+  {
+    value: "WORKER",
+    label: "Outside Worker (Labour Provider / Sub-Contractor)",
+    subtitle: "External contractor labour / third-party crew",
+    badge: "Outside Worker",
+    badgeColor: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+    bannerColor: "bg-amber-950/40 border-amber-800/60 text-amber-300",
+    info: "Outside Worker: Supplied by labour contractors / worker providers. Billed at flat daily rate.",
+  },
+  {
+    value: "DRIVER",
+    label: "Fleet Driver (Transit / Delivery Operator)",
+    subtitle: "Vehicle & machinery logistics transit",
+    badge: "Fleet Driver",
+    badgeColor: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
+    bannerColor: "bg-cyan-950/40 border-cyan-800/60 text-cyan-300",
+    info: "Logistics Driver: Operates transport trucks and transit equipment. Valid Driving License required.",
+  },
+  {
+    value: "STAFF",
+    label: "Office Staff (Operations & Dispatch)",
+    subtitle: "Billing, crew scheduling & customer coordination",
+    badge: "Office Staff",
+    badgeColor: "bg-blue-500/20 text-blue-300 border-blue-500/40",
+    bannerColor: "bg-blue-950/40 border-blue-800/60 text-blue-300",
+    info: "Desk Staff: Coordinates machine dispatches, billing invoices, and crew allocations.",
+  },
+  {
+    value: "ADMIN",
+    label: "System Administrator",
+    subtitle: "Full operational access, reports & employee credential control",
+    badge: "System Admin",
+    badgeColor: "bg-indigo-500/20 text-indigo-300 border-indigo-500/40",
+    bannerColor: "bg-indigo-950/40 border-indigo-800/60 text-indigo-300",
+    info: "System Administrator: Full platform access for fleet, financials, and staff management.",
+  },
+  {
+    value: "OWNER",
+    label: "Business Owner / Executive",
+    subtitle: "Executive oversight, financial settlements & security",
+    badge: "Executive",
+    badgeColor: "bg-purple-500/20 text-purple-300 border-purple-500/40",
+    bannerColor: "bg-purple-950/40 border-purple-800/60 text-purple-300",
+    info: "Owner Account: Unrestricted executive access across settlements, audits, and configuration.",
+  },
 ];
 
 function formatResetTime(isoString?: string | null) {
@@ -95,6 +235,7 @@ export default function CredentialsHubClient({
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSetPassOpen, setIsSetPassOpen] = useState(false);
   const [isOtpOpen, setIsOtpOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedEmp, setSelectedEmp] = useState<CredentialEmployee | null>(null);
 
   // Form states
@@ -102,11 +243,12 @@ export default function CredentialsHubClient({
   const [formEmail, setFormEmail] = useState("");
   const [formPhone, setFormPhone] = useState("");
   const [formPassword, setFormPassword] = useState("zero123");
-  const [formRole, setFormRole] = useState<Role>("DRIVER");
+  const [formRole, setFormRole] = useState<Role>("OPERATOR");
   const [formAddress, setFormAddress] = useState("");
   const [formLicense, setFormLicense] = useState("");
   const [formAadhaar, setFormAadhaar] = useState("");
   const [formSkills, setFormSkills] = useState<CrewRole[]>([]);
+  const [showLicenseField, setShowLicenseField] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -121,12 +263,15 @@ export default function CredentialsHubClient({
   // Document preview modal
   const [previewDocUrl, setPreviewDocUrl] = useState<string | null>(null);
 
-  const isAdminOrOwner = currentUserRole === "ADMIN" || currentUserRole === "OWNER";
+  const isOwner = currentUserRole === "OWNER";
+  const isAdminOrOwner = currentUserRole === "ADMIN" || isOwner;
 
   // Filter available roles to assign
-  const creatableRoles: Role[] = isAdminOrOwner
-    ? ["DRIVER", "OPERATOR", "WORKER", "STAFF", "ADMIN"]
-    : ["DRIVER", "OPERATOR", "WORKER", "STAFF"];
+  const creatableRoles: Role[] = isOwner
+    ? ["OPERATOR", "WORKER", "DRIVER", "STAFF", "ADMIN", "OWNER"]
+    : isAdminOrOwner
+    ? ["OPERATOR", "WORKER", "DRIVER", "STAFF", "ADMIN"]
+    : ["OPERATOR", "WORKER", "DRIVER", "STAFF"];
 
   // Toggle Password Visibility
   const toggleRevealPassword = (empId: string) => {
@@ -180,11 +325,12 @@ export default function CredentialsHubClient({
     setFormEmail("");
     setFormPhone("");
     setFormPassword("zero123");
-    setFormRole("DRIVER");
+    setFormRole("OPERATOR");
     setFormAddress("");
     setFormLicense("");
     setFormAadhaar("");
     setFormSkills([]);
+    setShowLicenseField(false);
     setActionError(null);
     setIsCreateOpen(true);
   };
@@ -209,6 +355,8 @@ export default function CredentialsHubClient({
 
       if (res.success && res.data) {
         const newEmp = res.data as any;
+        const operatorType: "INTERNAL" | "SUBCONTRACTOR" =
+          formRole === "WORKER" ? "SUBCONTRACTOR" : "INTERNAL";
         setEmployees((prev) => [
           {
             id: newEmp.id,
@@ -216,6 +364,7 @@ export default function CredentialsHubClient({
             email: formEmail,
             phone: newEmp.phone || formPhone,
             role: newEmp.role,
+            operatorType,
             address: newEmp.address || formAddress,
             officialIdType: "DRIVING_LICENSE",
             officialIdNumber: formAadhaar,
@@ -254,10 +403,11 @@ export default function CredentialsHubClient({
     setFormName(emp.name);
     setFormPhone(emp.phone);
     setFormRole(emp.role);
-    setFormAddress(emp.address);
-    setFormLicense(emp.drivingLicenseNumber);
-    setFormAadhaar(emp.officialIdNumber);
-    setFormSkills(emp.capableRoles);
+    setFormAddress(emp.address || "");
+    setFormLicense(emp.drivingLicenseNumber || "");
+    setFormAadhaar(emp.officialIdNumber || "");
+    setFormSkills(emp.capableRoles || []);
+    setShowLicenseField(Boolean(emp.drivingLicenseNumber));
     setActionError(null);
     setIsEditOpen(true);
   };
@@ -280,6 +430,8 @@ export default function CredentialsHubClient({
       });
 
       if (res.success) {
+        const operatorType: "INTERNAL" | "SUBCONTRACTOR" =
+          formRole === "WORKER" ? "SUBCONTRACTOR" : "INTERNAL";
         setEmployees((prev) =>
           prev.map((e) =>
             e.id === selectedEmp.id
@@ -288,6 +440,7 @@ export default function CredentialsHubClient({
                   name: formName,
                   phone: formPhone,
                   role: formRole,
+                  operatorType,
                   address: formAddress,
                   drivingLicenseNumber: formLicense,
                   officialIdNumber: formAadhaar,
@@ -406,6 +559,33 @@ export default function CredentialsHubClient({
       }
     } catch {
       setActionError("Failed to dismiss request.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // 7. Soft-Delete Employee Action
+  const openDeleteModal = (emp: CredentialEmployee) => {
+    setSelectedEmp(emp);
+    setActionError(null);
+    setIsDeleteOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedEmp) return;
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      const res = await softDeleteEmployee(selectedEmp.id);
+      if (res.success) {
+        setEmployees((prev) => prev.filter((e) => e.id !== selectedEmp.id));
+        setIsDeleteOpen(false);
+        setSelectedEmp(null);
+      } else {
+        setActionError(res.error || "Failed to remove employee.");
+      }
+    } catch (err: any) {
+      setActionError(err.message || "Failed to remove employee.");
     } finally {
       setActionLoading(false);
     }
@@ -706,7 +886,7 @@ export default function CredentialsHubClient({
                             <span>•</span>
                             <span className="truncate max-w-[140px]">{emp.email}</span>
                           </div>
-                          <div className="mt-1">
+                          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                             <span className={`inline-flex text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
                               emp.role === "ADMIN" || emp.role === "OWNER"
                                 ? "bg-purple-500/15 text-purple-300 border-purple-500/30"
@@ -714,10 +894,25 @@ export default function CredentialsHubClient({
                                 ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
                                 : emp.role === "DRIVER"
                                 ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/30"
+                                : emp.role === "OPERATOR"
+                                ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
                                 : "bg-amber-500/15 text-amber-300 border-amber-500/30"
                             }`}>
-                              {emp.role}
+                              {emp.role === "OPERATOR"
+                                ? "Operator (Company Worker)"
+                                : emp.role === "WORKER"
+                                ? "Outside Worker"
+                                : emp.role}
                             </span>
+                            {emp.operatorType && (
+                              <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${
+                                emp.operatorType === "INTERNAL"
+                                  ? "bg-emerald-950/40 text-emerald-400 border-emerald-800"
+                                  : "bg-amber-950/40 text-amber-400 border-amber-800"
+                              }`}>
+                                {emp.operatorType === "INTERNAL" ? "Company Staff" : "Worker Provider"}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -790,14 +985,17 @@ export default function CredentialsHubClient({
                     <td className="py-3.5 px-4">
                       <div className="flex flex-wrap gap-1 max-w-[200px]">
                         {emp.capableRoles.length > 0 ? (
-                          emp.capableRoles.map((skill) => (
-                            <span
-                              key={skill}
-                              className="text-[10px] font-bold bg-slate-800 text-indigo-300 border border-slate-700 px-2 py-0.5 rounded"
-                            >
-                              {skill.replace("_", " ")}
-                            </span>
-                          ))
+                          emp.capableRoles.map((skill) => {
+                            const match = ALL_CREW_ROLES.find((r) => r.value === skill);
+                            return (
+                              <span
+                                key={skill}
+                                className="text-[10px] font-bold bg-slate-800 text-indigo-300 border border-slate-700 px-2 py-0.5 rounded"
+                              >
+                                {match ? match.label : skill.replace(/_/g, " ")}
+                              </span>
+                            );
+                          })
                         ) : (
                           <span className="text-[11px] text-slate-600 italic">Standard Role</span>
                         )}
@@ -869,6 +1067,16 @@ export default function CredentialsHubClient({
                             className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[11px] border border-slate-700 transition-colors"
                           >
                             Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => openDeleteModal(emp)}
+                            className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold text-[11px] border border-rose-500/30 transition-colors flex items-center gap-1"
+                            title="Deactivate and move to Trash"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            <span>Delete</span>
                           </button>
                         </div>
                       )}
@@ -1036,168 +1244,398 @@ export default function CredentialsHubClient({
         </div>
       )}
 
-      {/* ── Create / Edit Employee Modal ───────────────────────────── */}
-      {(isCreateOpen || (isEditOpen && selectedEmp)) && (
+      {/* ── Soft Delete Confirmation Modal ─────────────────────────────── */}
+      {isDeleteOpen && selectedEmp && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <form
-            onSubmit={isCreateOpen ? handleCreateSubmit : handleEditSubmit}
-            className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl"
-          >
+          <div className="bg-slate-900 border border-rose-500/30 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-white text-base">
-                {isCreateOpen ? "Create New Team Member" : `Edit Details: ${selectedEmp?.name}`}
-              </h3>
+              <div className="flex items-center gap-2 text-rose-400">
+                <Trash2 className="w-5 h-5" />
+                <h3 className="font-bold text-white text-base">Deactivate Employee</h3>
+              </div>
               <button
                 type="button"
-                onClick={() => {
-                  setIsCreateOpen(false);
-                  setIsEditOpen(false);
-                }}
+                onClick={() => setIsDeleteOpen(false)}
                 className="text-slate-400 hover:text-white text-xs font-bold px-2 py-1 bg-slate-800 rounded-lg"
               >
                 ✕
               </button>
             </div>
 
-            {actionError && <p className="text-xs text-rose-400">{actionError}</p>}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  required
-                  placeholder="Employee name"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">Phone Number</label>
-                <input
-                  type="text"
-                  value={formPhone}
-                  onChange={(e) => setFormPhone(e.target.value)}
-                  required
-                  placeholder="10-digit mobile"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              {isCreateOpen && (
-                <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    value={formEmail}
-                    onChange={(e) => setFormEmail(e.target.value)}
-                    required
-                    placeholder="email@zerogroup.com"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white outline-none focus:border-indigo-500"
-                  />
+            <div className="space-y-2 text-sm text-slate-300">
+              <p>
+                Are you sure you want to deactivate <strong className="text-white">{selectedEmp.name}</strong> ({selectedEmp.role})?
+              </p>
+              <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 space-y-1 text-xs">
+                <div className="flex justify-between text-slate-400">
+                  <span>Role:</span>
+                  <span className="font-semibold text-slate-200">{selectedEmp.role}</span>
                 </div>
-              )}
+                <div className="flex justify-between text-slate-400">
+                  <span>Phone:</span>
+                  <span className="font-semibold text-slate-200">{selectedEmp.phone || "N/A"}</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Email:</span>
+                  <span className="font-semibold text-slate-200">{selectedEmp.email || "N/A"}</span>
+                </div>
+              </div>
 
-              {isCreateOpen && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-xs space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5" /> Two-Tier Safety Protocol:
+                </p>
+                <p className="text-amber-300/80">
+                  • User account login access will be immediately terminated.
+                </p>
+                <p className="text-amber-300/80">
+                  • The profile will be safely archived in the <strong>Trash Hub</strong> (/admin/trash).
+                </p>
+                <p className="text-amber-300/80">
+                  • Admins can 1-click restore this account at any time.
+                </p>
+              </div>
+            </div>
+
+            {actionError && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-300 text-xs">
+                {actionError}
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsDeleteOpen(false)}
+                disabled={actionLoading}
+                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={actionLoading}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-lg shadow-rose-600/20 disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{actionLoading ? "Deactivating..." : "Move to Trash"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Create / Edit Employee Modal ───────────────────────────── */}
+      {(isCreateOpen || (isEditOpen && selectedEmp)) && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <form
+            onSubmit={isCreateOpen ? handleCreateSubmit : handleEditSubmit}
+            className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 max-w-xl w-full max-h-[92vh] overflow-y-auto space-y-4 shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="font-bold text-white text-base">
+                  {isCreateOpen ? "Create New Team Member" : `Edit Details: ${selectedEmp?.name}`}
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Configure identity, system role, credentials & certified field capabilities.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCreateOpen(false);
+                  setIsEditOpen(false);
+                }}
+                className="text-slate-400 hover:text-white text-xs font-bold px-2 py-1 bg-slate-800 rounded-lg transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {actionError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span>{actionError}</span>
+              </div>
+            )}
+
+            {/* ── Step 1: Basic Identity Information ───────────────────── */}
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Initial Password</label>
+                  <label className="block font-semibold text-slate-300 mb-1">
+                    Full Name <span className="text-rose-400">*</span>
+                  </label>
                   <input
                     type="text"
-                    value={formPassword}
-                    onChange={(e) => setFormPassword(e.target.value)}
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
                     required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono outline-none focus:border-indigo-500"
+                    placeholder="e.g. Rajesh Kumar"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white outline-none focus:border-indigo-500 transition-colors"
                   />
                 </div>
-              )}
 
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">System Role</label>
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">
+                    Phone Number <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={formPhone}
+                    onChange={(e) => setFormPhone(e.target.value)}
+                    required
+                    placeholder="10-digit mobile number"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono outline-none focus:border-indigo-500 transition-colors"
+                  />
+                </div>
+
+                {isCreateOpen && (
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Email Address <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={formEmail}
+                      onChange={(e) => setFormEmail(e.target.value)}
+                      required
+                      placeholder="name@zerogroup.com"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white outline-none focus:border-indigo-500 transition-colors"
+                    />
+                  </div>
+                )}
+
+                {isCreateOpen && (
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Initial Password <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formPassword}
+                      onChange={(e) => setFormPassword(e.target.value)}
+                      required
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono outline-none focus:border-indigo-500 transition-colors"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* ── Step 2: System Role Selection ─────────────────────────── */}
+              <div className="pt-2 border-t border-slate-800/60 space-y-2">
+                <label className="block text-xs font-semibold text-slate-300">
+                  System Role & Employment Classification <span className="text-rose-400">*</span>
+                </label>
                 <select
                   value={formRole}
-                  onChange={(e) => setFormRole(e.target.value as Role)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-semibold outline-none focus:border-indigo-500"
+                  onChange={(e) => {
+                    const newRole = e.target.value as Role;
+                    setFormRole(newRole);
+                    if (newRole === "DRIVER") {
+                      setShowLicenseField(true);
+                    }
+                  }}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white font-semibold outline-none focus:border-indigo-500 text-xs transition-colors"
                 >
-                  {creatableRoles.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
+                  {creatableRoles.map((r) => {
+                    const def = SYSTEM_ROLE_DEFINITIONS.find((d) => d.value === r);
+                    return (
+                      <option key={r} value={r}>
+                        {def ? def.label : r}
+                      </option>
+                    );
+                  })}
                 </select>
+
+                {/* Active Role Descriptive Banner */}
+                {(() => {
+                  const currentDef = SYSTEM_ROLE_DEFINITIONS.find((d) => d.value === formRole);
+                  if (!currentDef) return null;
+                  return (
+                    <div className={`p-2.5 rounded-xl border text-[11px] flex items-center justify-between gap-2 ${currentDef.bannerColor}`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${currentDef.badgeColor}`}>
+                          {currentDef.badge}
+                        </span>
+                        <span className="leading-tight">{currentDef.info}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">Driving License No.</label>
-                <input
-                  type="text"
-                  value={formLicense}
-                  onChange={(e) => setFormLicense(e.target.value.toUpperCase())}
-                  placeholder="KL-05-..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono outline-none focus:border-indigo-500"
-                />
-              </div>
+              {/* ── Step 3: Conditional Driving License Field ─────────────── */}
+              {(() => {
+                const isDriverRoleOrSkill = formRole === "DRIVER" || formSkills.includes("DRIVER");
+                const isLicenseVisible = isDriverRoleOrSkill || showLicenseField || Boolean(formLicense);
 
-              <div className="sm:col-span-2">
-                <label className="block font-semibold text-slate-300 mb-1">Aadhaar / National ID No.</label>
+                if (isLicenseVisible) {
+                  return (
+                    <div className="p-3 rounded-2xl bg-slate-950 border border-cyan-500/30 space-y-1.5 transition-all">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-semibold text-cyan-300 flex items-center gap-1.5">
+                          <span>🚚 Driving License No.</span>
+                          {isDriverRoleOrSkill ? (
+                            <span className="text-[10px] text-cyan-400/80 font-normal">(Required for Fleet Drivers)</span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-normal">(Optional Heavy License)</span>
+                          )}
+                        </label>
+                        {!isDriverRoleOrSkill && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowLicenseField(false);
+                              setFormLicense("");
+                            }}
+                            className="text-[10px] text-slate-500 hover:text-slate-300 underline"
+                          >
+                            Hide field
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        value={formLicense}
+                        onChange={(e) => setFormLicense(e.target.value.toUpperCase())}
+                        placeholder="e.g. KL-05-20210001234"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs outline-none focus:border-cyan-400 transition-colors"
+                      />
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-[11px] text-slate-500">
+                      Driver license field is hidden (only needed for drivers).
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowLicenseField(true)}
+                      className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 underline"
+                    >
+                      + Add Driving License (Optional)
+                    </button>
+                  </div>
+                );
+              })()}
+
+              {/* ── Step 4: Aadhaar / National ID No. ──────────────────────── */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-300">
+                  Aadhaar / National ID No.
+                </label>
                 <input
                   type="text"
                   value={formAadhaar}
                   onChange={(e) => setFormAadhaar(e.target.value)}
-                  placeholder="12-digit Aadhaar number"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono outline-none focus:border-indigo-500"
+                  placeholder="12-digit Aadhaar number (e.g. 5489 1234 5678)"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono text-xs outline-none focus:border-indigo-500 transition-colors"
                 />
+                <p className="text-[10px] text-slate-500">
+                  Official government identification used for KYC and biometric verification.
+                </p>
               </div>
 
-              <div className="sm:col-span-2">
-                <label className="block font-semibold text-slate-300 mb-1">Residential Address</label>
+              {/* ── Step 5: Residential Address (Optional) ─────────────────── */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-300 flex items-center justify-between">
+                  <span>Residential Address</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700">
+                    Optional
+                  </span>
+                </label>
                 <textarea
                   value={formAddress}
                   onChange={(e) => setFormAddress(e.target.value)}
                   rows={2}
-                  placeholder="Full residential address"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white outline-none focus:border-indigo-500"
+                  placeholder="House/Building, Street, Village/City, Landmark (Optional)"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-indigo-500 transition-colors"
                 />
               </div>
             </div>
 
-            {/* Operator / Driver Skill Capability Selection (STAFF & ADMIN ONLY) */}
-            <div className="pt-2 border-t border-slate-800 space-y-2">
-              <label className="block text-xs font-black uppercase text-indigo-400">
-                Certified Machinery & Crew Skills (Office Managed)
-              </label>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                {ALL_CREW_ROLES.map((skill) => {
-                  const checked = formSkills.includes(skill.value);
-                  return (
-                    <label
-                      key={skill.value}
-                      className={`flex items-center gap-2 p-2 rounded-xl border cursor-pointer select-none transition-colors ${
-                        checked
-                          ? "bg-indigo-600/20 border-indigo-500 text-indigo-200"
-                          : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFormSkills([...formSkills, skill.value]);
-                          } else {
-                            setFormSkills(formSkills.filter((s) => s !== skill.value));
-                          }
-                        }}
-                        className="rounded accent-indigo-500"
-                      />
-                      <span className="text-[11px] font-semibold">{skill.label}</span>
-                    </label>
-                  );
-                })}
+            {/* ── Step 6: Categorized Certified Machinery & Crew Skills ────── */}
+            <div className="pt-3 border-t border-slate-800 space-y-3">
+              <div>
+                <label className="block text-xs font-black uppercase text-indigo-400 tracking-wider">
+                  Certified Machinery & Crew Skills (Office Managed)
+                </label>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Tag all roles this member is certified to operate. Used by automated dispatch allocation.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {CREW_SKILLS_CATEGORIES.map((cat) => (
+                  <div key={cat.title} className="p-2.5 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-1.5">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        {cat.title}
+                      </span>
+                      {cat.description && (
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          {cat.description}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
+                      {cat.skills.map((skill) => {
+                        const checked = formSkills.includes(skill.value);
+                        return (
+                          <label
+                            key={skill.value}
+                            className={`flex items-start gap-2.5 p-2 rounded-xl border cursor-pointer select-none transition-all ${
+                              checked
+                                ? "bg-indigo-600/20 border-indigo-500 text-indigo-200 shadow-sm shadow-indigo-500/10"
+                                : "bg-slate-900 border-slate-800/80 text-slate-400 hover:text-white hover:border-slate-700"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormSkills([...formSkills, skill.value]);
+                                } else {
+                                  setFormSkills(formSkills.filter((s) => s !== skill.value));
+                                }
+                              }}
+                              className="rounded accent-indigo-500 mt-0.5"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {skill.icon && <span className="text-xs">{skill.icon}</span>}
+                                <span className="text-[11px] font-bold text-white leading-tight">
+                                  {skill.label}
+                                </span>
+                                {skill.badge && (
+                                  <span className={`text-[8px] font-black uppercase px-1.5 py-0.2 rounded border ${skill.badgeColor || "bg-slate-800 text-slate-400 border-slate-700"}`}>
+                                    {skill.badge}
+                                  </span>
+                                )}
+                              </div>
+                              {skill.description && (
+                                <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                                  {skill.description}
+                                </p>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
+            {/* ── Submit / Cancel Buttons ─────────────────────────────────── */}
             <div className="flex items-center gap-2 pt-3 border-t border-slate-800">
               <button
                 type="button"
@@ -1205,14 +1643,14 @@ export default function CredentialsHubClient({
                   setIsCreateOpen(false);
                   setIsEditOpen(false);
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-400 text-xs font-bold"
+                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-bold transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={actionLoading}
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-xs font-bold disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white text-xs font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
               >
                 {actionLoading ? "Saving..." : isCreateOpen ? "Create Employee" : "Save Changes"}
               </button>

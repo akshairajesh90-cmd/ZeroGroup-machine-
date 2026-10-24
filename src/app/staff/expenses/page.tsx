@@ -9,6 +9,7 @@ export default async function AdminExpensesPage() {
   await requireAuth({ allowedRoles: [Role.OWNER, Role.STAFF, Role.ADMIN] });
 
   const rawExpenses = await prisma.expense.findMany({
+    where: { isPendingDelete: false },
     orderBy: { date: "desc" },
     include: {
       logger: { select: { name: true, role: true } },

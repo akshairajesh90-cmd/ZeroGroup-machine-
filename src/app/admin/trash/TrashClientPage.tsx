@@ -17,7 +17,7 @@ import { hardDeleteEmployee, restoreEmployee } from "@/actions/employees";
 import { hardDeletePaymentReceipt, restorePaymentReceipt } from "@/actions/receipts";
 import { restoreRecord, hardDelete } from "@/actions/adminApprovals";
 
-export type TrashModelType = "EMPLOYEE" | "RECEIPT" | "MACHINE" | "VEHICLE" | "TOOL";
+export type TrashModelType = "EMPLOYEE" | "RECEIPT" | "MACHINE" | "VEHICLE" | "TOOL" | "EXPENSE";
 
 interface TrashItem {
   id: string;
@@ -25,6 +25,7 @@ interface TrashItem {
   title: string;
   subtitle: string;
   deletedAt: string;
+  deletedBy?: string | null;
 }
 
 interface Props {
@@ -44,7 +45,7 @@ export default function TrashClientPage({ trashItems }: Props) {
       res = await restoreEmployee(id);
     } else if (type === "RECEIPT") {
       res = await restorePaymentReceipt(id);
-    } else if (type === "MACHINE" || type === "VEHICLE" || type === "TOOL") {
+    } else if (type === "MACHINE" || type === "VEHICLE" || type === "TOOL" || type === "EXPENSE") {
       res = await restoreRecord(type, id);
     }
 
@@ -65,7 +66,7 @@ export default function TrashClientPage({ trashItems }: Props) {
       res = await hardDeleteEmployee(id);
     } else if (type === "RECEIPT") {
       res = await hardDeletePaymentReceipt(id);
-    } else if (type === "MACHINE" || type === "VEHICLE" || type === "TOOL") {
+    } else if (type === "MACHINE" || type === "VEHICLE" || type === "TOOL" || type === "EXPENSE") {
       res = await hardDelete(type, id);
     }
 
@@ -89,6 +90,8 @@ export default function TrashClientPage({ trashItems }: Props) {
         return <Truck className="h-5 w-5 text-emerald-400" />;
       case "TOOL":
         return <Wrench className="h-5 w-5 text-purple-400" />;
+      case "EXPENSE":
+        return <Receipt className="h-5 w-5 text-rose-400" />;
     }
   };
 
@@ -104,6 +107,8 @@ export default function TrashClientPage({ trashItems }: Props) {
         return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
       case "TOOL":
         return "bg-purple-500/10 text-purple-400 border-purple-500/20";
+      case "EXPENSE":
+        return "bg-rose-500/10 text-rose-400 border-rose-500/20";
     }
   };
 
@@ -163,9 +168,14 @@ export default function TrashClientPage({ trashItems }: Props) {
                     <p className="text-xs text-zinc-500 truncate mt-0.5">{item.subtitle}</p>
                   </div>
 
-                  <div className="hidden md:flex items-center gap-1.5 text-zinc-500 text-xs shrink-0 mx-4">
-                    <Clock className="h-3.5 w-3.5" />
-                    Deleted: {date}
+                  <div className="hidden md:flex flex-col items-end text-zinc-500 text-xs shrink-0 mx-4">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>Deleted: {date}</span>
+                    </div>
+                    {item.deletedBy && (
+                      <span className="text-[10px] text-zinc-600 mt-0.5">by {item.deletedBy}</span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">

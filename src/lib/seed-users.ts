@@ -22,15 +22,6 @@ export const DEFAULT_ACCOUNTS = [
     capableRoles: [] as CrewRole[],
   },
   {
-    email: "owner@zerogroup.com",
-    name: "Owner Admin",
-    phone: "9847000098",
-    role: Role.OWNER,
-    password: "admin123",
-    employeeCode: "ZG-099",
-    capableRoles: [] as CrewRole[],
-  },
-  {
     email: "staff@zerogroup.com",
     name: "Priya Menon",
     phone: "9847000097",

@@ -1,7 +1,8 @@
 "use client";
 import React, { useState } from "react";
-import { Plus, Edit2, HardHat } from "lucide-react";
+import { Plus, Edit2, HardHat, Trash2 } from "lucide-react";
 import { createEmployee, updateEmployee } from "@/actions/hr";
+import { softDeleteEmployee } from "@/actions/employees";
 
 const CREW_ROLES = [
   { value: "HELPER", label: "Helper" },
@@ -15,9 +16,22 @@ export default function DriversClientPage({ Drivers }: { Drivers: any[] }) {
   const [mode, setMode] = useState<"CREATE"|"EDIT">("CREATE");
   const [selectedId, setSelectedId] = useState("");
   const [formData, setFormData] = useState({ name: "", phone: "", baseDailyWage: "", capableRoles: [] as string[] });
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const openCreate = () => { setMode("CREATE"); setFormData({ name: "", phone: "", baseDailyWage: "", capableRoles: [] }); setIsModalOpen(true); };
   const openEdit = (w: any) => { setMode("EDIT"); setSelectedId(w.id); setFormData({ name: w.name, phone: w.phone || "", baseDailyWage: w.baseDailyWage?.toString() || "", capableRoles: w.capableRoles || [] }); setIsModalOpen(true); };
+
+  const handleDelete = async (driver: any) => {
+    if (!confirm(`Are you sure you want to deactivate driver ${driver.name}? Their profile will be moved to the Trash Hub.`)) return;
+    setIsDeleting(driver.id);
+    const res = await softDeleteEmployee(driver.id);
+    if (res.success) {
+      window.location.reload();
+    } else {
+      alert(res.error || "Failed to delete driver.");
+      setIsDeleting(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +80,21 @@ export default function DriversClientPage({ Drivers }: { Drivers: any[] }) {
                 </td>
                 <td className="px-6 py-4 text-slate-400">{w.phone || "—"}</td>
                 <td className="px-6 py-4 text-right font-mono text-emerald-400 font-bold">{w.baseDailyWage}</td>
-                <td className="px-6 py-4 text-center"><button onClick={() => openEdit(w)} className="text-slate-400 hover:text-white"><Edit2 className="w-4 h-4"/></button></td>
+                <td className="px-6 py-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <button onClick={() => openEdit(w)} className="text-slate-400 hover:text-white" title="Edit">
+                      <Edit2 className="w-4 h-4"/>
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(w)} 
+                      disabled={isDeleting === w.id}
+                      className="text-rose-400 hover:text-rose-300 disabled:opacity-50" 
+                      title="Deactivate and move to Trash"
+                    >
+                      <Trash2 className="w-4 h-4"/>
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

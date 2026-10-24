@@ -22,8 +22,10 @@ import {
   ArrowUpRight,
   Calendar,
   ExternalLink,
-  ChevronDown
+  ChevronDown,
+  Trash2
 } from "lucide-react";
+import { softDelete } from "@/actions/adminApprovals";
 import { MAIN_LEDGER_HEADS, MainLedgerKey, getLedgerHeadForExpense } from "@/lib/expenseLedgerConfig";
 
 export interface ExpenseRecord {
@@ -55,11 +57,31 @@ interface Props {
 }
 
 export default function ExpensesClient({ initialExpenses }: Props) {
+  const [expenses, setExpenses] = useState(initialExpenses);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
   // Filters
   const [selectedLedgerTab, setSelectedLedgerTab] = useState<"ALL" | MainLedgerKey>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState<"ALL" | "TODAY" | "WEEK" | "MONTH">("ALL");
   const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string | null>(null);
+
+  const handleDeleteExpense = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this expense? It will be moved to the Trash Hub.")) return;
+    setIsDeleting(id);
+    try {
+      const res = await softDelete("EXPENSE", id);
+      if (res.success) {
+        setExpenses(prev => prev.filter(e => e.id !== id));
+      } else {
+        alert("Failed to delete expense.");
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to delete expense.");
+    } finally {
+      setIsDeleting(null);
+    }
+  };
 
   // Parse notes to extract payment mode, split amounts, and receipt if present
   const parseExpenseMeta = (notes: string | null) => {
@@ -103,7 +125,7 @@ export default function ExpensesClient({ initialExpenses }: Props) {
     const now = new Date();
     const todayStr = format(now, "yyyy-MM-dd");
 
-    return initialExpenses.filter((item) => {
+    return expenses.filter((item) => {
       // 1. Ledger Head Tab Filter
       if (selectedLedgerTab !== "ALL") {
         const itemHead = getLedgerHeadForExpense(item);
@@ -338,12 +360,13 @@ export default function ExpensesClient({ initialExpenses }: Props) {
                 <th className="px-6 py-4">Payment Channel</th>
                 <th className="px-6 py-4 text-right">Amount</th>
                 <th className="px-4 py-4 text-center">Receipt</th>
+                <th className="px-4 py-4 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/60">
               {filteredExpenses.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-zinc-500 text-sm">
+                  <td colSpan={7} className="px-6 py-12 text-center text-zinc-500 text-sm">
                     No expense records found matching current ledger filter.
                   </td>
                 </tr>
@@ -436,7 +459,7 @@ export default function ExpensesClient({ initialExpenses }: Props) {
                         </span>
                       </td>
 
-                      {/* Receipt Photo Thumbnail & Action */}
+                      {/* Receipt Photo Thumbnail */}
                       <td className="px-4 py-4 whitespace-nowrap text-center">
                         {meta.receiptUrl ? (
                           <button
@@ -457,6 +480,19 @@ export default function ExpensesClient({ initialExpenses }: Props) {
                         ) : (
                           <span className="text-zinc-600 text-xs">—</span>
                         )}
+                      </td>
+
+                      {/* Delete Action */}
+                      <td className="px-4 py-4 whitespace-nowrap text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteExpense(exp.id)}
+                          disabled={isDeleting === exp.id}
+                          className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition-colors disabled:opacity-50"
+                          title="Delete Expense (Move to Trash)"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </td>
                     </tr>
                   );

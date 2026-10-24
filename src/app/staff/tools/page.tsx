@@ -1,10 +1,11 @@
-﻿import React from "react";
+import React from "react";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/serverAuth";
 import { Role } from "@prisma/client";
 import { Wrench, Plus, Archive, Settings2, PackageCheck, Truck, ShieldAlert } from "lucide-react";
 import { EditToolModal } from "./EditToolModal";
 import { AddToolModal } from "./AddToolModal";
+import { DeleteToolButton } from "./DeleteToolButton";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ export default async function ToolsInventoryPage() {
   // Fetch tools along with their dispatch tool entries where the dispatch is active
   // Active statuses: ACCEPTED, EN_ROUTE, IN_PROGRESS, DELIVERED
   const tools = await prisma.tool.findMany({
+    where: { isPendingDelete: false },
     orderBy: { name: "asc" },
     include: {
       dispatchTools: {
@@ -127,6 +129,7 @@ export default async function ToolsInventoryPage() {
                           </span>
                         )}
                         <EditToolModal tool={tool} />
+                        <DeleteToolButton toolId={tool.id} toolName={tool.name} />
                       </td>
                     </tr>
                   );
