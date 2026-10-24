@@ -15,10 +15,12 @@ import {
   Edit2,
   Trash2,
   Receipt,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 import CreateOperatorModal from "@/components/operators/CreateOperatorModal";
 import EditOperatorModal from "@/components/operators/EditOperatorModal";
-import { softDeleteEmployee } from "@/actions/employees";
+import { softDeleteEmployee, toggleEmployeeActiveStatus } from "@/actions/employees";
 import Link from "next/link";
 
 interface OperatorRow {
@@ -33,6 +35,7 @@ interface OperatorRow {
   roleRates?: { crewRole: string; wagePerDay: number }[];
   baseDailyWage: number | null;
   dailyBataRate: number | null;
+  isActive?: boolean;
   createdAt: string;
 }
 
@@ -236,6 +239,21 @@ function OperatorRow({ operator: op, onEdit }: { operator: OperatorRow; onEdit: 
   const isInternal = op.operatorType === "INTERNAL";
   const [showDropdown, setShowDropdown] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
+
+  const handleToggleStatus = async () => {
+    const nextStatus = op.isActive === false;
+    const actionWord = nextStatus ? "enable" : "disable";
+    if (!confirm(`Are you sure you want to ${actionWord} operator ${op.name}? ${!nextStatus ? "This will revoke active sessions and prevent login." : ""}`)) return;
+    setIsToggling(true);
+    const res = await toggleEmployeeActiveStatus(op.id, nextStatus);
+    if (res.success) {
+      window.location.reload();
+    } else {
+      alert(res.error || `Failed to ${actionWord} operator.`);
+      setIsToggling(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this operator?")) return;
@@ -270,12 +288,23 @@ function OperatorRow({ operator: op, onEdit }: { operator: OperatorRow; onEdit: 
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <Link 
-          href={`/staff/operators/${op.id}`} 
-          className="font-semibold text-white text-sm hover:text-blue-400 hover:underline transition-colors truncate block"
-        >
-          {op.name}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link 
+            href={`/staff/operators/${op.id}`} 
+            className="font-semibold text-white text-sm hover:text-blue-400 hover:underline transition-colors truncate block"
+          >
+            {op.name}
+          </Link>
+          {op.isActive === false ? (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">
+              Disabled
+            </span>
+          ) : (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              Active
+            </span>
+          )}
+        </div>
         {op.contractorCoName && (
           <p className="text-xs text-zinc-500 truncate">{op.contractorCoName}</p>
         )}
@@ -415,6 +444,25 @@ function OperatorRow({ operator: op, onEdit }: { operator: OperatorRow; onEdit: 
               className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors text-left"
             >
               <Edit2 className="h-4 w-4" /> Edit
+            </button>
+            <button 
+              onClick={() => { setShowDropdown(false); handleToggleStatus(); }}
+              disabled={isToggling}
+              className={`flex w-full items-center gap-2 px-4 py-2.5 text-sm transition-colors text-left disabled:opacity-50 ${
+                op.isActive === false
+                  ? "text-emerald-400 hover:bg-emerald-500/10"
+                  : "text-amber-400 hover:bg-amber-500/10"
+              }`}
+            >
+              {op.isActive === false ? (
+                <>
+                  <UserCheck className="h-4 w-4" /> Enable
+                </>
+              ) : (
+                <>
+                  <UserX className="h-4 w-4" /> Disable
+                </>
+              )}
             </button>
             <button 
               onClick={() => { setShowDropdown(false); handleDelete(); }}

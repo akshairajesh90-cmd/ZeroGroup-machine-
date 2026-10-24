@@ -1,8 +1,8 @@
 "use client";
 import React, { useState } from "react";
-import { Plus, Edit2, HardHat, Trash2 } from "lucide-react";
+import { Plus, Edit2, HardHat, Trash2, UserCheck, UserX } from "lucide-react";
 import { createEmployee, updateEmployee } from "@/actions/hr";
-import { softDeleteEmployee } from "@/actions/employees";
+import { softDeleteEmployee, toggleEmployeeActiveStatus } from "@/actions/employees";
 
 const CREW_ROLES = [
   { value: "HELPER", label: "Helper" },
@@ -17,9 +17,24 @@ export default function WorkersClientPage({ workers }: { workers: any[] }) {
   const [selectedId, setSelectedId] = useState("");
   const [formData, setFormData] = useState({ name: "", phone: "", baseDailyWage: "", capableRoles: [] as string[] });
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isToggling, setIsToggling] = useState<string | null>(null);
 
   const openCreate = () => { setMode("CREATE"); setFormData({ name: "", phone: "", baseDailyWage: "", capableRoles: [] }); setIsModalOpen(true); };
   const openEdit = (w: any) => { setMode("EDIT"); setSelectedId(w.id); setFormData({ name: w.name, phone: w.phone || "", baseDailyWage: w.baseDailyWage?.toString() || "", capableRoles: w.capableRoles || [] }); setIsModalOpen(true); };
+
+  const handleToggleStatus = async (worker: any) => {
+    const nextStatus = worker.isActive === false;
+    const actionWord = nextStatus ? "enable" : "disable";
+    if (!confirm(`Are you sure you want to ${actionWord} worker ${worker.name}? ${!nextStatus ? "This will revoke active sessions and prevent login." : ""}`)) return;
+    setIsToggling(worker.id);
+    const res = await toggleEmployeeActiveStatus(worker.id, nextStatus);
+    if (res.success) {
+      window.location.reload();
+    } else {
+      alert(res.error || `Failed to ${actionWord} worker.`);
+      setIsToggling(null);
+    }
+  };
 
   const handleDelete = async (worker: any) => {
     if (!confirm(`Are you sure you want to deactivate worker ${worker.name}? Their profile will be moved to the Trash Hub.`)) return;
@@ -61,6 +76,7 @@ export default function WorkersClientPage({ workers }: { workers: any[] }) {
           <thead className="text-xs text-slate-400 uppercase bg-slate-950 border-b border-slate-800">
             <tr>
               <th className="px-6 py-4">Name</th>
+              <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4">Trades & Fares</th>
               <th className="px-6 py-4">Phone</th>
               <th className="px-6 py-4 text-right">Default Wage (INR)</th>
@@ -72,6 +88,17 @@ export default function WorkersClientPage({ workers }: { workers: any[] }) {
               <tr key={w.id} className="hover:bg-slate-800/50">
                 <td className="px-6 py-4 font-medium text-white">{w.name}</td>
                 <td className="px-6 py-4">
+                  {w.isActive === false ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
+                      Disabled
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      Active
+                    </span>
+                  )}
+                </td>
+                <td className="px-6 py-4">
                   <div className="flex flex-wrap gap-1">
                     {w.capableRoles.map((cr: string) => (
                       <span key={cr} className="px-2 py-1 bg-amber-500/10 text-amber-300 border border-amber-500/20 rounded text-[11px] font-semibold">{CREW_ROLES.find(r => r.value === cr)?.label || cr}</span>
@@ -81,9 +108,17 @@ export default function WorkersClientPage({ workers }: { workers: any[] }) {
                 <td className="px-6 py-4 text-slate-400">{w.phone || "—"}</td>
                 <td className="px-6 py-4 text-right font-mono text-emerald-400 font-bold">{w.baseDailyWage}</td>
                 <td className="px-6 py-4 text-center">
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center justify-center gap-3">
                     <button onClick={() => openEdit(w)} className="text-slate-400 hover:text-white" title="Edit">
                       <Edit2 className="w-4 h-4"/>
+                    </button>
+                    <button 
+                      onClick={() => handleToggleStatus(w)}
+                      disabled={isToggling === w.id}
+                      className={w.isActive === false ? "text-emerald-400 hover:text-emerald-300 disabled:opacity-50" : "text-amber-400 hover:text-amber-300 disabled:opacity-50"}
+                      title={w.isActive === false ? "Enable Worker" : "Disable Worker"}
+                    >
+                      {w.isActive === false ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
                     </button>
                     <button 
                       onClick={() => handleDelete(w)} 
@@ -125,4 +160,3 @@ export default function WorkersClientPage({ workers }: { workers: any[] }) {
     </div>
   );
 }
-

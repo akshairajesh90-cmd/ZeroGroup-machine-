@@ -12,7 +12,7 @@ import {
   revokeOfficialIdAction, adminSetPasswordAction, adminGenerateOtpAction,
   resolvePasswordResetRequestAction
 } from "@/actions/credentials";
-import { softDeleteEmployee } from "@/actions/employees";
+import { softDeleteEmployee, toggleEmployeeActiveStatus } from "@/actions/employees";
 import { Role, CrewRole } from "@prisma/client";
 
 type CredentialEmployee = {
@@ -42,6 +42,7 @@ type CredentialEmployee = {
   operatorType?: "INTERNAL" | "SUBCONTRACTOR";
   baseDailyWage: number | null;
   fixedSalary: number | null;
+  isActive?: boolean;
 };
 
 export interface CrewSkillItem {
@@ -120,8 +121,18 @@ export const CREW_SKILLS_CATEGORIES: CrewSkillCategory[] = [
         badgeColor: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
         description: "Logistics truck and transit mixer driver",
       },
-      { value: "TROLLY_1_WHEEL", label: "1-Wheel Trolly", icon: "🛞", description: "Single-wheel aggregate transit" },
-      { value: "TROLLY_2_WHEEL", label: "2-Wheel Trolly", icon: "🛞", description: "Double-wheel concrete cart" },
+      {
+        value: "TROLLY_1_WHEEL",
+        label: "1-Wheel Trolly Operator (Wheelbarrow / Ramp Handler)",
+        icon: "🛞",
+        description: "Single-wheel aggregate transit across ramps & planks",
+      },
+      {
+        value: "TROLLY_2_WHEEL",
+        label: "2-Wheel Trolly Handler (Concrete Cart)",
+        icon: "🛞",
+        description: "Double-wheel concrete cart on flat ground",
+      },
     ],
   },
 ];
@@ -225,6 +236,7 @@ export default function CredentialsHubClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
   const [verificationFilter, setVerificationFilter] = useState<string>("ALL");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   // Mask/Reveal password state
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
@@ -591,6 +603,31 @@ export default function CredentialsHubClient({
     }
   };
 
+  // 8. Toggle Active / Disabled Status
+  const handleToggleActive = async (emp: CredentialEmployee) => {
+    const nextStatus = emp.isActive === false;
+    const actionWord = nextStatus ? "enable" : "disable";
+    if (!confirm(`Are you sure you want to ${actionWord} ${emp.name}? ${!nextStatus ? "This will revoke active sessions and prevent login." : ""}`)) {
+      return;
+    }
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      const res = await toggleEmployeeActiveStatus(emp.id, nextStatus);
+      if (res.success) {
+        setEmployees((prev) =>
+          prev.map((e) => (e.id === emp.id ? { ...e, isActive: nextStatus } : e))
+        );
+      } else {
+        setActionError(res.error || `Failed to ${actionWord} employee.`);
+      }
+    } catch (err: any) {
+      setActionError(err.message || `Failed to ${actionWord} employee.`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Filter Logic
   const filteredEmployees = employees.filter((emp) => {
     const matchesSearch =
@@ -607,7 +644,12 @@ export default function CredentialsHubClient({
       (verificationFilter === "VERIFIED" && emp.isIdVerified) ||
       (verificationFilter === "PENDING" && !emp.isIdVerified);
 
-    return matchesSearch && matchesRole && matchesVerification;
+    const matchesStatus =
+      statusFilter === "ALL" ||
+      (statusFilter === "ACTIVE" && emp.isActive !== false) ||
+      (statusFilter === "DISABLED" && emp.isActive === false);
+
+    return matchesSearch && matchesRole && matchesVerification && matchesStatus;
   });
 
   const verifiedCount = employees.filter((e) => e.isIdVerified).length;
@@ -829,9 +871,19 @@ export default function CredentialsHubClient({
             onChange={(e) => setVerificationFilter(e.target.value)}
             className="bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-xl px-3 py-2 outline-none font-semibold"
           >
-            <option value="ALL">All Status</option>
+            <option value="ALL">All Verification</option>
             <option value="VERIFIED">Verified Only</option>
             <option value="PENDING">Pending Review Only</option>
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-xl px-3 py-2 outline-none font-semibold"
+          >
+            <option value="ALL">All Account States</option>
+            <option value="ACTIVE">Active Accounts</option>
+            <option value="DISABLED">Disabled Accounts</option>
           </select>
         </div>
       </div>
@@ -911,6 +963,15 @@ export default function CredentialsHubClient({
                                   : "bg-amber-950/40 text-amber-400 border-amber-800"
                               }`}>
                                 {emp.operatorType === "INTERNAL" ? "Company Staff" : "Worker Provider"}
+                              </span>
+                            )}
+                            {emp.isActive === false ? (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded border bg-rose-950/40 text-rose-400 border-rose-800">
+                                DISABLED
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded border bg-emerald-950/40 text-emerald-400 border-emerald-800">
+                                ACTIVE
                               </span>
                             )}
                           </div>
@@ -1067,6 +1128,30 @@ export default function CredentialsHubClient({
                             className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[11px] border border-slate-700 transition-colors"
                           >
                             Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleToggleActive(emp)}
+                            disabled={actionLoading}
+                            className={`px-2.5 py-1 rounded-lg font-bold text-[11px] border transition-colors flex items-center gap-1 ${
+                              emp.isActive === false
+                                ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                                : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border-amber-500/30"
+                            }`}
+                            title={emp.isActive === false ? "Enable this account" : "Disable this account"}
+                          >
+                            {emp.isActive === false ? (
+                              <>
+                                <UserCheck className="h-3 w-3" />
+                                <span>Enable</span>
+                              </>
+                            ) : (
+                              <>
+                                <UserX className="h-3 w-3" />
+                                <span>Disable</span>
+                              </>
+                            )}
                           </button>
 
                           <button

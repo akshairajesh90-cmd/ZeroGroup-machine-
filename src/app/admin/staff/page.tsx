@@ -9,12 +9,14 @@ export const dynamic = "force-dynamic";
 export default async function AdminStaffPage() {
   const currentUser = await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN, Role.STAFF] });
   
-  // 1. Fetch Staff Directory
+  // 1. Fetch Staff Directory (excluding soft-deleted)
   const employees = await prisma.employee.findMany({
+    where: { isPendingDelete: false },
     orderBy: { name: "asc" },
     select: {
       id: true, name: true, phone: true, role: true,
       baseDailyWage: true, fixedSalary: true, capableRoles: true, roleRates: true,
+      isActive: true,
     }
   });
 

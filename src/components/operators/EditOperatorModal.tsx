@@ -26,13 +26,13 @@ export const ALL_CREW_ROLES = [
   { id: "HYDRAULIC_OPERATOR", label: "Hydraulic Operator", shortLabel: "Hydraulic", icon: "🚜", color: "amber" },
   { id: "VIBRATOR_OPERATOR",  label: "Vibrator Operator",  shortLabel: "Vibrator",  icon: "⚡", color: "yellow" },
   { id: "LIFT_OPERATOR",      label: "Lift Operator",      shortLabel: "Lift",      icon: "🏗️", color: "blue" },
-  { id: "WORKER_LEADER",      label: "Worker Leader",      shortLabel: "Leader",    icon: "👷", color: "emerald" },
-  { id: "SUB_LEADER",         label: "Sub Leader",         shortLabel: "Sub-Leader",icon: "👥", color: "teal" },
+  { id: "WORKER_LEADER",      label: "Company Site Leader", shortLabel: "Leader",    icon: "👷", color: "emerald" },
+  { id: "SUB_LEADER",         label: "Sub Leader (Worker Provider)", shortLabel: "Sub-Leader",icon: "👥", color: "teal" },
   { id: "DRIVER",             label: "Driver",             shortLabel: "Driver",    icon: "🚚", color: "cyan" },
   { id: "HELPER",             label: "General Helper",     shortLabel: "Helper",    icon: "🤝", color: "slate" },
   { id: "PANI_HELPER",        label: "Pani Helper",        shortLabel: "Pani",      icon: "💧", color: "sky" },
-  { id: "TROLLY_1_WHEEL",     label: "1-Wheel Trolly",     shortLabel: "1W Trolly", icon: "🛞", color: "violet" },
-  { id: "TROLLY_2_WHEEL",     label: "2-Wheel Trolly",     shortLabel: "2W Trolly", icon: "🛞", color: "purple" },
+  { id: "TROLLY_1_WHEEL",     label: "1-Wheel Trolly Operator (Wheelbarrow / Ramp Handler)", shortLabel: "1W Trolly", icon: "🛞", color: "violet" },
+  { id: "TROLLY_2_WHEEL",     label: "2-Wheel Trolly Handler (Concrete Cart)", shortLabel: "2W Trolly", icon: "🛞", color: "purple" },
   { id: "P_VIBRATOR",         label: "Petrol Vibrator",    shortLabel: "P-Vibrator",icon: "⛽", color: "rose" },
 ];
 

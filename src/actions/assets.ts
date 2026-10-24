@@ -86,3 +86,43 @@ export async function addTool(data: { name: string; toolId: string; toolType: st
 
   revalidatePath("/staff/tools");
 }
+
+export async function toggleToolActiveStatus(toolId: string, isActive: boolean) {
+  try {
+    await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
+
+    const tool = await prisma.tool.findUnique({
+      where: { id: toolId },
+      include: {
+        dispatchTools: {
+          where: {
+            dispatch: {
+              status: { in: ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS", "DELIVERED"] }
+            }
+          }
+        }
+      }
+    });
+
+    if (!tool) throw new Error("Tool not found.");
+
+    if (!isActive && tool.dispatchTools.length > 0) {
+      throw new Error(`Cannot disable ${tool.name}: Currently deployed across ${tool.dispatchTools.length} active dispatches. Please return equipment first.`);
+    }
+
+    await prisma.tool.update({
+      where: { id: toolId },
+      data: { isActive }
+    });
+
+    try {
+      revalidatePath("/staff/tools");
+    } catch {
+      // Ignored in non-request contexts
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}

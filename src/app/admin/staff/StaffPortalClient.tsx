@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Shield, Users, Edit2, Plus, AlertTriangle, ShieldCheck, Trash2 } from "lucide-react";
+import { Shield, Users, Edit2, Plus, AlertTriangle, ShieldCheck, Trash2, UserCheck, UserX } from "lucide-react";
 import { createEmployee, updateEmployee, saveEmployeeRoleRates } from "@/actions/hr";
-import { softDeleteEmployee } from "@/actions/employees";
+import { softDeleteEmployee, toggleEmployeeActiveStatus } from "@/actions/employees";
 import { Role } from "@prisma/client";
 
 // All system roles with display labels
@@ -26,11 +26,12 @@ const CREW_ROLES: { value: string; label: string; group: string }[] = [
   { value: "VIBRATOR_OPERATOR",  label: "Vibrator Operator",   group: "Machine Ops" },
   { value: "P_VIBRATOR",         label: "Petrol Vibrator Op.", group: "Machine Ops" },
   { value: "LIFT_OPERATOR",      label: "Lift Operator",       group: "Machine Ops" },
-  { value: "WORKER_LEADER",      label: "Worker Leader",       group: "Site Labour" },
-  { value: "HELPER",             label: "Helper",              group: "Site Labour" },
+  { value: "WORKER_LEADER",      label: "Company Site Leader", group: "Site Labour" },
+  { value: "SUB_LEADER",         label: "Sub Leader (Worker Provider)", group: "Site Labour" },
+  { value: "HELPER",             label: "General Helper",      group: "Site Labour" },
   { value: "PANI_HELPER",        label: "Pani Helper",         group: "Site Labour" },
-  { value: "TROLLY_1_WHEEL",     label: "Trolly (1 Wheel)",    group: "Site Labour" },
-  { value: "TROLLY_2_WHEEL",     label: "Trolly (2 Wheel)",    group: "Site Labour" },
+  { value: "TROLLY_1_WHEEL",     label: "1-Wheel Trolly Operator (Wheelbarrow / Ramp Handler)", group: "Site Labour" },
+  { value: "TROLLY_2_WHEEL",     label: "2-Wheel Trolly Handler (Concrete Cart)", group: "Site Labour" },
 ];
 
 const CREW_GROUPS = ["Transport", "Machine Ops", "Site Labour"];
@@ -61,9 +62,24 @@ export default function StaffPortalClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isToggling, setIsToggling] = useState<string | null>(null);
   const router = useRouter();
 
   const canManageAdmins = currentUserRole === "OWNER" || currentUserRole === "ADMIN";
+
+  const handleToggleStatus = async (emp: any) => {
+    const nextStatus = emp.isActive === false;
+    const actionWord = nextStatus ? "enable" : "disable";
+    if (!confirm(`Are you sure you want to ${actionWord} ${emp.name}? ${!nextStatus ? "This will revoke active sessions and prevent login." : ""}`)) return;
+    setIsToggling(emp.id);
+    const res = await toggleEmployeeActiveStatus(emp.id, nextStatus);
+    if (res.success) {
+      router.refresh();
+    } else {
+      alert(res.error || `Failed to ${actionWord} employee.`);
+      setIsToggling(null);
+    }
+  };
 
   const handleDelete = async (emp: any) => {
     if (!confirm(`Are you sure you want to deactivate ${emp.name}? This account will be moved to the Trash Hub.`)) return;
@@ -248,7 +264,20 @@ export default function StaffPortalClient({
                   }).map((emp: any) => (
                     <tr key={emp.id} className="hover:bg-slate-800/50 transition-colors">
                       <td className="px-6 py-4 font-medium text-slate-200">{emp.name}</td>
-                      <td className="px-6 py-4">{getRoleBadge(emp.role)}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {getRoleBadge(emp.role)}
+                          {emp.isActive === false ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                              Disabled
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-1">
                           {(emp.capableRoles || []).map((cr: string) => {
@@ -270,6 +299,26 @@ export default function StaffPortalClient({
                         <div className="flex items-center justify-center gap-2">
                           <button onClick={() => openEditModal(emp)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-md transition-colors border border-slate-700">
                             <Edit2 className="w-3.5 h-3.5" /> Edit
+                          </button>
+                          <button 
+                            onClick={() => handleToggleStatus(emp)} 
+                            disabled={isToggling === emp.id}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors border disabled:opacity-50 ${
+                              emp.isActive === false
+                                ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                                : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border-amber-500/30"
+                            }`}
+                            title={emp.isActive === false ? "Enable Account" : "Disable Account"}
+                          >
+                            {emp.isActive === false ? (
+                              <>
+                                <UserCheck className="w-3.5 h-3.5" /> Enable
+                              </>
+                            ) : (
+                              <>
+                                <UserX className="w-3.5 h-3.5" /> Disable
+                              </>
+                            )}
                           </button>
                           <button 
                             onClick={() => handleDelete(emp)} 

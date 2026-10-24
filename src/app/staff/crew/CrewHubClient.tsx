@@ -62,13 +62,13 @@ const crewRoleMeta: Record<string, { label: string; icon: string; bg: string; te
   HYDRAULIC_OPERATOR: { label: "Hydraulic Operator", icon: "🚜", bg: "bg-amber-500/10",   text: "text-amber-400",   border: "border-amber-500/20" },
   VIBRATOR_OPERATOR:  { label: "Vibrator Operator",  icon: "⚡", bg: "bg-yellow-500/10",  text: "text-yellow-400",  border: "border-yellow-500/20" },
   LIFT_OPERATOR:      { label: "Lift Operator",      icon: "🏗️", bg: "bg-blue-500/10",    text: "text-blue-400",    border: "border-blue-500/20" },
-  WORKER_LEADER:      { label: "Worker Leader",      icon: "👷", bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20" },
-  SUB_LEADER:         { label: "Sub Leader",         icon: "👥", bg: "bg-teal-500/10",    text: "text-teal-400",    border: "border-teal-500/20" },
+  WORKER_LEADER:      { label: "Company Site Leader", icon: "👷", bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20" },
+  SUB_LEADER:         { label: "Sub Leader (Worker Provider)", icon: "👥", bg: "bg-teal-500/10", text: "text-teal-400", border: "border-teal-500/20" },
   DRIVER:             { label: "Driver",             icon: "🚚", bg: "bg-cyan-500/10",    text: "text-cyan-400",    border: "border-cyan-500/20" },
-  HELPER:             { label: "Helper",             icon: "🤝", bg: "bg-slate-500/10",   text: "text-slate-400",   border: "border-slate-500/20" },
+  HELPER:             { label: "General Helper",     icon: "🤝", bg: "bg-slate-500/10",   text: "text-slate-400",   border: "border-slate-500/20" },
   PANI_HELPER:        { label: "Pani Helper",        icon: "💧", bg: "bg-sky-500/10",     text: "text-sky-400",     border: "border-sky-500/20" },
-  TROLLY_1_WHEEL:     { label: "1-Wheel Trolly",     icon: "🛞", bg: "bg-violet-500/10",  text: "text-violet-400",  border: "border-violet-500/20" },
-  TROLLY_2_WHEEL:     { label: "2-Wheel Trolly",     icon: "🛞", bg: "bg-purple-500/10",  text: "text-purple-400",  border: "border-purple-500/20" },
+  TROLLY_1_WHEEL:     { label: "1-Wheel Trolly Operator (Wheelbarrow / Ramp Handler)", icon: "🛞", bg: "bg-violet-500/10", text: "text-violet-400", border: "border-violet-500/20" },
+  TROLLY_2_WHEEL:     { label: "2-Wheel Trolly Handler (Concrete Cart)", icon: "🛞", bg: "bg-purple-500/10", text: "text-purple-400", border: "border-purple-500/20" },
   P_VIBRATOR:         { label: "Petrol Vibrator",    icon: "⛽", bg: "bg-rose-500/10",    text: "text-rose-400",    border: "border-rose-500/20" },
 };
 

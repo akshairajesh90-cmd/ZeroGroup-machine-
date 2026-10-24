@@ -94,6 +94,12 @@ const nextAuthResult = NextAuth({
           throw new Error("User not found in database for: " + identifier);
         }
 
+        // Security Guard: Check if employee/user account is disabled
+        if (user.isActive === false || user.employee?.isActive === false) {
+          console.log(`🔒 [AUTH] Login rejected: Account for ${identifier} is disabled.`);
+          throw new Error("This user account has been disabled. Please contact your administrator.");
+        }
+
         // Security Guard: Check if employee/user account is soft-deleted or marked as pending delete
         if (user.employee?.isPendingDelete || (user as any).isPendingDelete) {
           console.log(`🔒 [AUTH] Login rejected: Account for ${identifier} is deactivated/deleted.`);

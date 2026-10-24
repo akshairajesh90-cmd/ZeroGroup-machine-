@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 function safeRevalidate(path: string) {
   try {
-    safeRevalidate(path);
+    revalidatePath(path);
   } catch {
     // Ignored in non-request contexts
   }
@@ -309,6 +309,115 @@ export async function editEmployeeDetails(targetEmployeeId: string, data: any) {
 
     safeRevalidate("/staff/operators");
     safeRevalidate("/admin/employees");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function toggleEmployeeActiveStatus(targetEmployeeId: string, isActive: boolean) {
+  try {
+    const caller = await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN, Role.STAFF] });
+
+    const target = await prisma.employee.findUnique({
+      where: { id: targetEmployeeId },
+      select: { id: true, name: true, role: true, userId: true, isActive: true, isPendingDelete: true }
+    });
+
+    if (!target) throw new Error("Employee record not found.");
+    if (target.isPendingDelete) {
+      throw new Error("Cannot change status of a deleted record. Restore the item first from the Trash Hub.");
+    }
+
+    // Role Hierarchy & Self-disable guards
+    if (caller.role === "STAFF" && (target.role === "ADMIN" || target.role === "OWNER")) {
+      throw new Error("Staff members cannot alter the status of Administrator or Owner accounts.");
+    }
+
+    if (!isActive && (target.userId === caller.userId || target.id === caller.employeeId)) {
+      throw new Error("You cannot disable your own active account.");
+    }
+
+    if (!isActive && target.role === "OWNER") {
+      const activeOwnerCount = await prisma.user.count({
+        where: { role: "OWNER", isActive: true, employee: { isPendingDelete: false } }
+      });
+      if (activeOwnerCount <= 1) {
+        throw new Error("Cannot disable the last active Owner account. The system requires at least one active Owner.");
+      }
+    }
+
+    // Active workflow guard: cannot disable employee if currently assigned to an active dispatch
+    if (!isActive) {
+      const activeDispatch = await prisma.dailyDispatch.findFirst({
+        where: {
+          isPendingDelete: false,
+          status: { in: ["PENDING", "ACCEPTED", "EN_ROUTE", "IN_PROGRESS", "DELIVERED", "PICKED_UP"] },
+          OR: [
+            { driverId: targetEmployeeId },
+            { operatorId: targetEmployeeId },
+            { workerId: targetEmployeeId },
+            { mainHelperId: targetEmployeeId },
+            { siteLeaderEmployeeId: targetEmployeeId }
+          ]
+        },
+        select: { id: true, location: true }
+      });
+
+      if (activeDispatch) {
+        throw new Error(`Cannot disable ${target.name}: Currently assigned to active dispatch #${activeDispatch.id} (${activeDispatch.location}). Please complete or reassign the dispatch first.`);
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Update Employee
+      await tx.employee.update({
+        where: { id: targetEmployeeId },
+        data: { isActive }
+      });
+
+      // 2. Update User & bump sessionTokenVersion if disabling
+      if (target.userId) {
+        await tx.user.update({
+          where: { id: target.userId },
+          data: {
+            isActive,
+            ...(!isActive ? { sessionTokenVersion: { increment: 1 } } : {})
+          }
+        });
+      }
+
+      // 3. Audit Log
+      let actorEmpId: string | null = caller.employeeId || null;
+      if (!actorEmpId && caller.userId) {
+        const callerEmp = await tx.employee.findUnique({ where: { userId: caller.userId } });
+        actorEmpId = callerEmp?.id || null;
+      }
+
+      if (actorEmpId) {
+        const actorExists = await tx.employee.findUnique({ where: { id: actorEmpId }, select: { id: true } });
+        if (actorExists) {
+          await tx.auditLog.create({
+            data: {
+              actionType: isActive ? "ENABLE_EMPLOYEE" : "DISABLE_EMPLOYEE",
+              entity: "EMPLOYEE",
+              actorRole: caller.role,
+              actorId: actorExists.id,
+              newPayload: { id: targetEmployeeId, name: target.name, isActive } as any
+            }
+          });
+        }
+      }
+    });
+
+    safeRevalidate("/staff/employees");
+    safeRevalidate("/staff/drivers");
+    safeRevalidate("/staff/workers");
+    safeRevalidate("/staff/operators");
+    safeRevalidate("/staff/credentials");
+    safeRevalidate("/admin/credentials");
+    safeRevalidate("/admin/staff");
+
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };

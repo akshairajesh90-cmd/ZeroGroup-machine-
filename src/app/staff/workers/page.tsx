@@ -24,6 +24,7 @@ export default async function StaffWorkersPage() {
     baseDailyWage: w.baseDailyWage || 0,
     capableRoles: w.capableRoles || [],
     roleRates: w.roleRates || [],
+    isActive: w.isActive ?? true,
     createdAt: w.createdAt.toISOString(),
   }));
 

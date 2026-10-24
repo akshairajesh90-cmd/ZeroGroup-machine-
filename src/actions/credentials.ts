@@ -49,6 +49,7 @@ export async function getCredentialsDirectory() {
             resetRequestedAt: true,
             resetRequestNotes: true,
             role: true,
+            isActive: true,
           },
         },
         documents: {
@@ -94,6 +95,7 @@ export async function getCredentialsDirectory() {
         operatorType: emp.operatorType || "INTERNAL",
         baseDailyWage: emp.baseDailyWage ? Number(emp.baseDailyWage) : null,
         fixedSalary: emp.fixedSalary ? Number(emp.fixedSalary) : null,
+        isActive: emp.isActive ?? true,
       })),
     };
   } catch (error: any) {

@@ -6,6 +6,7 @@ import { Wrench, Plus, Archive, Settings2, PackageCheck, Truck, ShieldAlert } fr
 import { EditToolModal } from "./EditToolModal";
 import { AddToolModal } from "./AddToolModal";
 import { DeleteToolButton } from "./DeleteToolButton";
+import { ToggleToolStatusButton } from "./ToggleToolStatusButton";
 
 export const dynamic = "force-dynamic";
 
@@ -119,7 +120,11 @@ export default async function ToolsInventoryPage() {
                       
                       {/* Status & Edit */}
                       <td className="px-6 py-4 whitespace-nowrap text-right flex items-center justify-end gap-2">
-                        {availableCount > 0 ? (
+                        {tool.isActive === false ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 text-xs font-bold border border-zinc-700">
+                            Disabled
+                          </span>
+                        ) : availableCount > 0 ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
                             In Stock
                           </span>
@@ -129,6 +134,7 @@ export default async function ToolsInventoryPage() {
                           </span>
                         )}
                         <EditToolModal tool={tool} />
+                        <ToggleToolStatusButton toolId={tool.id} toolName={tool.name} isActive={tool.isActive ?? true} />
                         <DeleteToolButton toolId={tool.id} toolName={tool.name} />
                       </td>
                     </tr>

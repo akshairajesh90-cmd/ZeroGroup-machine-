@@ -33,10 +33,9 @@ export default async function StaffOperatorsPage() {
     })),
     baseDailyWage: op.baseDailyWage ? Number(op.baseDailyWage) : null,
     dailyBataRate: op.dailyBataRate ? Number(op.dailyBataRate) : null,
+    isActive: op.isActive ?? true,
     createdAt: op.createdAt.toISOString(),
   }));
 
   return <OperatorsClientPage operators={serialized} />;
 }
-
-

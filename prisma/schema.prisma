@@ -17,6 +17,7 @@ model User {
   resetRequestedAt    DateTime?
   resetRequestNotes   String?
   role                Role      @default(DRIVER)
+  isActive            Boolean   @default(true)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   sessionTokenVersion Int       @default(1)
@@ -24,6 +25,7 @@ model User {
 
   @@index([email])
   @@index([resetRequested])
+  @@index([isActive])
   @@map("users")
 }
 
@@ -96,6 +98,7 @@ model Machine {
   machineId                String              @unique
   type                     MachineType
   status                   MachineStatus       @default(AVAILABLE)
+  isActive                 Boolean             @default(true)
   operatorDailyPayout      Decimal             @db.Decimal(10, 2)
   fuelConsumptionThreshold Decimal             @default(2000) @db.Decimal(10, 2)
   notes                    String?
@@ -113,6 +116,7 @@ model Machine {
   maintenanceTickets       MaintenanceTicket[]
 
   @@index([status])
+  @@index([isActive])
   @@map("machines")
 }
 
@@ -123,6 +127,7 @@ model Tool {
   toolType          String?
   totalInventory    Int            @default(10)
   status            ToolStatus     @default(AVAILABLE)
+  isActive          Boolean        @default(true)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   isPendingDelete   Boolean        @default(false)
@@ -131,6 +136,7 @@ model Tool {
   expenses          Expense[]
 
   @@index([status])
+  @@index([isActive])
   @@map("tools")
 }
 
@@ -140,6 +146,7 @@ model Employee {
   role                       Role
   fixedSalary                Decimal?                @db.Decimal(10, 2)
   userId                     String                  @unique
+  isActive                   Boolean                 @default(true)
   lastSeenAt                 DateTime?
   lastLatitude               Decimal?                @db.Decimal(10, 7)
   lastLongitude              Decimal?                @db.Decimal(10, 7)
@@ -206,6 +213,7 @@ model Employee {
   roleRates                  EmployeeRoleRate[]
 
   @@index([role])
+  @@index([isActive])
   @@map("employees")
 }
 
@@ -230,6 +238,7 @@ model Vehicle {
   licensePlate       String              @unique
   type               String
   status             VehicleStatus       @default(AVAILABLE)
+  isActive           Boolean             @default(true)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   isPendingDelete    Boolean             @default(false)
@@ -242,6 +251,7 @@ model Vehicle {
   dispatches         DailyDispatch[]
 
   @@index([status])
+  @@index([isActive])
   @@map("vehicles")
 }
 
