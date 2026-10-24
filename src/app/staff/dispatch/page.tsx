@@ -48,7 +48,7 @@ export default async function DispatchPage() {
       orderBy: { name: "asc" },
       include: { roleRates: true }
     }),
-    prisma.tool.findMany({ where: { status: 'AVAILABLE' }, orderBy: { toolId: 'asc' } }),
+    prisma.tool.findMany({ where: { isPendingDelete: false, isActive: true }, orderBy: { toolId: 'asc' } }),
     prisma.externalSubLeader.findMany({ orderBy: { name: 'asc' } }),
     prisma.vehicle.findMany({ where: { isPendingDelete: false, status: { not: "RETIRED" } }, orderBy: { licensePlate: 'asc' } }),
   ]);

@@ -25,7 +25,8 @@ export const DEFAULT_PRICING = {
   EXTERNAL_WORKER_WAGE:  1200,  // Outside workers
 
   // Machine Customer Charges (per day)
-  MIXER:                 1000,  // Concrete mixer flat rate
+  MIXER:                 1000,  // Concrete mixing machine flat base rate
+  HYDRAULIC_MIXER:       1100,  // Hydraulic mixing machine flat base rate
 
   // Lift (charged to customer)
   LIFT_BASE:             1700,  // Ground floor base price
@@ -44,11 +45,12 @@ export const DEFAULT_PRICING = {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type PricingInput = {
-  hasMixer?:         boolean;
-  hasLift?:          boolean;
-  liftFloors?:       number;  // floors ABOVE ground (e.g. 3 = third floor)
-  hasTrolly1Wheel?:  boolean;
-  hasTrolly2Wheel?:  boolean;
+  hasMixer?:          boolean;
+  hasHydraulicMixer?: boolean;
+  hasLift?:           boolean;
+  liftFloors?:        number;  // floors ABOVE ground (e.g. 3 = third floor)
+  hasTrolly1Wheel?:   boolean;
+  hasTrolly2Wheel?:   boolean;
   hasPetrolVibrator?:   boolean;
   hasElectricVibrator?: boolean;
   isInternalWorker?:    boolean;
@@ -72,10 +74,13 @@ export function calculateDispatchPricing(input: PricingInput): PricingResult {
   let operatorWage   = 0;
   const breakdown: PricingResult["breakdown"] = [];
 
-  // — Mixer ——————————————————————————————————
-  if (input.hasMixer) {
+  // — Mixing Machines —————————————————————————
+  if (input.hasHydraulicMixer) {
+    customerCharge += DEFAULT_PRICING.HYDRAULIC_MIXER;
+    breakdown.push({ label: "Hydraulic Mixing Machine", charge: DEFAULT_PRICING.HYDRAULIC_MIXER });
+  } else if (input.hasMixer) {
     customerCharge += DEFAULT_PRICING.MIXER;
-    breakdown.push({ label: "Mixer (Machine)", charge: DEFAULT_PRICING.MIXER });
+    breakdown.push({ label: "Mixing Machine (Standard)", charge: DEFAULT_PRICING.MIXER });
   }
 
   // — Lift ———————————————————————————————————

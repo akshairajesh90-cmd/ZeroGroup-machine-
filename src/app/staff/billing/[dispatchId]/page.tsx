@@ -55,20 +55,34 @@ export default async function BillingPage({
   // Calculate default items based on dispatch structure
   const defaultItems = [];
 
-  // 1. Machine
+  // 1. Machine Base Rental Rate
   if (dispatch.machine) {
+    const mType = dispatch.machine.type;
+    let baseRate = 1000;
+    let machineLabel = "Mixing Machine";
+    if (mType === "HYDRAULIC_MIXER" || dispatch.mixerCategory === "HYDRAULIC") {
+      baseRate = 1100;
+      machineLabel = "Hydraulic Mixing Machine";
+    } else if (mType === "LIFT") {
+      baseRate = 1700;
+      machineLabel = "Lift (Ground Floor)";
+    } else if (mType === "MIXER") {
+      baseRate = 1000;
+      machineLabel = "Mixing Machine";
+    }
+
     defaultItems.push({
       itemKey: "MACHINE_CHARGE",
-      description: `${dispatch.machine.type} (${dispatch.machine.machineId})`,
+      description: `${machineLabel} (${dispatch.machine.machineId}) - Base Rate`,
       quantity: 1,
-      rate: Number(dispatch.machine.operatorDailyPayout),
-      total: Number(dispatch.machine.operatorDailyPayout),
+      rate: baseRate,
+      total: baseRate,
     });
   }
 
   // 2. Lift Floors
   if (dispatch.liftFloors && dispatch.liftFloors > 0) {
-    // Standard rate per floor (you could pull this from settings/WorkTypeRate, assuming fixed 500 for now)
+    // Standard rate per floor (500 per additional floor)
     const ratePerFloor = 500; 
     defaultItems.push({
       itemKey: "LIFT_CHARGE",
@@ -120,26 +134,40 @@ export default async function BillingPage({
     });
   }
 
-  // 5. Tools / Surcharges (e.g. Vibrator wire length & Petrol Vibrator)
-  const vibratorToolElectric = dispatch.dispatchTools.find(dt => dt.tool.toolType === "VIBRATOR_ELECTRIC" || dt.tool.toolId.includes("ELEC"));
-  if (vibratorToolElectric || dispatch.vibratorType === "ELECTRIC") {
-    defaultItems.push({
-      itemKey: "WIRE_SURCHARGE",
-      description: `Electric Vibrator Wire Rental`,
-      quantity: 1,
-      rate: 200, // standard wire surcharge
-      total: 200,
-    });
-  }
+  // 5. Dispatched Tools (populated with 1-day rental rate from Tool registry)
+  if (dispatch.dispatchTools && dispatch.dispatchTools.length > 0) {
+    dispatch.dispatchTools.forEach((dt: any) => {
+      const toolRate = Number(dt.tool?.dailyRate || 0);
+      const qty = Number(dt.quantity || 1);
+      const toolName = dt.tool?.name || "Tool";
 
-  const vibratorToolPetrol = dispatch.dispatchTools.find(dt => dt.tool.toolType === "VIBRATOR_PETROL" || dt.tool.toolId.includes("PETROL"));
-  if (vibratorToolPetrol || dispatch.vibratorType === "PETROL") {
-    defaultItems.push({
-      itemKey: "PETROL_VIBRATOR_CHARGE",
-      description: `Petrol Vibrator Rental Charge`,
-      quantity: 1,
-      rate: 1000, // standard petrol vibrator rate (editable by staff)
-      total: 1000,
+      if (toolRate > 0) {
+        defaultItems.push({
+          itemKey: `TOOL_${dt.tool?.id || dt.id}`,
+          description: `${toolName} (1-Day Rate x${qty})`,
+          quantity: qty,
+          rate: toolRate,
+          total: qty * toolRate,
+        });
+      } else {
+        // Fallbacks for tools before rates were assigned
+        const nameLower = toolName.toLowerCase();
+        let fallbackRate = 0;
+        if (nameLower.includes("1-wheel")) fallbackRate = 1500;
+        else if (nameLower.includes("2-wheel")) fallbackRate = 1100;
+        else if (nameLower.includes("petrol") || dt.tool?.toolType === "VIBRATOR_PETROL") fallbackRate = 1000;
+        else if (nameLower.includes("electric") || dt.tool?.toolType === "VIBRATOR_ELECTRIC") fallbackRate = 200;
+
+        if (fallbackRate > 0) {
+          defaultItems.push({
+            itemKey: `TOOL_${dt.tool?.id || dt.id}`,
+            description: `${toolName} (x${qty})`,
+            quantity: qty,
+            rate: fallbackRate,
+            total: qty * fallbackRate,
+          });
+        }
+      }
     });
   }
 

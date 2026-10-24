@@ -70,22 +70,34 @@ export default async function ToolsInventoryPage() {
                 <tr>
                   <th className="px-6 py-4">Name</th>
                   <th className="px-6 py-4">Category</th>
+                  <th className="px-6 py-4">1-Day Rate</th>
                   <th className="px-6 py-4">Total Owned</th>
                   <th className="px-6 py-4">Deployed On-Site</th>
+                  <th className="px-6 py-4">In Repair</th>
                   <th className="px-6 py-4">Available in Yard</th>
-                  <th className="px-6 py-4 text-right">Status</th>
+                  <th className="px-6 py-4 text-right">Status & Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/40">
                 {tools.map((tool) => {
                   const deployedCount = tool.dispatchTools.reduce((acc, dt) => acc + dt.quantity, 0);
-                  const availableCount = Math.max(0, tool.totalInventory - deployedCount);
+                  const repairCount = tool.repairCount || 0;
+                  const availableCount = Math.max(0, tool.totalInventory - deployedCount - repairCount);
+                  const dailyRate = Number(tool.dailyRate || 0);
+                  const isDisabled = tool.isActive === false;
                   
                   return (
-                    <tr key={tool.id} className="hover:bg-zinc-800/20 transition-colors">
+                    <tr key={tool.id} className={`transition-colors ${isDisabled ? "bg-zinc-950/40 opacity-60" : "hover:bg-zinc-800/20"}`}>
                       {/* Name */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-bold text-white">{tool.name}</div>
+                        <div className="font-bold text-white flex items-center gap-2">
+                          {tool.name}
+                          {isDisabled && (
+                            <span className="text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700 px-1.5 py-0.5 rounded font-mono">
+                              DISABLED
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-zinc-500 font-mono mt-0.5">{tool.toolId}</div>
                       </td>
                       
@@ -94,6 +106,11 @@ export default async function ToolsInventoryPage() {
                         <span className="px-2 py-0.5 bg-zinc-800 text-zinc-400 text-[10px] rounded uppercase font-bold tracking-wider border border-zinc-750">
                           {tool.toolType || "GENERAL"}
                         </span>
+                      </td>
+
+                      {/* 1-Day Rate */}
+                      <td className="px-6 py-4 whitespace-nowrap font-bold text-emerald-400 font-mono">
+                        {dailyRate > 0 ? `₹${dailyRate.toLocaleString("en-IN")}` : <span className="text-zinc-600 font-normal">₹0 / day</span>}
                       </td>
                       
                       {/* Total Owned */}
@@ -112,30 +129,47 @@ export default async function ToolsInventoryPage() {
                           <span className="text-zinc-600 font-medium">0 Deployed</span>
                         )}
                       </td>
+
+                      {/* In Repair */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {repairCount > 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-xs font-bold border border-amber-500/20 font-mono">
+                            🔧 {repairCount} in Repair
+                          </span>
+                        ) : (
+                          <span className="text-zinc-600 font-medium">0</span>
+                        )}
+                      </td>
                       
                       {/* Available in Yard */}
-                      <td className="px-6 py-4 whitespace-nowrap font-bold text-emerald-400 font-mono">
-                        {availableCount} Available
+                      <td className="px-6 py-4 whitespace-nowrap font-bold font-mono">
+                        {availableCount > 0 ? (
+                          <span className="text-emerald-400">{availableCount} Available</span>
+                        ) : (
+                          <span className="text-rose-500 font-medium">0 Available</span>
+                        )}
                       </td>
                       
                       {/* Status & Edit */}
-                      <td className="px-6 py-4 whitespace-nowrap text-right flex items-center justify-end gap-2">
-                        {tool.isActive === false ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 text-xs font-bold border border-zinc-700">
-                            Disabled
-                          </span>
-                        ) : availableCount > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
-                            In Stock
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 text-xs font-bold border border-rose-500/20">
-                            Out of Stock
-                          </span>
-                        )}
-                        <EditToolModal tool={tool} />
-                        <ToggleToolStatusButton toolId={tool.id} toolName={tool.name} isActive={tool.isActive ?? true} />
-                        <DeleteToolButton toolId={tool.id} toolName={tool.name} />
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {isDisabled ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 text-xs font-bold border border-zinc-700">
+                              Disabled
+                            </span>
+                          ) : availableCount > 0 ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
+                              In Stock
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 text-xs font-bold border border-rose-500/20">
+                              Out of Stock
+                            </span>
+                          )}
+                          <EditToolModal tool={tool} />
+                          <ToggleToolStatusButton toolId={tool.id} toolName={tool.name} isActive={tool.isActive ?? true} />
+                          <DeleteToolButton toolId={tool.id} toolName={tool.name} />
+                        </div>
                       </td>
                     </tr>
                   );

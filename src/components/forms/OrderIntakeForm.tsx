@@ -49,7 +49,8 @@ type ToolItem = { toolId: string; quantity: number; variant?: string };
 // CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
 const MACHINE_TYPE_LABELS: Record<string, string> = {
-  MIXER: "Mixing Machine",
+  MIXER: "Mixing Machine (Standard)",
+  HYDRAULIC_MIXER: "Hydraulic Mixing Machine",
   LIFT: "Lift",
   VIBRATOR: "Vibrator",
   PANI: "Pani Machine",
@@ -57,10 +58,10 @@ const MACHINE_TYPE_LABELS: Record<string, string> = {
 };
 
 const CREW_ROLE_OPTIONS: { value: CrewRole; label: string; requiresSkill: boolean; compatibleMachines?: string[] }[] = [
-  { value: "MIXER_OPERATOR" as CrewRole, label: "Mixer Operator", requiresSkill: false, compatibleMachines: ["MIXER"] },
-  { value: "HYDRAULIC_OPERATOR" as CrewRole, label: "Hydraulic Operator", requiresSkill: true, compatibleMachines: ["MIXER"] },
+  { value: "MIXER_OPERATOR" as CrewRole, label: "Mixer Operator", requiresSkill: false, compatibleMachines: ["MIXER", "HYDRAULIC_MIXER"] },
+  { value: "HYDRAULIC_OPERATOR" as CrewRole, label: "Hydraulic Operator", requiresSkill: true, compatibleMachines: ["MIXER", "HYDRAULIC_MIXER"] },
   { value: "LIFT_OPERATOR" as CrewRole, label: "Lift Operator", requiresSkill: true, compatibleMachines: ["LIFT"] },
-  { value: "TROLLY_1_WHEEL" as CrewRole, label: "1-Wheel Trolly Operator", requiresSkill: true, compatibleMachines: ["MIXER", "LIFT"] },
+  { value: "TROLLY_1_WHEEL" as CrewRole, label: "1-Wheel Trolly Operator", requiresSkill: true, compatibleMachines: ["MIXER", "HYDRAULIC_MIXER", "LIFT"] },
   { value: "TROLLY_2_WHEEL" as CrewRole, label: "2-Wheel Trolly (No tag needed)", requiresSkill: false },
   { value: "P_VIBRATOR" as CrewRole, label: "Petrol Vibrator Operator", requiresSkill: false },
   { value: "VIBRATOR_OPERATOR" as CrewRole, label: "Electric Vibrator Helper", requiresSkill: false },
@@ -509,7 +510,7 @@ export default function OrderIntakeForm({ customers: initialCustomers, machines,
                 </div>
               )}
 
-              {primaryMachineType === "MIXER" && (
+              {(primaryMachineType === "MIXER" || primaryMachineType === "HYDRAULIC_MIXER") && (
                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 space-y-3">
                   <p className="text-xs font-bold text-amber-400 uppercase tracking-wider">Mixer Category</p>
                   <div className="flex gap-3">
@@ -795,7 +796,7 @@ export default function OrderIntakeForm({ customers: initialCustomers, machines,
                   <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Equipment</p>
                   <p className="text-zinc-300"><span className="text-zinc-500 w-24 inline-block">Machine:</span> {primaryMachine ? `${primaryMachine.machineId} (${MACHINE_TYPE_LABELS[primaryMachine.type] || primaryMachine.type})` : "Labor Only"}</p>
                   {primaryMachineType === "LIFT" && <p className="text-zinc-300"><span className="text-zinc-500 w-24 inline-block">Floors:</span> {liftFloors}</p>}
-                  {primaryMachineType === "MIXER" && <p className="text-zinc-300"><span className="text-zinc-500 w-24 inline-block">Category:</span> {mixerCategory}</p>}
+                  {(primaryMachineType === "MIXER" || primaryMachineType === "HYDRAULIC_MIXER") && <p className="text-zinc-300"><span className="text-zinc-500 w-24 inline-block">Category:</span> {primaryMachineType === "HYDRAULIC_MIXER" ? "Hydraulic Machine" : mixerCategory}</p>}
                   {vibratorType && <p className="text-zinc-300"><span className="text-zinc-500 w-24 inline-block">Vibrator:</span> {vibratorType} {wireRentalSurcharge > 0 ? `(Wire ₹${wireRentalSurcharge})` : ""}</p>}
                   {hasTrollyBench && <p className="text-zinc-300"><span className="text-zinc-500 w-24 inline-block">Trolly:</span> With Bench</p>}
                   {secondaryMachineIds.length > 0 && <p className="text-zinc-300"><span className="text-zinc-500 w-24 inline-block">Secondary:</span> {secondaryMachineIds.length} additional machine(s)</p>}

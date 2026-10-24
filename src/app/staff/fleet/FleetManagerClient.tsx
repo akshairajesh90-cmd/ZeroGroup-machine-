@@ -78,6 +78,7 @@ function StatusBadge({ status, hasActiveTicket }: { status: string; hasActiveTic
 
 const MACHINE_ICONS: Record<string, string> = {
   MIXER: "🪣",
+  HYDRAULIC_MIXER: "🚜",
   LIFT: "🏗️",
   VIBRATOR: "🔧",
   PANI: "💧",
@@ -86,6 +87,9 @@ const MACHINE_ICONS: Record<string, string> = {
 
 // Derive a human-friendly type label, with vibrator subtype from notes
 function getMachineLabel(type: string, machineId: string, notes: string | null): string {
+  if (type === "HYDRAULIC_MIXER") return "Hydraulic Mixing Machine";
+  if (type === "MIXER") return "Mixing Machine";
+  if (type === "LIFT") return "Lift";
   if (type === "VIBRATOR") {
     const id = machineId.toUpperCase();
     if (id.includes("PETROL")) return "Vibrator · Petrol";

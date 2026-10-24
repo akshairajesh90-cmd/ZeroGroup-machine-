@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { CheckCircle2, AlertTriangle, MapPin, X, Package, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertTriangle, MapPin, X, Package, Loader2, Wrench } from "lucide-react";
 import { completeDispatchWithToolReturns } from "@/actions/toolReturns";
 import { ToolReturnStatus } from "@prisma/client";
 
@@ -59,6 +59,15 @@ const STATUS_OPTIONS: {
     color: "text-emerald-400",
     bg: "bg-emerald-500/15",
     border: "border-emerald-500/40",
+  },
+  {
+    value: "DAMAGED",
+    label: "Needs Repair",
+    description: "Damaged / needs workshop maintenance",
+    icon: <Wrench className="h-4 w-4" />,
+    color: "text-orange-400",
+    bg: "bg-orange-500/15",
+    border: "border-orange-500/40",
   },
   {
     value: "LEFT_ON_SITE",

@@ -66,7 +66,10 @@ export default function DispatchBillingModal({
       // 1 & 2. Map Machine & Lift Strictly
       const machineType = dispatch.machine?.type || dispatch.dispatchMachines?.[0]?.machine?.type;
       
-      if (machineType === 'MIXER' || machineType === 'CONCRETE_MIXER' || dispatch.mixerCategory === 'HYDRAULIC') {
+      if (machineType === 'HYDRAULIC_MIXER' || dispatch.mixerCategory === 'HYDRAULIC') {
+        addQty('MACHINE', 1);
+        initialPrices['MACHINE'] = DEFAULT_PRICING.HYDRAULIC_MIXER.toString();
+      } else if (machineType === 'MIXER' || machineType === 'CONCRETE_MIXER') {
         addQty('MACHINE', 1);
         initialPrices['MACHINE'] = DEFAULT_PRICING.MIXER.toString();
       } else if (machineType === 'LIFT') {

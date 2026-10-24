@@ -12,6 +12,9 @@ export function EditToolModal({ tool }: { tool: any }) {
     toolId: tool.toolId,
     toolType: tool.toolType || "",
     totalInventory: tool.totalInventory,
+    repairCount: tool.repairCount ?? 0,
+    dailyRate: Number(tool.dailyRate ?? 0),
+    isActive: tool.isActive ?? true,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,6 +26,9 @@ export function EditToolModal({ tool }: { tool: any }) {
         toolId: formData.toolId,
         toolType: formData.toolType,
         totalInventory: parseInt(formData.totalInventory as any),
+        repairCount: parseInt(formData.repairCount as any) || 0,
+        dailyRate: parseFloat(formData.dailyRate as any) || 0,
+        isActive: formData.isActive,
       });
       setIsOpen(false);
     } catch (error) {
@@ -83,16 +89,56 @@ export function EditToolModal({ tool }: { tool: any }) {
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Total Owned</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    value={formData.totalInventory}
+                    onChange={(e) => setFormData({ ...formData, totalInventory: e.target.value as any })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-1">In Repair Units</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.repairCount}
+                    onChange={(e) => setFormData({ ...formData, repairCount: e.target.value as any })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-amber-400 font-bold focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Total Inventory</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">1-Day Rental Rate (₹/day)</label>
                 <input
                   type="number"
-                  required
                   min="0"
-                  value={formData.totalInventory}
-                  onChange={(e) => setFormData({ ...formData, totalInventory: e.target.value as any })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-indigo-500"
+                  step="10"
+                  value={formData.dailyRate}
+                  onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value as any })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-emerald-400 font-bold focus:outline-none focus:border-emerald-500"
                 />
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-slate-950/60 border border-slate-800 rounded-xl">
+                <div>
+                  <div className="text-xs font-bold text-white uppercase">Active Status</div>
+                  <div className="text-[11px] text-slate-500">Disabled tools cannot be dispatched to new jobs</div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isActive}
+                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
               </div>
               <div className="pt-4 flex justify-end gap-3">
                 <button

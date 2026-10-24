@@ -251,10 +251,6 @@ export async function createDailyDispatch(formData: unknown) {
             variant: item.variant || null,
           },
         });
-        await tx.tool.update({
-          where: { id: item.toolId },
-          data: { status: "IN_USE" },
-        });
       }
 
       return newDispatch;
@@ -784,7 +780,6 @@ export async function updateDailyDispatch(formData: unknown) {
         await tx.dispatchTool.create({
           data: { dispatchId, toolId: item.toolId, quantity: item.quantity, variant: item.variant || null },
         });
-        await tx.tool.update({ where: { id: item.toolId }, data: { status: "IN_USE" } });
       }
 
       // 3. Write strict AuditLog

@@ -36,6 +36,10 @@ export default function BillingClient({ dispatch, defaultItems, collectorId }: P
     setItems([...items, { itemKey: "CUSTOM", description: "", quantity: 1, rate: 0, total: 0 }]);
   };
 
+  const addDistanceSurcharge = () => {
+    setItems([...items, { itemKey: "DISTANCE_SURCHARGE", description: "Distance / Travel Surcharge", quantity: 1, rate: 500, total: 500 }]);
+  };
+
   // 2. Expenses
   const [expenses, setExpenses] = useState<any[]>([]);
   
@@ -141,11 +145,19 @@ export default function BillingClient({ dispatch, defaultItems, collectorId }: P
           
           {/* LINE ITEMS */}
           <section className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-white">Billable Charges</h2>
-              <button onClick={addItem} className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1 bg-blue-500/10 px-3 py-1.5 rounded-full transition-colors">
-                <Plus className="w-3 h-3" /> Add Item
-              </button>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-white">Billable Charges</h2>
+                <p className="text-xs text-zinc-400">Machine base rates are editable below. Adjust rate or add distance surcharge based on distance.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={addDistanceSurcharge} className="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-full transition-colors">
+                  <Plus className="w-3 h-3" /> Distance Surcharge
+                </button>
+                <button type="button" onClick={addItem} className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1 bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-full transition-colors">
+                  <Plus className="w-3 h-3" /> Add Item
+                </button>
+              </div>
             </div>
             
             <div className="space-y-3">

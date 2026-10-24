@@ -161,13 +161,32 @@ export async function createOrderWithAssets(formData: unknown) {
       const toolIds = data.toolItems.map((t) => t.toolId);
       const tools = await prisma.tool.findMany({
         where: { id: { in: toolIds } },
-        select: { id: true, name: true, status: true },
+        include: {
+          dispatchTools: {
+            where: {
+              dispatch: {
+                status: { in: ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS", "DELIVERED"] },
+              },
+            },
+          },
+        },
       });
-      for (const tool of tools) {
-        if (tool.status !== "AVAILABLE") {
+      for (const item of data.toolItems) {
+        const tool = tools.find((t) => t.id === item.toolId);
+        if (!tool) continue;
+        if (tool.isActive === false) {
           return {
             success: false,
-            error: `Tool "${tool.name}" is currently ${tool.status} and cannot be assigned.`,
+            error: `Tool "${tool.name}" is currently disabled and cannot be assigned to new dispatches.`,
+          };
+        }
+        const deployedCount = tool.dispatchTools.reduce((acc, dt) => acc + dt.quantity, 0);
+        const repairCount = tool.repairCount || 0;
+        const availableCount = Math.max(0, tool.totalInventory - deployedCount - repairCount);
+        if (item.quantity > availableCount) {
+          return {
+            success: false,
+            error: `Insufficient inventory for "${tool.name}". Requested ${item.quantity}, but only ${availableCount} available in yard (${repairCount} in repair, ${deployedCount} deployed on other sites).`,
           };
         }
       }
@@ -255,7 +274,7 @@ export async function createOrderWithAssets(formData: unknown) {
         });
       }
 
-      // 5e. Attach tools → DispatchTool + mark IN_USE
+      // 5e. Attach tools → DispatchTool
       for (const item of data.toolItems) {
         await tx.dispatchTool.create({
           data: {
@@ -264,10 +283,6 @@ export async function createOrderWithAssets(formData: unknown) {
             quantity: item.quantity,
             variant: item.variant || null,
           },
-        });
-        await tx.tool.update({
-          where: { id: item.toolId },
-          data: { status: "IN_USE" },
         });
       }
 
@@ -361,9 +376,9 @@ export async function getOrderFormData() {
         },
       }),
       prisma.tool.findMany({
-        where: { status: "AVAILABLE", isPendingDelete: false },
+        where: { isPendingDelete: false, isActive: true },
         orderBy: { name: "asc" },
-        select: { id: true, toolId: true, name: true, toolType: true, totalInventory: true },
+        select: { id: true, toolId: true, name: true, toolType: true, totalInventory: true, repairCount: true, dailyRate: true },
       }),
       prisma.workTypeRate.findMany({
         select: { machineType: true, workType: true, payoutRate: true, customerCharge: true },

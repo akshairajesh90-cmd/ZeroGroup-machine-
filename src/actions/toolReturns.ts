@@ -86,13 +86,20 @@ export async function completeDispatchWithToolReturns(formData: unknown) {
           RETURNED: "AVAILABLE",    // Tool came back → available again
           LEFT_ON_SITE: "IN_USE",   // Tool still at customer site
           MISSING: "REPAIR",        // Tool lost → flag for admin investigation
+          DAMAGED: "REPAIR",        // Tool damaged → in repair
           PENDING: "IN_USE",        // Fallback (should not reach here due to guard)
         };
+
+        const dt = dispatch.dispatchTools.find(d => d.id === item.dispatchToolId);
+        const qty = dt?.quantity || 1;
 
         await tx.tool.update({
           where: { id: item.toolId },
           data: {
             status: toolStatusMap[item.returnStatus],
+            ...(item.returnStatus === "DAMAGED" && {
+              repairCount: { increment: qty },
+            }),
           },
         });
       }

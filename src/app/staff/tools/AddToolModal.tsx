@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useTransition } from "react";
 import { addTool } from "@/actions/assets";
@@ -12,17 +12,21 @@ export function AddToolModal() {
   const [toolId, setToolId] = useState("");
   const [toolType, setToolType] = useState("GENERAL");
   const [totalInventory, setTotalInventory] = useState<number>(1);
+  const [dailyRate, setDailyRate] = useState<number>(0);
+  const [repairCount, setRepairCount] = useState<number>(0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     startTransition(async () => {
       try {
-        await addTool({ name, toolId, toolType, totalInventory });
+        await addTool({ name, toolId, toolType, totalInventory, dailyRate, repairCount });
         setIsOpen(false);
         setName("");
         setToolId("");
         setToolType("GENERAL");
         setTotalInventory(1);
+        setDailyRate(0);
+        setRepairCount(0);
       } catch (error) {
         console.error(error);
         alert("Failed to add tool");
@@ -89,15 +93,40 @@ export function AddToolModal() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-400 uppercase mb-1">Total Stock Owned</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={totalInventory}
+                    onChange={(e) => setTotalInventory(Number(e.target.value))}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-zinc-400 uppercase mb-1">In Repair Units</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={repairCount}
+                    onChange={(e) => setRepairCount(Number(e.target.value))}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-amber-400 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-bold text-zinc-400 uppercase mb-1">Total Stock Owned</label>
+                <label className="block text-xs font-bold text-zinc-400 uppercase mb-1">1-Day Rental Rate (₹/day)</label>
                 <input
                   type="number"
-                  required
-                  min="1"
-                  value={totalInventory}
-                  onChange={(e) => setTotalInventory(Number(e.target.value))}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500"
+                  min="0"
+                  step="10"
+                  value={dailyRate}
+                  onChange={(e) => setDailyRate(Number(e.target.value))}
+                  placeholder="e.g. 150"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-emerald-400 font-bold focus:outline-none focus:border-emerald-500"
                 />
               </div>
 

@@ -40,7 +40,7 @@ export default async function AdminNewDispatchPage() {
   });
 
   const tools = await prisma.tool.findMany({
-    where: { status: "AVAILABLE", isPendingDelete: false },
+    where: { isPendingDelete: false, isActive: true },
     orderBy: { name: 'asc' }
   });
 

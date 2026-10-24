@@ -57,7 +57,7 @@ export async function editVehicle(vehicleId: string, data: { licensePlate?: stri
   return { success: true };
 }
 
-export async function editTool(toolId: string, data: { name?: string; toolId?: string; toolType?: string; totalInventory?: number }) {
+export async function editTool(toolId: string, data: { name?: string; toolId?: string; toolType?: string; totalInventory?: number; repairCount?: number; dailyRate?: number; isActive?: boolean }) {
   await requireAuth({ allowedRoles: ["OWNER", "STAFF", "ADMIN"] });
   await prisma.tool.update({
     where: { id: toolId },
@@ -66,13 +66,16 @@ export async function editTool(toolId: string, data: { name?: string; toolId?: s
       ...(data.toolId && { toolId: data.toolId }),
       ...(data.toolType !== undefined && { toolType: data.toolType }),
       ...(data.totalInventory !== undefined && { totalInventory: data.totalInventory }),
+      ...(data.repairCount !== undefined && { repairCount: data.repairCount }),
+      ...(data.dailyRate !== undefined && { dailyRate: data.dailyRate }),
+      ...(data.isActive !== undefined && { isActive: data.isActive }),
     }
   });
   revalidatePath(`/staff/tools`);
   return { success: true };
 }
 
-export async function addTool(data: { name: string; toolId: string; toolType: string; totalInventory: number }) {
+export async function addTool(data: { name: string; toolId: string; toolType: string; totalInventory: number; dailyRate?: number; repairCount?: number }) {
   await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
   
   await prisma.tool.create({
@@ -80,7 +83,9 @@ export async function addTool(data: { name: string; toolId: string; toolType: st
       name: data.name,
       toolId: data.toolId,
       toolType: data.toolType,
-      totalInventory: data.totalInventory
+      totalInventory: data.totalInventory,
+      dailyRate: data.dailyRate ?? 0,
+      repairCount: data.repairCount ?? 0,
     }
   });
 
