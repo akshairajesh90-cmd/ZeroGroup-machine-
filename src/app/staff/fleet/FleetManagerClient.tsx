@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   Wrench, Truck, Plus, AlertTriangle, ShieldAlert,
   CheckCircle2, Clock, Hammer, FileWarning, ChevronRight, MapPin,
+  Layers, Cpu,
 } from "lucide-react";
 
 import { softDeleteMachine, softDeleteVehicle } from "./actions";
@@ -76,35 +77,22 @@ function StatusBadge({ status, hasActiveTicket }: { status: string; hasActiveTic
 
 // ─── Machine Type Icon ───────────────────────────────────────────────────────
 
-const MACHINE_ICONS: Record<string, string> = {
-  MIXER: "🪣",
-  HYDRAULIC_MIXER: "🚜",
-  LIFT: "🏗️",
-  VIBRATOR: "🔧",
-  PANI: "💧",
-  INDEPENDENT: "👷",
-};
+function MachineTypeIcon({ type }: { type: string }) {
+  if (type === "HYDRAULIC_MIXER") {
+    return <Cpu className="w-5 h-5 text-amber-400" />;
+  }
+  if (type === "LIFT") {
+    return <Layers className="w-5 h-5 text-blue-400" />;
+  }
+  return <Wrench className="w-5 h-5 text-indigo-400" />;
+}
 
-// Derive a human-friendly type label, with vibrator subtype from notes
-function getMachineLabel(type: string, machineId: string, notes: string | null): string {
+// Derive a human-friendly type label
+function getMachineLabel(type: string): string {
   if (type === "HYDRAULIC_MIXER") return "Hydraulic Mixing Machine";
   if (type === "MIXER") return "Mixing Machine";
   if (type === "LIFT") return "Lift";
-  if (type === "VIBRATOR") {
-    const id = machineId.toUpperCase();
-    if (id.includes("PETROL")) return "Vibrator · Petrol";
-    if (id.includes("CURRENT") || id.includes("ELECTRIC")) return "Vibrator · Electric";
-    if (notes?.toLowerCase().includes("petrol")) return "Vibrator · Petrol";
-    if (notes?.toLowerCase().includes("electric") || notes?.toLowerCase().includes("current")) return "Vibrator · Electric";
-  }
-  return type.charAt(0) + type.slice(1).toLowerCase();
-}
-
-function getVibratorIcon(machineId: string, notes: string | null): string {
-  const id = machineId.toUpperCase();
-  if (id.includes("PETROL") || notes?.toLowerCase().includes("petrol")) return "⛽";
-  if (id.includes("CURRENT") || id.includes("ELECTRIC") || notes?.toLowerCase().includes("electric")) return "⚡";
-  return "🔧";
+  return type;
 }
 
 // ─── Machine Card ────────────────────────────────────────────────────────────
@@ -118,14 +106,12 @@ function MachineCard({ machine, onRetire }: { machine: SerializedMachine; onReti
       <Link href={`/admin/fleet/machine/${machine.id}`} className="block p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-2xl shrink-0">
-              {machine.type === "VIBRATOR"
-                ? getVibratorIcon(machine.machineId, machine.notes)
-                : (MACHINE_ICONS[machine.type] ?? "⚙️")}
+            <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
+              <MachineTypeIcon type={machine.type} />
             </div>
             <div className="min-w-0">
               <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-400 mb-0.5">
-                {getMachineLabel(machine.type, machine.machineId, machine.notes)}
+                {getMachineLabel(machine.type)}
               </p>
               {/* BOLD, Large, Clickable Machine ID */}
               <h3 className="text-xl font-black text-white tracking-tight truncate group-hover:text-indigo-300 transition-colors">

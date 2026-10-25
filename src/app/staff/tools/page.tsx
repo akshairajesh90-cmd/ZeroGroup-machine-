@@ -133,8 +133,9 @@ export default async function ToolsInventoryPage() {
                       {/* In Repair */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         {repairCount > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-xs font-bold border border-amber-500/20 font-mono">
-                            🔧 {repairCount} in Repair
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-xs font-bold border border-amber-500/20 font-mono">
+                            <Wrench className="w-3 h-3" />
+                            {repairCount} in Repair
                           </span>
                         ) : (
                           <span className="text-zinc-600 font-medium">0</span>

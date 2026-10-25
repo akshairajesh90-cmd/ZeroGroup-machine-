@@ -14,7 +14,11 @@ export default async function FleetPage() {
 
   const [rawMachines, rawVehicles] = await Promise.all([
     prisma.machine.findMany({
-      where: { status: { not: "RETIRED" }, isPendingDelete: false },
+      where: {
+        status: { not: "RETIRED" },
+        isPendingDelete: false,
+        type: { in: ["MIXER", "HYDRAULIC_MIXER", "LIFT"] },
+      },
       orderBy: { createdAt: "desc" },
       include: {
         maintenanceTickets: {

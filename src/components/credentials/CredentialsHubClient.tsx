@@ -94,19 +94,15 @@ export const CREW_SKILLS_CATEGORIES: CrewSkillCategory[] = [
   },
   {
     title: "Site Helpers",
-    description: "Complementary field support roles",
+    description: "General site labour & water assistance (Pani)",
     skills: [
       {
         value: "HELPER",
-        label: "General Helper",
+        label: "General Helper (Pani / Site Labour)",
         icon: "🤝",
-        description: "Material handling, aggregate shoveling & site cleanup",
-      },
-      {
-        value: "PANI_HELPER",
-        label: "Pani Helper",
-        icon: "💧",
-        description: "Water hose supply, curing & mixer washout",
+        badge: "Pani & Site Work",
+        badgeColor: "bg-blue-500/20 text-blue-300 border-blue-500/40",
+        description: "Material handling, aggregate shoveling, water hose supply & concrete curing",
       },
     ],
   },
@@ -138,9 +134,10 @@ export const CREW_SKILLS_CATEGORIES: CrewSkillCategory[] = [
 ];
 
 // Flat list for fast lookup
-export const ALL_CREW_ROLES: { value: CrewRole; label: string }[] = CREW_SKILLS_CATEGORIES.flatMap(
-  (c) => c.skills.map((s) => ({ value: s.value, label: s.label }))
-);
+export const ALL_CREW_ROLES: { value: CrewRole; label: string }[] = [
+  ...CREW_SKILLS_CATEGORIES.flatMap((c) => c.skills.map((s) => ({ value: s.value, label: s.label }))),
+  { value: "PANI_HELPER" as CrewRole, label: "General Helper (Pani / Site Labour)" },
+];
 
 export const SYSTEM_ROLE_DEFINITIONS: {
   value: Role;
@@ -1046,17 +1043,33 @@ export default function CredentialsHubClient({
                     <td className="py-3.5 px-4">
                       <div className="flex flex-wrap gap-1 max-w-[200px]">
                         {emp.capableRoles.length > 0 ? (
-                          emp.capableRoles.map((skill) => {
-                            const match = ALL_CREW_ROLES.find((r) => r.value === skill);
-                            return (
-                              <span
-                                key={skill}
-                                className="text-[10px] font-bold bg-slate-800 text-indigo-300 border border-slate-700 px-2 py-0.5 rounded"
-                              >
-                                {match ? match.label : skill.replace(/_/g, " ")}
-                              </span>
-                            );
-                          })
+                          (() => {
+                            const renderedKeys = new Set<string>();
+                            return emp.capableRoles.map((skill) => {
+                              // Consolidate HELPER and PANI_HELPER into a single badge
+                              if (skill === "HELPER" || skill === "PANI_HELPER") {
+                                if (renderedKeys.has("HELPER_UNIFIED")) return null;
+                                renderedKeys.add("HELPER_UNIFIED");
+                                return (
+                                  <span
+                                    key="helper-unified"
+                                    className="text-[10px] font-bold bg-slate-800 text-indigo-300 border border-slate-700 px-2 py-0.5 rounded"
+                                  >
+                                    General Helper (Pani)
+                                  </span>
+                                );
+                              }
+                              const match = ALL_CREW_ROLES.find((r) => r.value === skill);
+                              return (
+                                <span
+                                  key={skill}
+                                  className="text-[10px] font-bold bg-slate-800 text-indigo-300 border border-slate-700 px-2 py-0.5 rounded"
+                                >
+                                  {match ? match.label : skill.replace(/_/g, " ")}
+                                </span>
+                              );
+                            });
+                          })()
                         ) : (
                           <span className="text-[11px] text-slate-600 italic">Standard Role</span>
                         )}
@@ -1671,11 +1684,16 @@ export default function CredentialsHubClient({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
                       {cat.skills.map((skill) => {
-                        const checked = formSkills.includes(skill.value);
+                        const isHelper = skill.value === "HELPER";
+                        const checked = isHelper
+                          ? formSkills.includes("HELPER") || formSkills.includes("PANI_HELPER")
+                          : formSkills.includes(skill.value);
                         return (
                           <label
                             key={skill.value}
                             className={`flex items-start gap-2.5 p-2 rounded-xl border cursor-pointer select-none transition-all ${
+                              cat.skills.length === 1 ? "sm:col-span-2" : ""
+                            } ${
                               checked
                                 ? "bg-indigo-600/20 border-indigo-500 text-indigo-200 shadow-sm shadow-indigo-500/10"
                                 : "bg-slate-900 border-slate-800/80 text-slate-400 hover:text-white hover:border-slate-700"
@@ -1685,10 +1703,18 @@ export default function CredentialsHubClient({
                               type="checkbox"
                               checked={checked}
                               onChange={(e) => {
-                                if (e.target.checked) {
-                                  setFormSkills([...formSkills, skill.value]);
+                                if (isHelper) {
+                                  if (e.target.checked) {
+                                    setFormSkills(Array.from(new Set([...formSkills, "HELPER", "PANI_HELPER"])));
+                                  } else {
+                                    setFormSkills(formSkills.filter((s) => s !== "HELPER" && s !== "PANI_HELPER"));
+                                  }
                                 } else {
-                                  setFormSkills(formSkills.filter((s) => s !== skill.value));
+                                  if (e.target.checked) {
+                                    setFormSkills([...formSkills, skill.value]);
+                                  } else {
+                                    setFormSkills(formSkills.filter((s) => s !== skill.value));
+                                  }
                                 }
                               }}
                               className="rounded accent-indigo-500 mt-0.5"

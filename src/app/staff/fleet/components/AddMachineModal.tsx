@@ -25,13 +25,10 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-const MACHINE_TYPE_LABELS: Record<MachineType, string> = {
-  MIXER: "🪣 Mixing Machine",
-  HYDRAULIC_MIXER: "🚜 Hydraulic Mixing Machine",
-  LIFT: "🏗️ Lift",
-  VIBRATOR: "🔧 Vibrator",
-  PANI: "💧 Pani (Water Pump)",
-  INDEPENDENT: "👷 Independent Labor",
+const MACHINE_TYPE_LABELS: Partial<Record<MachineType, string>> = {
+  MIXER: "Mixing Machine",
+  HYDRAULIC_MIXER: "Hydraulic Mixing Machine",
+  LIFT: "Lift",
 };
 
 const STATUS_LABELS: Record<MachineStatus, string> = {
