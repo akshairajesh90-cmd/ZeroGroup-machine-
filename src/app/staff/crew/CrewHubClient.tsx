@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -29,6 +29,7 @@ import {
   Power,
   Trash2,
   AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 import { saveEmployeeRoleRates } from "@/actions/hr";
 import {
@@ -245,6 +246,32 @@ export default function CrewHubClient({
     "ALL" | "WITH_RATES" | "OPERATOR" | "WORKER" | "DRIVER"
   >("WITH_RATES");
 
+  // Company Master Role Wages State (Editable Standard Rate Card)
+  const [masterRoleWages, setMasterRoleWages] = useState<Record<string, number>>(COMPANY_WORKER_ROLE_WAGES);
+  const [outsideWage, setOutsideWage] = useState<number>(OUTSIDE_WORKER_FLAT_WAGE);
+
+  // Load any user-customized standard rates from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedMaster = localStorage.getItem("zero_group_master_role_wages");
+      if (savedMaster) {
+        try {
+          setMasterRoleWages((prev) => ({ ...prev, ...JSON.parse(savedMaster) }));
+        } catch (e) {}
+      }
+      const savedOutside = localStorage.getItem("zero_group_outside_flat_wage");
+      if (savedOutside) {
+        const val = Number(savedOutside);
+        if (!isNaN(val) && val > 0) setOutsideWage(val);
+      }
+    }
+  }, []);
+
+  // Edit Standard Rate Card Modal State
+  const [isEditingMasterRates, setIsEditingMasterRates] = useState(false);
+  const [tempMasterWages, setTempMasterWages] = useState<Record<string, number>>(COMPANY_WORKER_ROLE_WAGES);
+  const [tempOutsideWage, setTempOutsideWage] = useState<number>(OUTSIDE_WORKER_FLAT_WAGE);
+
   // Action status / banners
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -254,7 +281,7 @@ export default function CrewHubClient({
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // Edit Role Rates Modal State
+  // Edit Individual Role Rates Modal State
   const [editingEmployee, setEditingEmployee] = useState<EmployeeItem | null>(null);
   const [modalRates, setModalRates] = useState<Record<string, { enabled: boolean; wage: number }>>({});
   const [isSavingRates, setIsSavingRates] = useState(false);
@@ -274,6 +301,33 @@ export default function CrewHubClient({
     setTimeout(() => {
       setToastMessage(null);
     }, 4000);
+  };
+
+  // Open Edit Master Rates modal
+  const handleOpenEditMasterRates = (highlightRoleKey?: string) => {
+    setTempMasterWages({ ...masterRoleWages });
+    setTempOutsideWage(outsideWage);
+    setIsEditingMasterRates(true);
+  };
+
+  // Save Company Standard Rate Card
+  const handleSaveMasterRates = () => {
+    setMasterRoleWages(tempMasterWages);
+    setOutsideWage(tempOutsideWage);
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("zero_group_master_role_wages", JSON.stringify(tempMasterWages));
+      localStorage.setItem("zero_group_outside_flat_wage", String(tempOutsideWage));
+    }
+
+    setIsEditingMasterRates(false);
+    showToast("success", "Company Standard Rate Card saved successfully!");
+  };
+
+  // Reset Standard Rate Card to Factory Defaults
+  const handleResetMasterRatesToDefault = () => {
+    setTempMasterWages({ ...COMPANY_WORKER_ROLE_WAGES });
+    setTempOutsideWage(OUTSIDE_WORKER_FLAT_WAGE);
   };
 
   // Toggle Active / Disabled status
@@ -388,8 +442,8 @@ export default function CrewHubClient({
       } else {
         const defaultWage =
           emp.operatorType === "SUBCONTRACTOR"
-            ? OUTSIDE_WORKER_FLAT_WAGE
-            : COMPANY_WORKER_ROLE_WAGES[roleKey] ?? 1000;
+            ? outsideWage
+            : masterRoleWages[roleKey] ?? 1000;
         initialMap[roleKey] = { enabled: false, wage: defaultWage };
       }
     });
@@ -407,8 +461,8 @@ export default function CrewHubClient({
     MASTER_ROLES_ORDER.forEach((roleKey) => {
       const defaultWage =
         editingEmployee.operatorType === "SUBCONTRACTOR"
-          ? OUTSIDE_WORKER_FLAT_WAGE
-          : COMPANY_WORKER_ROLE_WAGES[roleKey] ?? 1000;
+          ? outsideWage
+          : masterRoleWages[roleKey] ?? 1000;
       updated[roleKey] = { enabled: true, wage: defaultWage };
     });
     setModalRates(updated);
@@ -498,37 +552,50 @@ export default function CrewHubClient({
           </div>
           <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
             <DollarSign className="w-8 h-8 text-amber-400" />
-            Role-Based Rates & Crew Wage Matrix
+            Role-Based Rates &amp; Crew Wage Matrix
           </h1>
           <p className="text-slate-400 text-sm mt-1">
             Company-wide master role rates, equipment work-type payouts, individual crew rate cards, soft delete &amp; disable controls.
           </p>
         </div>
 
-        {/* Tab switch */}
-        <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl">
+        {/* Header Actions: Edit Master Rates & Tab Switch */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Direct Header Edit Standard Rate Card Button */}
           <button
-            onClick={() => setActiveTab("rates")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === "rates"
-                ? "bg-amber-600 text-white shadow-lg shadow-amber-600/20"
-                : "text-slate-400 hover:text-white"
-            }`}
+            type="button"
+            onClick={() => handleOpenEditMasterRates()}
+            className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg shadow-amber-500/25 transition-all cursor-pointer"
           >
-            <HardHat className="w-3.5 h-3.5" />
-            Role-Based Rates &amp; Wage Matrix ({personnelWithRates.length})
+            <Edit3 className="w-4 h-4" />
+            <span>Edit Standard Rate Card</span>
           </button>
-          <button
-            onClick={() => setActiveTab("directory")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === "directory"
-                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            Crew Directory ({employees.length})
-          </button>
+
+          {/* Tab switch */}
+          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl">
+            <button
+              onClick={() => setActiveTab("rates")}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                activeTab === "rates"
+                  ? "bg-amber-600 text-white shadow-lg shadow-amber-600/20"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <HardHat className="w-3.5 h-3.5" />
+              Role-Based Rates &amp; Wage Matrix ({personnelWithRates.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("directory")}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                activeTab === "directory"
+                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              Crew Directory ({employees.length})
+            </button>
+          </div>
         </div>
       </div>
 
@@ -674,13 +741,24 @@ export default function CrewHubClient({
                 </p>
               </div>
 
+              {/* Actions & Outside Wage Badge */}
               <div className="flex items-center gap-3">
                 <div className="px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2">
                   <span className="text-[11px] text-slate-400">Outside Flat Wage:</span>
                   <span className="text-xs font-black text-emerald-400">
-                    {formatCurrency(OUTSIDE_WORKER_FLAT_WAGE)} / day
+                    {formatCurrency(outsideWage)} / day
                   </span>
                 </div>
+
+                {/* Primary Edit Button for Section 1 */}
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditMasterRates()}
+                  className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg shadow-amber-500/25 transition-all cursor-pointer"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  <span>Edit Standard Rate Card</span>
+                </button>
               </div>
             </div>
 
@@ -688,7 +766,7 @@ export default function CrewHubClient({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {MASTER_ROLES_ORDER.map((roleKey) => {
                 const meta = crewRoleMeta[roleKey];
-                const internalWage = COMPANY_WORKER_ROLE_WAGES[roleKey] ?? 1000;
+                const internalWage = masterRoleWages[roleKey] ?? COMPANY_WORKER_ROLE_WAGES[roleKey] ?? 1000;
                 return (
                   <div
                     key={roleKey}
@@ -718,19 +796,29 @@ export default function CrewHubClient({
                         <div className="flex items-center justify-between text-[11px]">
                           <span className="text-slate-500">Outside Subcontractor:</span>
                           <span className="font-bold text-slate-300">
-                            {formatCurrency(OUTSIDE_WORKER_FLAT_WAGE)}
+                            {formatCurrency(outsideWage)}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    {meta.customerBillingNote && (
-                      <div className="mt-3 pt-2 border-t border-slate-900">
+                    <div className="mt-3 pt-2 border-t border-slate-900 space-y-2">
+                      {meta.customerBillingNote && (
                         <span className="text-[10px] text-emerald-400/90 font-medium block">
                           💡 {meta.customerBillingNote}
                         </span>
-                      </div>
-                    )}
+                      )}
+
+                      {/* Quick Edit button per card */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditMasterRates(roleKey)}
+                        className="w-full py-1 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-amber-400 hover:text-amber-300 text-[11px] font-bold flex items-center justify-center gap-1 transition-all"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        Edit Rate
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -776,7 +864,7 @@ export default function CrewHubClient({
                     <div className="flex justify-between py-1">
                       <span className="text-slate-400">Operator Payout:</span>
                       <span className="font-bold text-amber-400 text-sm">
-                        {formatCurrency(COMPANY_WORKER_ROLE_WAGES.MIXER_OPERATOR)} / day
+                        {formatCurrency(masterRoleWages.MIXER_OPERATOR ?? COMPANY_WORKER_ROLE_WAGES.MIXER_OPERATOR)} / day
                       </span>
                     </div>
                   </div>
@@ -804,7 +892,7 @@ export default function CrewHubClient({
                     <div className="flex justify-between py-1">
                       <span className="text-slate-400">Operator Payout:</span>
                       <span className="font-bold text-amber-400 text-sm">
-                        {formatCurrency(COMPANY_WORKER_ROLE_WAGES.HYDRAULIC_OPERATOR)} / day
+                        {formatCurrency(masterRoleWages.HYDRAULIC_OPERATOR ?? COMPANY_WORKER_ROLE_WAGES.HYDRAULIC_OPERATOR)} / day
                       </span>
                     </div>
                   </div>
@@ -832,7 +920,7 @@ export default function CrewHubClient({
                     <div className="flex justify-between py-1">
                       <span className="text-slate-400">Operator Payout:</span>
                       <span className="font-bold text-amber-400 text-sm">
-                        {formatCurrency(COMPANY_WORKER_ROLE_WAGES.LIFT_OPERATOR)} / day
+                        {formatCurrency(masterRoleWages.LIFT_OPERATOR ?? COMPANY_WORKER_ROLE_WAGES.LIFT_OPERATOR)} / day
                       </span>
                     </div>
                   </div>
@@ -860,7 +948,7 @@ export default function CrewHubClient({
                     <div className="flex justify-between py-1">
                       <span className="text-slate-400">Handler Payout:</span>
                       <span className="font-bold text-amber-400 text-sm">
-                        {formatCurrency(COMPANY_WORKER_ROLE_WAGES.TROLLY_1_WHEEL)} / day
+                        {formatCurrency(masterRoleWages.TROLLY_1_WHEEL ?? COMPANY_WORKER_ROLE_WAGES.TROLLY_1_WHEEL)} / day
                       </span>
                     </div>
                   </div>
@@ -888,7 +976,7 @@ export default function CrewHubClient({
                     <div className="flex justify-between py-1">
                       <span className="text-slate-400">Handler Payout:</span>
                       <span className="font-bold text-amber-400 text-sm">
-                        {formatCurrency(COMPANY_WORKER_ROLE_WAGES.TROLLY_2_WHEEL)} / day
+                        {formatCurrency(masterRoleWages.TROLLY_2_WHEEL ?? COMPANY_WORKER_ROLE_WAGES.TROLLY_2_WHEEL)} / day
                       </span>
                     </div>
                   </div>
@@ -934,7 +1022,7 @@ export default function CrewHubClient({
                   Individual Personnel Role Wage Cards &amp; Management
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Custom per-role daily wages, active/disable controls, and soft delete for crew personnel.
+                  Custom per-role daily wages, active/disable controls, soft delete, and edit role rates.
                 </p>
               </div>
 
@@ -970,10 +1058,19 @@ export default function CrewHubClient({
                               {person.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-2">
                                 <h4 className="font-bold text-white text-base leading-snug">
                                   {person.name}
                                 </h4>
+                                {/* Quick Edit Icon Button in Header */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditRates(person)}
+                                  title="Edit Role Rates for this person"
+                                  className="p-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 transition-all cursor-pointer"
+                                >
+                                  <Edit3 className="w-3 h-3" />
+                                </button>
                               </div>
                               <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
                                 <span className="font-semibold text-amber-400">{person.role}</span>
@@ -1058,7 +1155,7 @@ export default function CrewHubClient({
                         </div>
                       </div>
 
-                      {/* Card Action Controls: Edit, Disable/Enable, Soft Delete */}
+                      {/* Card Action Controls: High-Visibility Edit Button, Disable/Enable, Soft Delete */}
                       <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
                           {/* Disable / Enable Toggle button */}
@@ -1071,7 +1168,7 @@ export default function CrewHubClient({
                               person.isActive
                                 ? "bg-slate-900 border-slate-800 text-slate-400 hover:text-amber-400 hover:border-amber-500/40"
                                 : "bg-emerald-950/40 border-emerald-500/30 text-emerald-400 hover:bg-emerald-900/50"
-                            } disabled:opacity-40`}
+                            } disabled:opacity-40 cursor-pointer`}
                           >
                             <Power className="w-3.5 h-3.5" />
                             <span>{person.isActive ? "Disable" : "Enable"}</span>
@@ -1086,18 +1183,20 @@ export default function CrewHubClient({
                               setDeleteCandidate(person);
                             }}
                             title="Soft delete crew member (Move to Trash)"
-                            className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 hover:text-rose-400 hover:border-rose-500/40 transition-colors"
+                            className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 hover:text-rose-400 hover:border-rose-500/40 transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
 
+                        {/* HIGH-VISIBILITY PRIMARY AMBER EDIT BUTTON */}
                         <button
+                          type="button"
                           onClick={() => handleOpenEditRates(person)}
-                          className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold transition-all flex items-center gap-1.5 shadow"
+                          className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition-all flex items-center gap-1.5 shadow-lg shadow-amber-500/20 cursor-pointer"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
-                          Edit Role Rates
+                          <span>Edit Role Rates</span>
                         </button>
                       </div>
                     </div>
@@ -1133,7 +1232,20 @@ export default function CrewHubClient({
                         {emp.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <h3 className="font-bold text-white text-base leading-snug">{emp.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-white text-base leading-snug">{emp.name}</h3>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveTab("rates");
+                              handleOpenEditRates(emp);
+                            }}
+                            title="Edit Role Rates"
+                            className="p-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 transition-all cursor-pointer"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                          </button>
+                        </div>
                         <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
                           <span className="font-semibold text-emerald-400">{emp.role}</span>
                           {emp.defaultCrewRole && (
@@ -1211,7 +1323,7 @@ export default function CrewHubClient({
                       disabled={actionLoadingId === emp.id}
                       onClick={() => handleToggleActive(emp)}
                       title={emp.isActive ? "Disable employee" : "Enable employee"}
-                      className={`p-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1 ${
+                      className={`p-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
                         emp.isActive
                           ? "bg-slate-950 border-slate-800 text-slate-400 hover:text-amber-400"
                           : "bg-emerald-950/40 border-emerald-500/30 text-emerald-400"
@@ -1229,7 +1341,7 @@ export default function CrewHubClient({
                         setDeleteCandidate(emp);
                       }}
                       title="Soft delete crew member (Move to Trash)"
-                      className="p-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-500 hover:text-rose-400 transition-colors"
+                      className="p-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -1240,14 +1352,156 @@ export default function CrewHubClient({
                       setActiveTab("rates");
                       handleOpenEditRates(emp);
                     }}
-                    className="text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1"
+                    className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
                   >
-                    Edit Rates <ChevronRight className="w-3 h-3" />
+                    <Edit3 className="w-3.5 h-3.5" />
+                    Edit Role Rates
                   </button>
                 </div>
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {/* EDIT STANDARD RATE CARD MODAL (SECTION 1 EDIT) */}
+      {isEditingMasterRates && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-800 flex items-start justify-between bg-slate-950/60">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    Master Wage Card
+                  </span>
+                  <span className="text-xs text-slate-500 font-mono">12 Standard Roles</span>
+                </div>
+                <h3 className="text-xl font-black text-white">
+                  Edit Standard Rate Card Common
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Adjust default company-wide daily payout wages for each role and outside subcontractor flat wage.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsEditingMasterRates(false)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="px-6 py-3 bg-slate-950/40 border-b border-slate-800/60 flex items-center justify-between">
+              <span className="text-xs text-slate-400">
+                Update standard daily wage values:
+              </span>
+              <button
+                type="button"
+                onClick={handleResetMasterRatesToDefault}
+                className="text-xs font-bold text-amber-400 hover:text-amber-300 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Reset Factory Defaults
+              </button>
+            </div>
+
+            {/* Outside Flat Wage Row */}
+            <div className="p-6 overflow-y-auto space-y-3 flex-1">
+              <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 flex items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🏢</span>
+                    <span className="text-xs font-black text-emerald-300">
+                      Outside Subcontractor Flat Wage
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">
+                    Standard flat daily wage applied to outside subcontracted workers.
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400 font-bold">₹</span>
+                  <input
+                    type="number"
+                    value={tempOutsideWage || ""}
+                    onChange={(e) => setTempOutsideWage(Number(e.target.value))}
+                    className="w-28 bg-slate-900 border border-emerald-500/50 rounded-xl px-3 py-1.5 text-sm font-black text-emerald-400 text-right focus:outline-none focus:border-emerald-400"
+                  />
+                  <span className="text-[11px] text-slate-500">/ day</span>
+                </div>
+              </div>
+
+              {/* 12 Master Roles List */}
+              {MASTER_ROLES_ORDER.map((roleKey) => {
+                const meta = crewRoleMeta[roleKey];
+                const currentVal = tempMasterWages[roleKey] ?? 1000;
+
+                return (
+                  <div
+                    key={roleKey}
+                    className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800/80 flex items-center justify-between gap-4 hover:border-slate-700 transition-all"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{meta.icon}</span>
+                        <span className="text-xs font-bold text-white">{meta.label}</span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 block mt-0.5">
+                        {meta.description}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400 font-bold">₹</span>
+                      <input
+                        type="number"
+                        value={currentVal || ""}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setTempMasterWages((prev) => ({
+                            ...prev,
+                            [roleKey]: val,
+                          }));
+                        }}
+                        className="w-28 bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm font-black text-amber-400 text-right focus:outline-none focus:border-amber-500"
+                      />
+                      <span className="text-[11px] text-slate-500">/ day</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
+              <span className="text-xs text-slate-400">
+                12 Master Roles &amp; Subcontractor Rate Configured
+              </span>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingMasterRates(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveMasterRates}
+                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition-all flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  Save Standard Rate Card
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1287,7 +1541,7 @@ export default function CrewHubClient({
                 type="button"
                 disabled={isDeleting}
                 onClick={() => setDeleteCandidate(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -1295,7 +1549,7 @@ export default function CrewHubClient({
                 type="button"
                 disabled={isDeleting}
                 onClick={handleConfirmSoftDelete}
-                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-all flex items-center gap-2 shadow-lg shadow-rose-600/20 disabled:opacity-50"
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-all flex items-center gap-2 shadow-lg shadow-rose-600/20 disabled:opacity-50 cursor-pointer"
               >
                 {isDeleting ? "Deleting..." : "Confirm Soft Delete"}
               </button>
@@ -1304,7 +1558,7 @@ export default function CrewHubClient({
         </div>
       )}
 
-      {/* EDIT ROLE RATES MODAL */}
+      {/* EDIT INDIVIDUAL ROLE RATES MODAL */}
       {editingEmployee && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
@@ -1328,8 +1582,9 @@ export default function CrewHubClient({
               </div>
 
               <button
+                type="button"
                 onClick={() => setEditingEmployee(null)}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1357,7 +1612,7 @@ export default function CrewHubClient({
               <button
                 type="button"
                 onClick={handlePrefillDefaults}
-                className="text-xs font-bold text-amber-400 hover:text-amber-300 hover:underline flex items-center gap-1"
+                className="text-xs font-bold text-amber-400 hover:text-amber-300 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 Prefill Company Defaults
@@ -1371,8 +1626,8 @@ export default function CrewHubClient({
                 const state = modalRates[roleKey] || { enabled: false, wage: 1000 };
                 const companyDefault =
                   editingEmployee.operatorType === "SUBCONTRACTOR"
-                    ? OUTSIDE_WORKER_FLAT_WAGE
-                    : COMPANY_WORKER_ROLE_WAGES[roleKey] ?? 1000;
+                    ? outsideWage
+                    : masterRoleWages[roleKey] ?? 1000;
 
                 return (
                   <div
@@ -1446,7 +1701,7 @@ export default function CrewHubClient({
                 <button
                   type="button"
                   onClick={() => setEditingEmployee(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors"
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1454,7 +1709,7 @@ export default function CrewHubClient({
                   type="button"
                   disabled={isSavingRates}
                   onClick={handleSaveRates}
-                  className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-all flex items-center gap-2 shadow-lg shadow-amber-600/20 disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition-all flex items-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50 cursor-pointer"
                 >
                   {isSavingRates ? (
                     <>Saving Rates...</>

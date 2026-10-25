@@ -163,4 +163,30 @@ test.describe('Role-Based Rates & Crew Wage Matrix Verification', () => {
       }
     }
   });
+
+  test('7. Edit Standard Rate Card button opens modal and updates rates', async ({ page }) => {
+    await page.goto('/staff/crew');
+    await page.waitForLoadState('networkidle');
+
+    // Click Edit Standard Rate Card
+    const editMasterBtn = page.getByRole('button', { name: /Edit Standard Rate Card/i }).first();
+    await expect(editMasterBtn).toBeVisible();
+    await editMasterBtn.click();
+
+    // Verify modal is open
+    await expect(page.getByText(/Edit Standard Rate Card Common/i)).toBeVisible();
+    await expect(page.getByText(/Reset Factory Defaults/i)).toBeVisible();
+
+    await page.screenshot({
+      path: path.join(artifactDir, 'proof_edit_master_rate_card_modal.png'),
+    });
+
+    // Click Save Standard Rate Card
+    const saveMasterBtn = page.getByRole('button', { name: /Save Standard Rate Card/i });
+    await expect(saveMasterBtn).toBeVisible();
+    await saveMasterBtn.click();
+
+    // Verify success toast appears
+    await expect(page.getByText(/Standard Rate Card saved successfully/i)).toBeVisible({ timeout: 5000 });
+  });
 });
