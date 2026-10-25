@@ -69,6 +69,7 @@ export async function createEmployee(data: {
     });
 
     revalidatePath("/admin/staff");
+    revalidatePath("/staff/crew");
     return { success: true, data: result };
   } catch (error: any) {
     console.error("Create Employee error:", error);
@@ -132,6 +133,7 @@ export async function updateEmployee(
     });
 
     revalidatePath("/admin/staff");
+    revalidatePath("/staff/crew");
     return { success: true, data: result };
   } catch (error: any) {
     console.error("Update Employee error:", error);
@@ -159,6 +161,7 @@ export async function saveEmployeeRoleRates(
     );
 
     revalidatePath("/admin/staff");
+    revalidatePath("/staff/crew");
     return { success: true };
   } catch (error: any) {
     console.error("Save Role Rates error:", error);

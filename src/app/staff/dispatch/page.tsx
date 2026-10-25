@@ -43,7 +43,7 @@ export default async function DispatchPage() {
       orderBy: { dateOfService: "desc" },
     }),
     prisma.customer.findMany({ orderBy: { name: "asc" } }),
-    prisma.machine.findMany({ where: { status: "AVAILABLE" }, orderBy: { machineId: "asc" } }),
+    prisma.machine.findMany({ where: { isPendingDelete: false }, orderBy: { machineId: "asc" } }),
     prisma.employee.findMany({ 
       orderBy: { name: "asc" },
       include: { roleRates: true }

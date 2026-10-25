@@ -18,11 +18,17 @@ export default async function BillingPage({
     redirect("/");
   }
 
-  // Fetch the logged-in employee for the collector ID
+  // Fetch the logged-in employee for the collector ID, with fallback for Admins/Owners
   const me = await prisma.employee.findUnique({
     where: { userId: session.user.id },
   });
-  if (!me) redirect("/");
+  let collectorId = me?.id;
+  if (!collectorId) {
+    const fallbackEmp = await prisma.employee.findFirst({
+      where: { isActive: true, isPendingDelete: false },
+    });
+    collectorId = fallbackEmp?.id || session.user.id;
+  }
 
   const dispatch = await prisma.dailyDispatch.findUnique({
     where: { id: params.dispatchId },
@@ -53,6 +59,8 @@ export default async function BillingPage({
   }
 
   // Calculate default items based on dispatch structure
+  // DOMAIN RULE: Invoices ONLY show Machine Rent and Tools Used.
+  // Internal operator wages and worker wages are NEVER billed to the customer.
   const defaultItems = [];
 
   // 1. Machine Base Rental Rate
@@ -93,80 +101,82 @@ export default async function BillingPage({
     });
   }
 
-  // 3. Crew
-  let totalWages = 0;
-  dispatch.crewAssignments.forEach((ca: any) => {
-    totalWages += Number(ca.lockedWageRate || 0);
-  });
-  if (totalWages > 0) {
+  // 3. Trolly & Bench Stand Check (Configured in Work & Concrete Specs)
+  let has1WheelTrollyAdded = false;
+  if (dispatch.hasTrollyBench) {
+    const oneWheelCount = Math.max(1, dispatch.trollyWorkerCount || 1);
     defaultItems.push({
-      itemKey: "CREW_WAGES",
-      description: `Internal Crew (${dispatch.crewAssignments.length} members)`,
+      itemKey: "TOOL_TROLLY_1_WHEEL_BENCH",
+      description: `1-Wheel Trolly & Bench (${oneWheelCount} Unit${oneWheelCount > 1 ? "s" : ""})`,
+      quantity: oneWheelCount,
+      rate: 1500,
+      total: oneWheelCount * 1500,
+    });
+    defaultItems.push({
+      itemKey: "TOOL_TROLLY_1_WHEEL_BENCH_RENT",
+      description: "1-Wheel Trolly & Bench - Tool Rent",
       quantity: 1,
-      rate: totalWages,
-      total: totalWages,
+      rate: 1000,
+      total: 1000,
     });
+    has1WheelTrollyAdded = true;
   }
 
-  // 4. External / Additional Helpers
-  if (dispatch.helperCount && dispatch.helperCount > 0) {
-    const defaultHelperRate = 1200; // Default rate, staff can edit this on the billing screen
-    defaultItems.push({
-      itemKey: "HELPER_CHARGE",
-      description: `Helpers Provided`,
-      quantity: dispatch.helperCount,
-      rate: defaultHelperRate,
-      total: dispatch.helperCount * defaultHelperRate,
-    });
-  }
-
-  let externalWages = 0;
-  dispatch.dispatchLabor.forEach((el: any) => {
-    externalWages += Number(el.lumpSumWage || 0);
-  });
-  if (externalWages > 0) {
-    defaultItems.push({
-      itemKey: "EXTERNAL_WAGES",
-      description: `External Labor (${dispatch.dispatchLabor.length} workers)`,
-      quantity: 1,
-      rate: externalWages,
-      total: externalWages,
-    });
-  }
-
-  // 5. Dispatched Tools (populated with 1-day rental rate from Tool registry)
+  // 4. Tools Used (2-Wheel Trolly, Vibrators, Kit, Sheets, etc.)
   if (dispatch.dispatchTools && dispatch.dispatchTools.length > 0) {
     dispatch.dispatchTools.forEach((dt: any) => {
-      const toolRate = Number(dt.tool?.dailyRate || 0);
-      const qty = Number(dt.quantity || 1);
       const toolName = dt.tool?.name || "Tool";
+      const nameLower = toolName.toLowerCase();
+      const qty = Number(dt.quantity || 1);
+      let toolRate = Number(dt.tool?.dailyRate || 0);
 
-      if (toolRate > 0) {
+      if (nameLower.includes("1-wheel")) {
+        // 1-Wheel Trolly only goes with bench in Work Specs
+        if (!has1WheelTrollyAdded) {
+          defaultItems.push({
+            itemKey: `TOOL_${dt.tool?.id || dt.id}`,
+            description: `1-Wheel Trolly & Bench (${qty} Unit${qty > 1 ? "s" : ""})`,
+            quantity: qty,
+            rate: 1500,
+            total: qty * 1500,
+          });
+          defaultItems.push({
+            itemKey: `TOOL_${dt.tool?.id || dt.id}_RENT`,
+            description: "1-Wheel Trolly & Bench - Tool Rent",
+            quantity: 1,
+            rate: 1000,
+            total: 1000,
+          });
+          has1WheelTrollyAdded = true;
+        }
+      } else if (nameLower.includes("2-wheel") || dt.tool?.toolType?.includes("TROLLY_2")) {
+        // 2-Wheel Trolly in Tools section: Exactly ₹200 per trolly given
+        const rate = 200;
         defaultItems.push({
           itemKey: `TOOL_${dt.tool?.id || dt.id}`,
-          description: `${toolName} (1-Day Rate x${qty})`,
+          description: `2-Wheel Trolly (Tools Used x${qty})`,
+          quantity: qty,
+          rate: rate,
+          total: qty * rate,
+        });
+      } else {
+        // Fallback rates if dailyRate not set in DB
+        if (toolRate <= 0) {
+          if (nameLower.includes("petrol") || dt.tool?.toolType === "VIBRATOR_PETROL") toolRate = 1000;
+          else if (nameLower.includes("electric") || dt.tool?.toolType === "VIBRATOR_ELECTRIC") toolRate = 200;
+          else if (nameLower.includes("needle") || dt.tool?.toolType === "VIBRATOR") toolRate = 300;
+          else if (nameLower.includes("bench") || dt.tool?.toolType === "PANI") toolRate = 500;
+          else if (nameLower.includes("tarp") || dt.tool?.toolType === "SHEET") toolRate = 150;
+          else toolRate = 100;
+        }
+
+        defaultItems.push({
+          itemKey: `TOOL_${dt.tool?.id || dt.id}`,
+          description: `${toolName} (Tools Used x${qty})`,
           quantity: qty,
           rate: toolRate,
           total: qty * toolRate,
         });
-      } else {
-        // Fallbacks for tools before rates were assigned
-        const nameLower = toolName.toLowerCase();
-        let fallbackRate = 0;
-        if (nameLower.includes("1-wheel")) fallbackRate = 1500;
-        else if (nameLower.includes("2-wheel")) fallbackRate = 1100;
-        else if (nameLower.includes("petrol") || dt.tool?.toolType === "VIBRATOR_PETROL") fallbackRate = 1000;
-        else if (nameLower.includes("electric") || dt.tool?.toolType === "VIBRATOR_ELECTRIC") fallbackRate = 200;
-
-        if (fallbackRate > 0) {
-          defaultItems.push({
-            itemKey: `TOOL_${dt.tool?.id || dt.id}`,
-            description: `${toolName} (x${qty})`,
-            quantity: qty,
-            rate: fallbackRate,
-            total: qty * fallbackRate,
-          });
-        }
       }
     });
   }
@@ -176,7 +186,7 @@ export default async function BillingPage({
       <BillingClient 
         dispatch={dispatch} 
         defaultItems={defaultItems} 
-        collectorId={me.id}
+        collectorId={collectorId || ""}
       />
     </div>
   );

@@ -88,6 +88,17 @@ export default function LiveMap({
   onSelectPerson,
 }: LiveMapProps) {
   const [mounted, setMounted] = useState(false);
+  const [roadRoutes, setRoadRoutes] = useState<
+    Record<
+      string,
+      {
+        positions: [number, number][];
+        distanceKm: number;
+        durationMins: number;
+        isRoadSnapped: boolean;
+      }
+    >
+  >({});
 
   useEffect(() => {
     setMounted(true);
@@ -211,6 +222,47 @@ export default function LiveMap({
     });
   });
 
+  // Asynchronously fetch road-snapped geometry for active route lines
+  useEffect(() => {
+    if (routePolylines.length === 0) return;
+    let isCancelled = false;
+
+    routePolylines.forEach((route) => {
+      if (roadRoutes[route.id]) return; // Already fetched
+
+      fetch("/api/routing/directions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          origin: route.positions[0],
+          destination: route.positions[1],
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (isCancelled) return;
+          if (data.success && data.coordinates && data.coordinates.length > 0) {
+            setRoadRoutes((prev) => ({
+              ...prev,
+              [route.id]: {
+                positions: data.coordinates,
+                distanceKm: data.distanceKm,
+                durationMins: data.durationMins,
+                isRoadSnapped: data.isRoadSnapped ?? true,
+              },
+            }));
+          }
+        })
+        .catch((err) => {
+          console.warn("[LiveMap] Road route fetch failed:", err);
+        });
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [routePolylines.length]);
+
   // Calculate default center (Kerala or first marker)
   const defaultCenter: [number, number] =
     focusCoords ||
@@ -243,30 +295,46 @@ export default function LiveMap({
           className="map-tiles"
         />
 
-        {/* 1. Route Polylines Connecting Workers to Destination Sites */}
-        {routePolylines.map((route) => (
-          <Polyline
-            key={route.id}
-            positions={route.positions}
-            pathOptions={{
-              color: "#3b82f6",
-              weight: 3.5,
-              opacity: 0.85,
-              dashArray: "6, 8",
-            }}
-          >
-            <Popup className="custom-popup">
-              <div className="p-1 text-xs space-y-1">
-                <span className="font-bold text-blue-600 block">
-                  Route: {route.workerName} → {route.siteLocation}
-                </span>
-                <span className="text-slate-600 font-mono">
-                  Distance: {route.distanceKm} km (straight-line)
-                </span>
-              </div>
-            </Popup>
-          </Polyline>
-        ))}
+        {/* 1. Route Polylines Connecting Workers to Destination Sites (Following Roads) */}
+        {routePolylines.map((route) => {
+          const road = roadRoutes[route.id];
+          const positions = road?.positions?.length ? road.positions : route.positions;
+          const dist = road?.distanceKm ?? route.distanceKm;
+          const dur = road?.durationMins;
+          return (
+            <Polyline
+              key={route.id}
+              positions={positions}
+              pathOptions={{
+                color: "#2563eb",
+                weight: 4.5,
+                opacity: 0.9,
+                dashArray: road?.isRoadSnapped ? undefined : "6, 8",
+              }}
+            >
+              <Popup className="custom-popup">
+                <div className="p-1 text-xs space-y-1">
+                  <span className="font-bold text-blue-600 block">
+                    Route: {route.workerName} → {route.siteLocation}
+                  </span>
+                  <div className="text-slate-600 font-mono space-y-0.5">
+                    <div>
+                      Distance: <strong>{dist} km</strong>{" "}
+                      <span className="text-[10px] text-emerald-600 font-semibold">
+                        {road?.isRoadSnapped ? "(Road Routed)" : "(Direct)"}
+                      </span>
+                    </div>
+                    {dur && dur > 0 && (
+                      <div className="text-slate-500">
+                        Est. Drive Time: ~{dur} mins
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Popup>
+            </Polyline>
+          );
+        })}
 
         {/* 2. Job Site Markers (Violet) */}
         {siteMarkers.map((m) => (

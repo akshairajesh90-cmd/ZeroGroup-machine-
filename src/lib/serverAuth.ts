@@ -33,7 +33,7 @@ export async function requireAuth(options?: { allowedRoles?: Role[]; redirectOnF
     throw new AuthError(statusCode, msg);
   };
 
-  if (!session?.user?.email) {
+  if (!session?.user || (!session.user.email && !session.user.id)) {
     fail(401, "Unauthenticated");
   }
 
@@ -41,14 +41,19 @@ export async function requireAuth(options?: { allowedRoles?: Role[]; redirectOnF
   if (process.env.CLI_TEST_ROLE) {
     return {
       userId: process.env.CLI_TEST_USER_ID || "cli-user",
-      email: session.user.email,
+      email: session.user.email || "cli@ironrent.test",
       role: process.env.CLI_TEST_ROLE as Role,
       employeeId: process.env.CLI_TEST_EMPLOYEE_ID || "cli-emp",
     };
   }
 
-  const currentUser = await prisma.user.findUnique({
-    where: { email: session!.user!.email! },
+  const currentUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        ...(session.user.email ? [{ email: session.user.email }] : []),
+        ...(session.user.id ? [{ id: session.user.id }] : []),
+      ]
+    },
     include: { employee: true },
   });
 
@@ -57,25 +62,25 @@ export async function requireAuth(options?: { allowedRoles?: Role[]; redirectOnF
     throw new AuthError(401, "User not found in database");
   }
 
-  if (!currentUser.employee) {
+  if (!currentUser.employee && !["OWNER", "ADMIN"].includes(currentUser.role)) {
     if (shouldRedirect) redirect("/api/auth/force-logout");
     throw new AuthError(401, "No employee profile linked to user");
   }
 
   if (options?.allowedRoles && options.allowedRoles.length > 0) {
-    if (!options.allowedRoles.includes(currentUser!.role)) {
+    if (!options.allowedRoles.includes(currentUser.role)) {
       if (shouldRedirect) redirect("/admin/dashboard");
       throw new AuthError(403, "Insufficient role");
     }
   }
 
   return {
-    userId: currentUser!.id,
-    email: currentUser!.email,
-    role: currentUser!.role,
-    employeeId: currentUser!.employee!.id,
-    originalAdminId: (session!.user as any).originalAdminId,
-    isImpersonating: (session!.user as any).isImpersonating,
+    userId: currentUser.id,
+    email: currentUser.email,
+    role: currentUser.role,
+    employeeId: currentUser.employee?.id ?? currentUser.id,
+    originalAdminId: (session.user as any).originalAdminId,
+    isImpersonating: (session.user as any).isImpersonating,
   };
 }
 

@@ -150,6 +150,7 @@ export async function restoreEmployee(targetEmployeeId: string) {
     safeRevalidate("/staff/operators");
     safeRevalidate("/staff/drivers");
     safeRevalidate("/staff/workers");
+    safeRevalidate("/staff/crew");
     safeRevalidate("/staff/employees");
     safeRevalidate("/admin/staff");
     return { success: true };
@@ -247,10 +248,12 @@ export async function softDeleteEmployee(targetEmployeeId: string) {
     });
 
     safeRevalidate("/staff/credentials");
+    safeRevalidate("/staff/crew");
     safeRevalidate("/admin/credentials");
     safeRevalidate("/staff/operators");
     safeRevalidate("/staff/drivers");
     safeRevalidate("/staff/workers");
+    safeRevalidate("/staff/crew");
     safeRevalidate("/staff/employees");
     safeRevalidate("/admin/staff");
     safeRevalidate("/admin/trash");
@@ -410,6 +413,7 @@ export async function toggleEmployeeActiveStatus(targetEmployeeId: string, isAct
       }
     });
 
+    safeRevalidate("/staff/crew");
     safeRevalidate("/staff/employees");
     safeRevalidate("/staff/drivers");
     safeRevalidate("/staff/workers");

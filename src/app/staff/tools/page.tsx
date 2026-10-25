@@ -167,7 +167,18 @@ export default async function ToolsInventoryPage() {
                               Out of Stock
                             </span>
                           )}
-                          <EditToolModal tool={tool} />
+                          <EditToolModal
+                            tool={{
+                              id: tool.id,
+                              name: tool.name,
+                              toolId: tool.toolId,
+                              toolType: tool.toolType,
+                              totalInventory: tool.totalInventory,
+                              repairCount: tool.repairCount,
+                              dailyRate: Number(tool.dailyRate || 0),
+                              isActive: tool.isActive,
+                            }}
+                          />
                           <ToggleToolStatusButton toolId={tool.id} toolName={tool.name} isActive={tool.isActive ?? true} />
                           <DeleteToolButton toolId={tool.id} toolName={tool.name} />
                         </div>

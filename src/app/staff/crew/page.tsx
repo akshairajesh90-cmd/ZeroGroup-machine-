@@ -34,6 +34,7 @@ export default async function StaffCrewPage() {
     role: e.role,
     phone: e.phone ?? null,
     profilePhotoUrl: e.profilePhotoUrl ?? null,
+    isActive: e.isActive ?? true,
     operatorType: e.operatorType || "INTERNAL",
     contractorCoName: e.contractorCoName || null,
     defaultCrewRole: e.defaultCrewRole || null,

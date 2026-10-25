@@ -9,6 +9,8 @@ import {
   createQuickCustomer
 } from "@/actions/dispatch";
 import { CreateDispatchModalV2 } from "@/components/dispatch/CreateDispatchModalV2";
+import { EditDispatchModal } from "@/components/dispatch/EditDispatchModal";
+import { StatusChangeModal } from "@/components/dispatch/StatusChangeModal";
 import DispatchBillingModal from "@/components/admin/DispatchBillingModal";
 import { SiteLaborDisbursementReview } from "./SiteLaborDisbursementReview";
 import ToolReturnModal from "@/components/ToolReturnModal";
@@ -89,6 +91,8 @@ export default function DispatchBoardClient({
   const [showNewModal, setShowNewModal] = useState(false);
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
   const [viewMode, setViewMode] = useState<"TABLE" | "GRID">("TABLE");
+  const [statusModalDispatch, setStatusModalDispatch] = useState<any | null>(null);
+  const [statusModalTarget, setStatusModalTarget] = useState<"CANCELLED" | "POSTPONED" | "PENDING">("CANCELLED");
 
   const searchParams = useSearchParams();
   const urlView = (searchParams.get("view") || "month") as "month" | "week" | "day";
@@ -564,8 +568,24 @@ export default function DispatchBoardClient({
       setToolQuantities(toolQs);
     }
     
-    setShowNewModal(true);
+    // Opens EditDispatchModal directly via editingDispatch state
   };
+
+  const [closedEditId, setClosedEditId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId) {
+      if (closedEditId) setClosedEditId(null);
+      return;
+    }
+    if (editId && editId !== closedEditId && dispatches.length > 0 && (!editingDispatch || editingDispatch.id !== editId)) {
+      const target = dispatches.find((d: any) => d.id === editId);
+      if (target) {
+        handleEditDispatch(target);
+      }
+    }
+  }, [searchParams, dispatches, closedEditId, editingDispatch]);
 
   useEffect(() => {
     let start: Date;
@@ -662,16 +682,14 @@ export default function DispatchBoardClient({
   };
 
   const handleStatusChange = async (dispatchObj: any, status: string) => {
+    if (status === "CANCELLED" || status === "POSTPONED" || status === "PENDING") {
+      setStatusModalDispatch(dispatchObj);
+      setStatusModalTarget(status as any);
+      return;
+    }
     const id = dispatchObj.id;
     let reason = undefined;
-    if (status === "CANCELLED" || status === "POSTPONED") {
-      const promptRes = window.prompt(`Mandatory Audit Reason to ${status} this job:`);
-      if (!promptRes || promptRes.trim().length < 3) {
-        alert("Action aborted: You must enter a valid reason (at least 3 characters).");
-        return;
-      }
-      reason = promptRes.trim();
-    }
+    
 
     // Intercept COMPLETED status — open the per-tool return checklist
     if (status === "COMPLETED" && dispatchObj.dispatchTools && dispatchObj.dispatchTools.length > 0) {
@@ -1047,7 +1065,7 @@ export default function DispatchBoardClient({
                           )}
                           {d.hasTrollyBench && (
                             <span className="bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-lg font-bold text-xs flex items-center gap-1">
-                              <span>Trolly + Bench Stand</span>
+                              <span>1-Wheel Trolly + Bench ({d.trollyWorkerCount || 1} unit{Number(d.trollyWorkerCount || 1) > 1 ? "s" : ""})</span>
                             </span>
                           )}
                         </div>
@@ -1071,8 +1089,28 @@ export default function DispatchBoardClient({
                         </div>
 
                         {/* Status updates */}
+                        {(d.status === "CANCELLED" || d.status === "POSTPONED") && (
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => handleStatusChange(d, "PENDING")}
+                              className="px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 transition-colors font-bold text-[10px]"
+                            >
+                              ↺ Re-activate Job
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleStatusChange(d, "POSTPONED")}
+                              className="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-colors font-bold text-[10px]"
+                            >
+                              📅 Reschedule
+                            </button>
+                          </div>
+                        )}
                         {d.status !== "CANCELLED" && d.status !== "POSTPONED" && d.status !== "COMPLETED" && (
                           <div className="relative group flex items-center gap-1.5 pt-1">
+                            <button type="button" onClick={() => handleStatusChange(d, "CANCELLED")} className="px-2 py-1 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 font-bold text-[10px]">Cancel Job</button>
+                            <button type="button" onClick={() => handleStatusChange(d, "POSTPONED")} className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 font-bold text-[10px]">Postpone</button>
                             <button className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-1.5 rounded-lg text-[11px] transition-all">
                               Update Status
                             </button>
@@ -1116,7 +1154,7 @@ export default function DispatchBoardClient({
                                 >
                                   <CheckCircle2 className="w-3 h-3" /> Mark Finished
                                 </button>
-                                {d.status === "COMPLETED" && !d.invoiceId && (
+                                {!d.invoiceId && (
                                   <button
                                     onClick={() => {
                                       window.location.href = `/staff/billing/${d.id}`;
@@ -1216,10 +1254,13 @@ export default function DispatchBoardClient({
                 ) : (
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleGenerateBill(group.id)}
+                      onClick={() => {
+                        const primaryRow = group.childDispatches?.find((d: any) => d.isPrimaryBillingRow) || group.childDispatches?.[0] || group;
+                        window.location.href = `/staff/billing/${primaryRow.id}`;
+                      }}
                       className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow"
                     >
-                      Generate Group Bill
+                      Generate Bill
                     </button>
                     <button
                       onClick={() => {
@@ -1234,6 +1275,16 @@ export default function DispatchBoardClient({
                     >
                       Edit Group Bill
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const primaryRow = group.childDispatches?.find((d: any) => d.isPrimaryBillingRow) || group.childDispatches?.[0] || group;
+                        handleEditDispatch(primaryRow);
+                      }}
+                      className="w-full mt-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow"
+                    >
+                      Edit Dispatch
+                    </button>
                   </div>
                 )}
               </div>
@@ -1242,6 +1293,54 @@ export default function DispatchBoardClient({
         </div>
       )}
       </div>
+      )}
+
+      {editingDispatch && (
+        <EditDispatchModal
+          dispatch={editingDispatch}
+          machines={machines}
+          employees={employees}
+          tools={tools}
+          vehicles={vehicles}
+          customers={customersList}
+          onClose={() => {
+            setClosedEditId(editingDispatch.id);
+            setEditingDispatch(null);
+            if (typeof window !== "undefined") {
+              const params = new URLSearchParams(window.location.search);
+              if (params.has("edit")) {
+                params.delete("edit");
+                const newQuery = params.toString();
+                router.replace(newQuery ? `?${newQuery}` : window.location.pathname, { scroll: false });
+              }
+            }
+          }}
+          onSuccess={() => {
+            setClosedEditId(editingDispatch.id);
+            setEditingDispatch(null);
+            if (typeof window !== "undefined") {
+              const params = new URLSearchParams(window.location.search);
+              if (params.has("edit")) {
+                params.delete("edit");
+                const newQuery = params.toString();
+                router.replace(newQuery ? `?${newQuery}` : window.location.pathname, { scroll: false });
+              }
+            }
+            window.location.reload();
+          }}
+        />
+      )}
+
+      {statusModalDispatch && (
+        <StatusChangeModal
+          dispatch={statusModalDispatch}
+          targetStatus={statusModalTarget}
+          onClose={() => setStatusModalDispatch(null)}
+          onSuccess={() => {
+            setStatusModalDispatch(null);
+            window.location.reload();
+          }}
+        />
       )}
 
       {showNewModal && (

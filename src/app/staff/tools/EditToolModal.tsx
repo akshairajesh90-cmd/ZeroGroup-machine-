@@ -21,7 +21,7 @@ export function EditToolModal({ tool }: { tool: any }) {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await editTool(tool.id, {
+      const res = await editTool(tool.id, {
         name: formData.name,
         toolId: formData.toolId,
         toolType: formData.toolType,
@@ -30,10 +30,15 @@ export function EditToolModal({ tool }: { tool: any }) {
         dailyRate: parseFloat(formData.dailyRate as any) || 0,
         isActive: formData.isActive,
       });
-      setIsOpen(false);
-    } catch (error) {
+      if (res?.success) {
+        setIsOpen(false);
+        window.location.reload();
+      } else {
+        alert(res?.error || "Failed to edit tool");
+      }
+    } catch (error: any) {
       console.error(error);
-      alert("Failed to edit tool");
+      alert(error?.message || "Failed to edit tool");
     } finally {
       setIsLoading(false);
     }

@@ -40,6 +40,7 @@ export const authConfig = {
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
+        token.email = user.email;
         token.role = user.role;
         token.employeeId = user.employeeId;
         token.sessionTokenVersion = (user as any).sessionTokenVersion || 1;
@@ -67,6 +68,9 @@ export const authConfig = {
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = String(token.id);
+        if (token.email) {
+          session.user.email = String(token.email);
+        }
         session.user.role = token.role as Role;
         session.user.employeeId = typeof token.employeeId === "string" ? token.employeeId : null;
         (session.user as any).sessionTokenVersion = token.sessionTokenVersion;

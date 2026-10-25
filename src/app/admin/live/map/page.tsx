@@ -174,6 +174,58 @@ export default async function LiveMapPage({
     });
   });
 
+  // Fallback: If any field employee has no pings in the current window (e.g. view=today but pings from previous shift),
+  // fetch their latest recorded location pings so their GPS trail ALWAYS appears!
+  const employeesNeedingTrails = fieldEmployees
+    .filter((emp) => !routeTrails[emp.id] || routeTrails[emp.id].length === 0)
+    .map((emp) => emp.id);
+
+  if (employeesNeedingTrails.length > 0) {
+    const historicalPings = await prisma.locationPing.findMany({
+      where: {
+        employeeId: { in: employeesNeedingTrails },
+      },
+      orderBy: { timestamp: "asc" },
+      take: 1000,
+      select: {
+        id: true,
+        employeeId: true,
+        latitude: true,
+        longitude: true,
+        accuracy: true,
+        speed: true,
+        altitude: true,
+        timestamp: true,
+      },
+    });
+
+    historicalPings.forEach((p) => {
+      if (!routeTrails[p.employeeId]) {
+        routeTrails[p.employeeId] = [];
+      }
+      routeTrails[p.employeeId].push({
+        lat: Number(p.latitude),
+        lng: Number(p.longitude),
+        time: p.timestamp.toISOString(),
+        speed: p.speed,
+      });
+    });
+  }
+
+  // Ensure every employee with a known GPS position has at least one waypoint
+  fieldEmployees.forEach((emp) => {
+    if ((!routeTrails[emp.id] || routeTrails[emp.id].length === 0) && emp.lastLatitude && emp.lastLongitude) {
+      routeTrails[emp.id] = [
+        {
+          lat: Number(emp.lastLatitude),
+          lng: Number(emp.lastLongitude),
+          time: emp.lastLocationUpdate ? emp.lastLocationUpdate.toISOString() : new Date().toISOString(),
+          speed: emp.role === "DRIVER" ? 24 : 0,
+        },
+      ];
+    }
+  });
+
   // ── Serialize employee GPS pins ───────────────────────────────────────────
   const employeePins = fieldEmployees
     .filter((e) => e.lastLatitude !== null && e.lastLongitude !== null)

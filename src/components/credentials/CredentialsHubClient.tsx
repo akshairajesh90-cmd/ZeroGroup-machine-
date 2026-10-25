@@ -139,8 +139,34 @@ export const ALL_CREW_ROLES: { value: CrewRole; label: string }[] = [
   { value: "PANI_HELPER" as CrewRole, label: "General Helper (Pani / Site Labour)" },
 ];
 
+export type OperationalRoleKey =
+  | "OPERATOR"
+  | "WORKER_LEADER"
+  | "WORKER"
+  | "SUB_LEADER"
+  | "HELPER"
+  | "DRIVER"
+  | "STAFF"
+  | "ADMIN"
+  | "OWNER";
+
+export function getOperationalRoleKey(role: Role, capableRoles: CrewRole[]): OperationalRoleKey {
+  if (role === "DRIVER") return "DRIVER";
+  if (role === "STAFF") return "STAFF";
+  if (role === "ADMIN") return "ADMIN";
+  if (role === "OWNER") return "OWNER";
+  if (capableRoles.includes("WORKER_LEADER")) return "WORKER_LEADER";
+  if (capableRoles.includes("SUB_LEADER")) return "SUB_LEADER";
+  if (capableRoles.includes("HELPER") || capableRoles.includes("PANI_HELPER")) return "HELPER";
+  if (role === "WORKER") return "WORKER";
+  return "OPERATOR";
+}
+
 export const SYSTEM_ROLE_DEFINITIONS: {
-  value: Role;
+  value: OperationalRoleKey;
+  systemRole: Role;
+  operatorType: "INTERNAL" | "SUBCONTRACTOR";
+  defaultSkill?: CrewRole;
   label: string;
   subtitle: string;
   badge: string;
@@ -150,6 +176,8 @@ export const SYSTEM_ROLE_DEFINITIONS: {
 }[] = [
   {
     value: "OPERATOR",
+    systemRole: "OPERATOR",
+    operatorType: "INTERNAL",
     label: "Operator / Company Worker (Our Internal Worker)",
     subtitle: "Internal payroll employee / machine technician",
     badge: "Company Internal",
@@ -158,8 +186,22 @@ export const SYSTEM_ROLE_DEFINITIONS: {
     info: "Internal ZERO GROUP Worker: Directly on company payroll with role-specific daily or monthly wages.",
   },
   {
+    value: "WORKER_LEADER",
+    systemRole: "OPERATOR",
+    operatorType: "INTERNAL",
+    defaultSkill: "WORKER_LEADER",
+    label: "Company Site Leader (Our Company Leader)",
+    subtitle: "Company lead supervisor managing site pouring & internal crew",
+    badge: "Our Company Leader",
+    badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+    bannerColor: "bg-emerald-950/40 border-emerald-800/60 text-emerald-300",
+    info: "Our Company Leader: Internal site foreman supervising concrete pouring operations, equipment, and crew allocations.",
+  },
+  {
     value: "WORKER",
-    label: "Outside Worker (Labour Provider / Sub-Contractor)",
+    systemRole: "WORKER",
+    operatorType: "SUBCONTRACTOR",
+    label: "Outside Worker (Labour Provider / Vendor Labour)",
     subtitle: "External contractor labour / third-party crew",
     badge: "Outside Worker",
     badgeColor: "bg-amber-500/20 text-amber-300 border-amber-500/40",
@@ -167,7 +209,34 @@ export const SYSTEM_ROLE_DEFINITIONS: {
     info: "Outside Worker: Supplied by labour contractors / worker providers. Billed at flat daily rate.",
   },
   {
+    value: "SUB_LEADER",
+    systemRole: "WORKER",
+    operatorType: "SUBCONTRACTOR",
+    defaultSkill: "SUB_LEADER",
+    label: "Sub Leader (Worker Provider / Labour Contractor)",
+    subtitle: "Labour contractor lead managing external workforce",
+    badge: "Worker Provider",
+    badgeColor: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+    bannerColor: "bg-amber-950/40 border-amber-800/60 text-amber-300",
+    info: "Sub Leader: Labour contractor / worker provider lead overseeing external supplied manpower.",
+  },
+  {
+    value: "HELPER",
+    systemRole: "WORKER",
+    operatorType: "SUBCONTRACTOR",
+    defaultSkill: "HELPER",
+    label: "General Helper / Pani Helper (Site Labour)",
+    subtitle: "Material handling, aggregate shoveling, water hose supply & curing",
+    badge: "Site Labour (Pani)",
+    badgeColor: "bg-blue-500/20 text-blue-300 border-blue-500/40",
+    bannerColor: "bg-blue-950/40 border-blue-800/60 text-blue-300",
+    info: "Site Helper (Pani / Work): General site support, material handling, water curing, and mixer washout.",
+  },
+  {
     value: "DRIVER",
+    systemRole: "DRIVER",
+    operatorType: "INTERNAL",
+    defaultSkill: "DRIVER",
     label: "Fleet Driver (Transit / Delivery Operator)",
     subtitle: "Vehicle & machinery logistics transit",
     badge: "Fleet Driver",
@@ -177,6 +246,8 @@ export const SYSTEM_ROLE_DEFINITIONS: {
   },
   {
     value: "STAFF",
+    systemRole: "STAFF",
+    operatorType: "INTERNAL",
     label: "Office Staff (Operations & Dispatch)",
     subtitle: "Billing, crew scheduling & customer coordination",
     badge: "Office Staff",
@@ -186,6 +257,8 @@ export const SYSTEM_ROLE_DEFINITIONS: {
   },
   {
     value: "ADMIN",
+    systemRole: "ADMIN",
+    operatorType: "INTERNAL",
     label: "System Administrator",
     subtitle: "Full operational access, reports & employee credential control",
     badge: "System Admin",
@@ -195,6 +268,8 @@ export const SYSTEM_ROLE_DEFINITIONS: {
   },
   {
     value: "OWNER",
+    systemRole: "OWNER",
+    operatorType: "INTERNAL",
     label: "Business Owner / Executive",
     subtitle: "Executive oversight, financial settlements & security",
     badge: "Executive",
@@ -252,6 +327,7 @@ export default function CredentialsHubClient({
   const [formEmail, setFormEmail] = useState("");
   const [formPhone, setFormPhone] = useState("");
   const [formPassword, setFormPassword] = useState("zero123");
+  const [formOperationalRole, setFormOperationalRole] = useState<OperationalRoleKey>("OPERATOR");
   const [formRole, setFormRole] = useState<Role>("OPERATOR");
   const [formAddress, setFormAddress] = useState("");
   const [formLicense, setFormLicense] = useState("");
@@ -275,12 +351,12 @@ export default function CredentialsHubClient({
   const isOwner = currentUserRole === "OWNER";
   const isAdminOrOwner = currentUserRole === "ADMIN" || isOwner;
 
-  // Filter available roles to assign
-  const creatableRoles: Role[] = isOwner
-    ? ["OPERATOR", "WORKER", "DRIVER", "STAFF", "ADMIN", "OWNER"]
+  // Filter available operational roles to assign
+  const creatableOperationalRoles: OperationalRoleKey[] = isOwner
+    ? ["OPERATOR", "WORKER_LEADER", "WORKER", "SUB_LEADER", "HELPER", "DRIVER", "STAFF", "ADMIN", "OWNER"]
     : isAdminOrOwner
-    ? ["OPERATOR", "WORKER", "DRIVER", "STAFF", "ADMIN"]
-    : ["OPERATOR", "WORKER", "DRIVER", "STAFF"];
+    ? ["OPERATOR", "WORKER_LEADER", "WORKER", "SUB_LEADER", "HELPER", "DRIVER", "STAFF", "ADMIN"]
+    : ["OPERATOR", "WORKER_LEADER", "WORKER", "SUB_LEADER", "HELPER", "DRIVER", "STAFF"];
 
   // Toggle Password Visibility
   const toggleRevealPassword = (empId: string) => {
@@ -334,6 +410,7 @@ export default function CredentialsHubClient({
     setFormEmail("");
     setFormPhone("");
     setFormPassword("zero123");
+    setFormOperationalRole("OPERATOR");
     setFormRole("OPERATOR");
     setFormAddress("");
     setFormLicense("");
@@ -411,12 +488,15 @@ export default function CredentialsHubClient({
     setSelectedEmp(emp);
     setFormName(emp.name);
     setFormPhone(emp.phone);
+    const opKey = getOperationalRoleKey(emp.role, emp.capableRoles || []);
+    setFormOperationalRole(opKey);
     setFormRole(emp.role);
     setFormAddress(emp.address || "");
     setFormLicense(emp.drivingLicenseNumber || "");
     setFormAadhaar(emp.officialIdNumber || "");
     setFormSkills(emp.capableRoles || []);
-    setShowLicenseField(Boolean(emp.drivingLicenseNumber));
+    const isDriver = emp.role === "DRIVER" || (emp.capableRoles || []).includes("DRIVER");
+    setShowLicenseField(isDriver || Boolean(emp.drivingLicenseNumber));
     setActionError(null);
     setIsEditOpen(true);
   };
@@ -634,7 +714,12 @@ export default function CredentialsHubClient({
       emp.employeeCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
       emp.drivingLicenseNumber.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesRole = roleFilter === "ALL" || emp.role === roleFilter;
+    const matchesRole =
+      roleFilter === "ALL" ||
+      emp.role === roleFilter ||
+      (roleFilter === "WORKER_LEADER" && (emp.capableRoles || []).includes("WORKER_LEADER")) ||
+      (roleFilter === "SUB_LEADER" && (emp.capableRoles || []).includes("SUB_LEADER")) ||
+      (roleFilter === "HELPER" && ((emp.capableRoles || []).includes("HELPER") || (emp.capableRoles || []).includes("PANI_HELPER")));
 
     const matchesVerification =
       verificationFilter === "ALL" ||
@@ -856,9 +941,12 @@ export default function CredentialsHubClient({
             className="bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-xl px-3 py-2 outline-none font-semibold"
           >
             <option value="ALL">All Roles</option>
-            <option value="DRIVER">Drivers</option>
-            <option value="OPERATOR">Operators</option>
-            <option value="WORKER">Workers</option>
+            <option value="OPERATOR">Operators / Company Workers</option>
+            <option value="WORKER_LEADER">Company Site Leaders</option>
+            <option value="WORKER">Outside Workers</option>
+            <option value="SUB_LEADER">Sub Leaders (Worker Providers)</option>
+            <option value="HELPER">General Helpers (Pani)</option>
+            <option value="DRIVER">Fleet Drivers</option>
             <option value="STAFF">Office Staff</option>
             {isAdminOrOwner && <option value="ADMIN">Administrators</option>}
           </select>
@@ -947,11 +1035,15 @@ export default function CredentialsHubClient({
                                 ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
                                 : "bg-amber-500/15 text-amber-300 border-amber-500/30"
                             }`}>
-                              {emp.role === "OPERATOR"
-                                ? "Operator (Company Worker)"
-                                : emp.role === "WORKER"
-                                ? "Outside Worker"
-                                : emp.role}
+                              {(() => {
+                                if (emp.capableRoles?.includes("WORKER_LEADER")) return "Company Site Leader";
+                                if (emp.capableRoles?.includes("SUB_LEADER")) return "Sub Leader (Worker Provider)";
+                                if (emp.capableRoles?.includes("HELPER") || emp.capableRoles?.includes("PANI_HELPER")) return "General Helper (Pani)";
+                                if (emp.role === "OPERATOR") return "Operator (Company Worker)";
+                                if (emp.role === "WORKER") return "Outside Worker";
+                                if (emp.role === "DRIVER") return "Fleet Driver";
+                                return emp.role;
+                              })()}
                             </span>
                             {emp.operatorType && (
                               <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${
@@ -1522,23 +1614,45 @@ export default function CredentialsHubClient({
                 )}
               </div>
 
-              {/* ── Step 2: System Role Selection ─────────────────────────── */}
+              {/* ── Step 2: System Role & Operational Designation Selection ── */}
               <div className="pt-2 border-t border-slate-800/60 space-y-2">
                 <label className="block text-xs font-semibold text-slate-300">
-                  System Role & Employment Classification <span className="text-rose-400">*</span>
+                  System Role & Operational Designation <span className="text-rose-400">*</span>
                 </label>
                 <select
-                  value={formRole}
+                  value={formOperationalRole}
                   onChange={(e) => {
-                    const newRole = e.target.value as Role;
-                    setFormRole(newRole);
-                    if (newRole === "DRIVER") {
+                    const newOpRole = e.target.value as OperationalRoleKey;
+                    setFormOperationalRole(newOpRole);
+                    const def = SYSTEM_ROLE_DEFINITIONS.find((d) => d.value === newOpRole);
+                    if (!def) return;
+
+                    setFormRole(def.systemRole);
+
+                    // Clean previous operational role skills and sync new default skill
+                    const operationalSkills: CrewRole[] = ["WORKER_LEADER", "SUB_LEADER", "HELPER", "PANI_HELPER", "DRIVER"];
+                    setFormSkills((prev) => {
+                      const cleaned = prev.filter((s) => !operationalSkills.includes(s));
+                      if (def.defaultSkill === "HELPER") {
+                        return Array.from(new Set([...cleaned, "HELPER", "PANI_HELPER"]));
+                      }
+                      if (def.defaultSkill) {
+                        return Array.from(new Set([...cleaned, def.defaultSkill]));
+                      }
+                      return cleaned;
+                    });
+
+                    // Driving License visibility: ONLY show if DRIVER
+                    if (newOpRole === "DRIVER") {
                       setShowLicenseField(true);
+                    } else {
+                      setShowLicenseField(false);
+                      setFormLicense("");
                     }
                   }}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white font-semibold outline-none focus:border-indigo-500 text-xs transition-colors"
                 >
-                  {creatableRoles.map((r) => {
+                  {creatableOperationalRoles.map((r) => {
                     const def = SYSTEM_ROLE_DEFINITIONS.find((d) => d.value === r);
                     return (
                       <option key={r} value={r}>
@@ -1550,16 +1664,17 @@ export default function CredentialsHubClient({
 
                 {/* Active Role Descriptive Banner */}
                 {(() => {
-                  const currentDef = SYSTEM_ROLE_DEFINITIONS.find((d) => d.value === formRole);
+                  const currentDef = SYSTEM_ROLE_DEFINITIONS.find((d) => d.value === formOperationalRole);
                   if (!currentDef) return null;
                   return (
                     <div className={`p-2.5 rounded-xl border text-[11px] flex items-center justify-between gap-2 ${currentDef.bannerColor}`}>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${currentDef.badgeColor}`}>
-                          {currentDef.badge}
-                        </span>
-                        <span className="leading-tight">{currentDef.info}</span>
+                      <div className="space-y-0.5">
+                        <span className="font-bold text-[11px] block">{currentDef.label}</span>
+                        <span className="text-[10px] opacity-90 block">{currentDef.info}</span>
                       </div>
+                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border shrink-0 ${currentDef.badgeColor}`}>
+                        {currentDef.badge}
+                      </span>
                     </div>
                   );
                 })()}
@@ -1567,8 +1682,8 @@ export default function CredentialsHubClient({
 
               {/* ── Step 3: Conditional Driving License Field ─────────────── */}
               {(() => {
-                const isDriverRoleOrSkill = formRole === "DRIVER" || formSkills.includes("DRIVER");
-                const isLicenseVisible = isDriverRoleOrSkill || showLicenseField || Boolean(formLicense);
+                const isDriverRoleOrSkill = formOperationalRole === "DRIVER" || formRole === "DRIVER" || formSkills.includes("DRIVER");
+                const isLicenseVisible = isDriverRoleOrSkill || showLicenseField;
 
                 if (isLicenseVisible) {
                   return (

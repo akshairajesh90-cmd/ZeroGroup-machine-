@@ -119,6 +119,36 @@ export default function PersonRouteModal({
         )
       : null;
 
+  const [roadInfo, setRoadInfo] = React.useState<{ distanceKm: number; durationMin: number } | null>(null);
+
+  React.useEffect(() => {
+    if (!hasWorkerCoords || !hasSiteCoords) return;
+    let isCancelled = false;
+    fetch("/api/routing/directions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        coordinates: [
+          [person.lastLongitude!, person.lastLatitude!],
+          [destination!.longitude!, destination!.latitude!],
+        ],
+      }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!isCancelled && data && typeof data.distanceKm === "number") {
+          setRoadInfo({
+            distanceKm: data.distanceKm,
+            durationMin: data.durationMin,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isCancelled = true;
+    };
+  }, [person.lastLatitude, person.lastLongitude, destination?.latitude, destination?.longitude]);
+
   const directionsUrl = getDirectionsUrl(
     person.lastLatitude,
     person.lastLongitude,
@@ -227,11 +257,16 @@ export default function PersonRouteModal({
           <div className="space-y-4">
             <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center justify-between">
               <span>Route Origin & Destination</span>
-              {distanceKm !== null && (
-                <span className="text-emerald-400 font-mono text-xs normal-case bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                  Approx. {distanceKm} km straight line
+              {roadInfo ? (
+                <span className="text-emerald-400 font-mono text-xs normal-case bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 flex items-center gap-1.5">
+                  <span>🛣️ {roadInfo.distanceKm} km driving</span>
+                  {roadInfo.durationMin > 0 && <span className="text-zinc-400">• ~{roadInfo.durationMin} mins</span>}
                 </span>
-              )}
+              ) : distanceKm !== null ? (
+                <span className="text-zinc-400 font-mono text-xs normal-case bg-zinc-800 px-2 py-0.5 rounded-md border border-zinc-700">
+                  ~{distanceKm} km straight line
+                </span>
+              ) : null}
             </h4>
 
             <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-gradient-to-b before:from-blue-500 before:via-indigo-500 before:to-emerald-500">

@@ -24,6 +24,8 @@ export default function BillingClient({ dispatch, defaultItems, collectorId }: P
     newItems[index][field] = value;
     if (field === "rate" || field === "quantity") {
       newItems[index].total = Number(newItems[index].rate) * Number(newItems[index].quantity);
+    } else if (field === "total") {
+      newItems[index].total = Number(value);
     }
     setItems(newItems);
   };
@@ -34,6 +36,18 @@ export default function BillingClient({ dispatch, defaultItems, collectorId }: P
 
   const addItem = () => {
     setItems([...items, { itemKey: "CUSTOM", description: "", quantity: 1, rate: 0, total: 0 }]);
+  };
+
+  const addTrollyBench = () => {
+    setItems([...items, { itemKey: "TOOL_TROLLY_1_WHEEL_BENCH", description: "1-Wheel Trolly & Bench", quantity: 1, rate: 1500, total: 1500 }]);
+  };
+
+  const addTrollyToolRent = () => {
+    setItems([...items, { itemKey: "TOOL_TROLLY_1_WHEEL_RENT", description: "1-Wheel Trolly & Bench - Tool Rent", quantity: 1, rate: 1000, total: 1000 }]);
+  };
+
+  const add2WheelTrolly = () => {
+    setItems([...items, { itemKey: "TOOL_TROLLY_2_WHEEL", description: "2-Wheel Trolly (Tools Used)", quantity: 1, rate: 200, total: 200 }]);
   };
 
   const addDistanceSurcharge = () => {
@@ -148,9 +162,18 @@ export default function BillingClient({ dispatch, defaultItems, collectorId }: P
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
               <div>
                 <h2 className="text-lg font-bold text-white">Billable Charges</h2>
-                <p className="text-xs text-zinc-400">Machine base rates are editable below. Adjust rate or add distance surcharge based on distance.</p>
+                <p className="text-xs text-zinc-400">All machine base rates, tools used, and charges below are 100% editable. Modify descriptions, quantities, rates, or totals inline.</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={addTrollyBench} className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full transition-colors">
+                  <Plus className="w-3 h-3" /> 1-Wheel Trolly & Bench (₹1,500)
+                </button>
+                <button type="button" onClick={addTrollyToolRent} className="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 rounded-full transition-colors">
+                  <Plus className="w-3 h-3" /> 1-Wheel Trolly & Bench - Tool Rent (₹1,000)
+                </button>
+                <button type="button" onClick={add2WheelTrolly} className="text-xs font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 bg-purple-500/10 border border-purple-500/20 px-3 py-1.5 rounded-full transition-colors">
+                  <Plus className="w-3 h-3" /> 2-Wheel Trolly (₹200)
+                </button>
                 <button type="button" onClick={addDistanceSurcharge} className="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-full transition-colors">
                   <Plus className="w-3 h-3" /> Distance Surcharge
                 </button>
@@ -180,8 +203,9 @@ export default function BillingClient({ dispatch, defaultItems, collectorId }: P
                         <span>Rate: ₹</span>
                         <input type="number" value={item.rate} onChange={(e) => updateItem(idx, "rate", Number(e.target.value))} className="w-24 bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-white focus:outline-none focus:border-zinc-600" />
                       </div>
-                      <div className="font-bold text-white ml-auto">
-                        Total: ₹{item.total.toLocaleString('en-IN')}
+                      <div className="flex items-center gap-2 ml-auto">
+                        <span className="font-bold text-white">Total: ₹</span>
+                        <input type="number" value={item.total} onChange={(e) => updateItem(idx, "total", Number(e.target.value))} className="w-28 bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-emerald-400 font-bold focus:outline-none focus:border-emerald-500 text-right" />
                       </div>
                     </div>
                   </div>

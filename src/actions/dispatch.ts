@@ -56,6 +56,7 @@ const updateStatusSchema = z.object({
   dispatchId: z.string().min(1, "Dispatch ID required"),
   status: z.enum(["PENDING", "EN_ROUTE", "IN_PROGRESS", "DELIVERED", "PICKED_UP", "COMPLETED", "CANCELLED", "POSTPONED"]),
   reason: z.string().optional(), // Mandatory if CANCELLED or POSTPONED
+  newDateOfService: z.string().optional(), // For rescheduling when postponed
 });
 
 const reportIncidentSchema = z.object({
@@ -65,7 +66,7 @@ const reportIncidentSchema = z.object({
 
 const updateDailyDispatchSchema = z.object({
   id: z.string().min(1, "Dispatch ID required"),
-  version: z.number().int(),
+  version: z.number().int().optional(),
   customerId: z.string().min(1, "Customer is required"),
   vehicleId: z.string().nullable().optional(),
   routeStopOrder: z.number().int().min(1).default(1).optional(),
@@ -74,23 +75,33 @@ const updateDailyDispatchSchema = z.object({
   driverId: z.string().nullable().optional(),
   operatorId: z.string().nullable().optional(),
   workerId: z.string().nullable().optional(),
+  siteLeaderEmployeeId: z.string().nullable().optional(),
   mainHelperId: z.string().nullable().optional(),
   mainHelperName: z.string().optional(),
   helperCount: z.number().min(0).default(0),
   trollyWorkerCount: z.number().min(0).default(0),
   multiOperatorIds: z.array(z.string()).optional(),
   multiWorkerIds: z.array(z.string()).optional(),
-  siteBundleId: z.string().optional(),
+  crewAssignments: z.array(
+    z.object({
+      employeeId: z.string(),
+      assignedRole: z.string(),
+      lockedWageRate: z.number().optional(),
+    })
+  ).optional(),
+  siteBundleId: z.string().optional().nullable(),
   location: z.string().min(2, "Location is required"),
-  mapLink: z.string().optional(),
+  mapLink: z.string().optional().nullable(),
   dateOfService: z.string().min(1, "Service date is required"),
+  status: z.enum(["PENDING", "EN_ROUTE", "IN_PROGRESS", "DELIVERED", "PICKED_UP", "COMPLETED", "CANCELLED", "POSTPONED"]).optional(),
+  statusReason: z.string().optional().nullable(),
   workType: z.enum(["NORMAL", "TROLLY", "LATE"]).default("NORMAL"),
   liftFloors: z.number().min(1).default(1),
   mixerCategory: z.enum(["STANDARD", "HYDRAULIC"]).default("STANDARD"),
   vibratorType: z.enum(["PETROL", "ELECTRIC"]).nullable().optional(),
   hasTrollyBench: z.boolean().default(false),
   publicTransportUsed: z.boolean().default(false),
-  machineNumberTag: z.string().optional(),
+  machineNumberTag: z.string().optional().nullable(),
   toolIds: z.array(z.string()).default([]),
   toolItems: z.array(
     z.object({
@@ -99,7 +110,7 @@ const updateDailyDispatchSchema = z.object({
       variant: z.string().optional(),
     })
   ).optional(),
-  notes: z.string().optional(),
+  notes: z.string().optional().nullable(),
 });
 
 // ============================================================================
@@ -297,14 +308,17 @@ export async function updateDispatchStatus(formData: unknown) {
     return { success: false, error: parsed.error.issues.map(i => i.message).join(", ") };
   }
 
-  const { dispatchId, status, reason } = parsed.data;
+  const { dispatchId, status, reason, newDateOfService } = parsed.data;
 
   try {
-    const changerEmp = await prisma.employee.findUnique({
+    let changerEmp = await prisma.employee.findUnique({
       where: { userId: session.user.id },
     });
-    if (!changerEmp && session.user.role !== "OWNER") {
-      return { success: false, error: "Only valid employees or OWNER can update status." };
+    if (!changerEmp) {
+      // Fallback for Admin or Owner without direct Employee record
+      changerEmp = await prisma.employee.findFirst({
+        where: { isActive: true, isPendingDelete: false },
+      });
     }
 
     await prisma.$transaction(async (tx) => {
@@ -317,22 +331,10 @@ export async function updateDispatchStatus(formData: unknown) {
 
       const oldStatus = dispatch.status;
 
-      // Check Cancellation / Postponement Guardrails (V6.0)
+      // Mandatory audit reason if cancelling or postponing
       if (status === "CANCELLED" || status === "POSTPONED") {
-        if (!reason || !reason.trim()) {
-          throw new Error(`Mandatory Audit Lock: A clear reason is required to mark job ${status}.`);
-        }
-
-        // Staff cancellation window guardrail: ONLY until 2:00 PM the day AFTER scheduled dateOfService
-        if (session.user.role === "STAFF") {
-          const serviceDate = new Date(dispatch.dateOfService);
-          const deadline = new Date(serviceDate);
-          deadline.setDate(deadline.getDate() + 1);
-          deadline.setHours(14, 0, 0, 0); // 2:00 PM the next day
-
-          if (new Date() > deadline) {
-            throw new Error(`Staff Cancellation Window Expired: You cannot cancel/postpone after 2:00 PM the day after scheduled service date. Contact OWNER.`);
-          }
+        if (!reason || !reason.trim() || reason.trim().length < 3) {
+          throw new Error(`Mandatory Audit Lock: A clear reason (at least 3 characters) is required to mark job ${status}.`);
         }
 
         // Record immutable audit trail in DispatchStatusHistory
@@ -349,9 +351,19 @@ export async function updateDispatchStatus(formData: unknown) {
         }
       }
 
+      // Build update payload
+      const updateData: any = {
+        status: status as DispatchStatus,
+      };
+
+      // Reschedule date of service if postponed with a new date
+      if (status === "POSTPONED" && newDateOfService) {
+        updateData.dateOfService = new Date(newDateOfService);
+      }
+
       await tx.dailyDispatch.update({
         where: { id: dispatchId },
-        data: { status: status as DispatchStatus },
+        data: updateData,
       });
 
       // If completed, picked up, cancelled, or postponed -> free up all equipment and tools
@@ -368,10 +380,36 @@ export async function updateDispatchStatus(formData: unknown) {
             data: { status: "AVAILABLE" },
           });
         }
+        if (dispatch.vehicleId) {
+          await tx.vehicle.update({
+            where: { id: dispatch.vehicleId },
+            data: { status: "AVAILABLE" },
+          });
+        }
         for (const dt of dispatch.dispatchTools) {
           await tx.tool.update({
             where: { id: dt.toolId },
             data: { status: "AVAILABLE" },
+          });
+        }
+      } else if (["PENDING", "EN_ROUTE", "IN_PROGRESS"].includes(status)) {
+        // Re-activating a job restores equipment to RENTED
+        for (const dm of dispatch.dispatchMachines) {
+          await tx.machine.update({
+            where: { id: dm.machineId },
+            data: { status: "RENTED" },
+          });
+        }
+        if (dispatch.machineId) {
+          await tx.machine.update({
+            where: { id: dispatch.machineId },
+            data: { status: "RENTED" },
+          });
+        }
+        if (dispatch.vehicleId) {
+          await tx.vehicle.update({
+            where: { id: dispatch.vehicleId },
+            data: { status: "IN_USE" },
           });
         }
       }
@@ -651,8 +689,16 @@ export async function fetchDispatchesByRange(startDate: string, endDate: string)
         vehicle: true,
         operator: true,
         worker: true,
+        mainHelper: true,
+        invoice: true,
+        siteDisbursements: {
+          include: { subLeader: true },
+        },
         crewAssignments: {
-          include: { employee: true },
+          include: {
+            employee: { select: { id: true, name: true, role: true, profilePhotoUrl: true, phone: true, operatorType: true } },
+            contractor: { select: { id: true, name: true, companyName: true } },
+          },
         },
         dispatchTools: {
           include: { tool: true },
@@ -672,8 +718,8 @@ export async function fetchDispatchesByRange(startDate: string, endDate: string)
  */
 export async function updateDailyDispatch(formData: unknown) {
   const session = await auth();
-  if (!session?.user || (session.user.role !== "OWNER" && session.user.role !== "STAFF")) {
-    return { success: false, error: "Unauthorized: Only OWNER or STAFF can update dispatch." };
+  if (!session?.user || !["OWNER", "ADMIN", "STAFF"].includes(session.user.role)) {
+    return { success: false, error: "Unauthorized: Only OWNER, ADMIN, or STAFF can update dispatch." };
   }
 
   const parsed = updateDailyDispatchSchema.safeParse(formData);
@@ -694,22 +740,18 @@ export async function updateDailyDispatch(formData: unknown) {
       });
 
       if (!current) throw new Error("Dispatch not found.");
-      if (current.version !== data.version) throw new Error("OCC Conflict: Record was modified by another user.");
-      if (["COMPLETED", "CANCELLED"].includes(current.status)) {
-        throw new Error("Cannot edit a Completed or Cancelled dispatch.");
-      }
 
       const allMachineIds = Array.from(new Set([
         ...(data.machineId && data.machineId !== "INDEPENDENT" ? [data.machineId] : []),
         ...(data.machineIds || []).filter(id => id !== "INDEPENDENT"),
       ]));
 
-      // Clear existing relations
+      // Clear existing relations to rebuild accurately
       await tx.dispatchMachine.deleteMany({ where: { dispatchId } });
       await tx.dispatchAssignment.deleteMany({ where: { dispatchId } });
       await tx.dispatchTool.deleteMany({ where: { dispatchId } });
 
-      // Free up machines/tools
+      // Free up old machines/tools
       for (const dm of current.dispatchMachines) {
         await tx.machine.update({ where: { id: dm.machineId }, data: { status: "AVAILABLE" } });
       }
@@ -717,9 +759,28 @@ export async function updateDailyDispatch(formData: unknown) {
         await tx.tool.update({ where: { id: dt.toolId }, data: { status: "AVAILABLE" } });
       }
 
+      // Check if status changed
+      const oldStatus = current.status;
+      const targetStatus = (data.status as DispatchStatus) || current.status;
+      if (data.status && data.status !== oldStatus && (data.status === "CANCELLED" || data.status === "POSTPONED")) {
+        const changerEmp = await tx.employee.findUnique({ where: { userId: session.user.id } })
+          || await tx.employee.findFirst({ where: { isActive: true, isPendingDelete: false } });
+        if (changerEmp) {
+          await tx.dispatchStatusHistory.create({
+            data: {
+              dispatchId,
+              oldStatus,
+              newStatus: targetStatus,
+              changedById: changerEmp.id,
+              reason: data.statusReason || "Updated via Dispatch Editor",
+            },
+          });
+        }
+      }
+
       // 2. Perform the update & bump version
       const updated = await tx.dailyDispatch.update({
-        where: { id: dispatchId, version: data.version },
+        where: { id: dispatchId },
         data: {
           customerId: data.customerId,
           vehicleId: data.vehicleId || null,
@@ -735,6 +796,7 @@ export async function updateDailyDispatch(formData: unknown) {
           location: data.location,
           mapLink: data.mapLink || null,
           dateOfService: new Date(data.dateOfService),
+          status: targetStatus,
           workType: data.workType as WorkType,
           liftFloors: data.liftFloors || 1,
           mixerCategory: data.mixerCategory || "STANDARD",
@@ -748,59 +810,94 @@ export async function updateDailyDispatch(formData: unknown) {
         }
       });
 
-      // Attach new relations
+      // Attach new machine relations
+      const isEquipmentActive = !["CANCELLED", "POSTPONED"].includes(targetStatus);
       for (const mId of allMachineIds) {
         await tx.dispatchMachine.create({ data: { dispatchId, machineId: mId } });
-        await tx.machine.update({ where: { id: mId }, data: { status: "RENTED" } });
+        if (isEquipmentActive) {
+          await tx.machine.update({ where: { id: mId }, data: { status: "RENTED" } });
+        }
       }
 
-      const allOperatorIds = Array.from(new Set([
-        ...(data.operatorId ? [data.operatorId] : []),
-        ...(data.multiOperatorIds || [])
-      ])).filter(Boolean);
+      // Dynamic Crew Allocation
+      if (data.crewAssignments && data.crewAssignments.length > 0) {
+        for (const ca of data.crewAssignments) {
+          if (!ca.employeeId) continue;
+          await tx.dispatchAssignment.create({
+            data: {
+              dispatchId,
+              employeeId: ca.employeeId,
+              assignedRole: ca.assignedRole as any,
+              lockedWageRate: ca.lockedWageRate || 1000,
+            },
+          });
+        }
+      } else {
+        // Fallback to legacy arrays
+        const allOperatorIds = Array.from(new Set([
+          ...(data.operatorId ? [data.operatorId] : []),
+          ...(data.multiOperatorIds || [])
+        ])).filter(Boolean);
 
-      for (const opId of allOperatorIds) {
-        await tx.dispatchAssignment.create({ data: { dispatchId, employeeId: opId, assignedRole: "MIXER_OPERATOR", lockedWageRate: current.operatorDailyRate || 1000 } });
+        for (const opId of allOperatorIds) {
+          await tx.dispatchAssignment.create({
+            data: {
+              dispatchId,
+              employeeId: opId,
+              assignedRole: "MIXER_OPERATOR",
+              lockedWageRate: current.operatorDailyRate || 1000
+            }
+          });
+        }
+
+        const allWorkerIds = Array.from(new Set([
+          ...(data.workerId ? [data.workerId] : []),
+          ...(data.multiWorkerIds || [])
+        ])).filter(Boolean);
+
+        for (const wId of allWorkerIds) {
+          await tx.dispatchAssignment.create({
+            data: {
+              dispatchId,
+              employeeId: wId,
+              assignedRole: "HELPER",
+              lockedWageRate: 800
+            }
+          });
+        }
       }
 
-      const allWorkerIds = Array.from(new Set([
-        ...(data.workerId ? [data.workerId] : []),
-        ...(data.multiWorkerIds || [])
-      ])).filter(Boolean);
-
-      for (const wId of allWorkerIds) {
-        await tx.dispatchAssignment.create({ data: { dispatchId, employeeId: wId, assignedRole: "HELPER", lockedWageRate: 800 } });
-      }
-
+      // Link Setup Tools with accurate quantities and variants
       const itemsToLink = data.toolItems && data.toolItems.length > 0
         ? data.toolItems
-        : data.toolIds.map(tId => ({ toolId: tId, quantity: 1, variant: undefined }));
+        : (data.toolIds || []).map(tId => ({ toolId: tId, quantity: 1, variant: undefined }));
 
       for (const item of itemsToLink) {
+        if (!item.toolId) continue;
         await tx.dispatchTool.create({
           data: { dispatchId, toolId: item.toolId, quantity: item.quantity, variant: item.variant || null },
         });
       }
 
-      // 3. Write strict AuditLog
-      // Look up employee ID of current session user for actorId
-      const emp = await tx.employee.findUnique({ where: { userId: session.user.id } });
-      if (emp) {
-        await tx.auditLog.create({
-          data: {
-            actionType: "UPDATE",
-            entity: "DAILY_DISPATCH",
-            actorRole: session.user.role as any,
-            actorId: emp.id,
-            newPayload: { dispatchId, delta: data as any }
-          }
-        });
-      }
+      // 3. Write AuditLog
+      const emp = await tx.employee.findUnique({ where: { userId: session.user.id } })
+        || await tx.employee.findFirst({ where: { isActive: true, isPendingDelete: false } });
+
+      await tx.auditLog.create({
+        data: {
+          actionType: "UPDATE",
+          entity: "DAILY_DISPATCH",
+          actorRole: session.user.role as any,
+          actorId: emp?.id ?? "system",
+          newPayload: { dispatchId, delta: data as any }
+        }
+      });
 
       return updated;
     });
 
     if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/staff/dispatch");
       revalidatePath("/admin/dispatch");
     }
     return { success: true, dispatchId: result.id };

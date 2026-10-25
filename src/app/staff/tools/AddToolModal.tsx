@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from "react";
 import { addTool } from "@/actions/assets";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus, X, Loader2, AlertCircle } from "lucide-react";
 
 export function AddToolModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,22 +14,44 @@ export function AddToolModal() {
   const [totalInventory, setTotalInventory] = useState<number>(1);
   const [dailyRate, setDailyRate] = useState<number>(0);
   const [repairCount, setRepairCount] = useState<number>(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const resetForm = () => {
+    setName("");
+    setToolId("");
+    setToolType("GENERAL");
+    setTotalInventory(1);
+    setDailyRate(0);
+    setRepairCount(0);
+    setErrorMessage(null);
+  };
+
+  const handleOpen = () => {
+    resetForm();
+    setIsOpen(true);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setErrorMessage(null);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+
     startTransition(async () => {
       try {
-        await addTool({ name, toolId, toolType, totalInventory, dailyRate, repairCount });
-        setIsOpen(false);
-        setName("");
-        setToolId("");
-        setToolType("GENERAL");
-        setTotalInventory(1);
-        setDailyRate(0);
-        setRepairCount(0);
-      } catch (error) {
-        console.error(error);
-        alert("Failed to add tool");
+        const res = await addTool({ name, toolId, toolType, totalInventory, dailyRate, repairCount });
+        if (res.success) {
+          handleClose();
+          window.location.reload();
+        } else {
+          setErrorMessage(res.error || "Failed to add asset. Please check the values and try again.");
+        }
+      } catch (error: any) {
+        console.error("AddTool error:", error);
+        setErrorMessage(error?.message || "Failed to add asset. Please try again.");
       }
     });
   };
@@ -37,8 +59,8 @@ export function AddToolModal() {
   return (
     <>
       <button
-        onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-sm font-bold transition-all"
+        onClick={handleOpen}
+        className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-900/20"
       >
         <Plus className="w-4 h-4" />
         Add Tool
@@ -51,10 +73,18 @@ export function AddToolModal() {
               <h3 className="font-bold text-white flex items-center gap-2">
                 <Plus className="w-4 h-4 text-rose-400" /> Add New Asset
               </h3>
-              <button onClick={() => setIsOpen(false)} className="text-zinc-400 hover:text-white">
+              <button onClick={handleClose} className="text-zinc-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {errorMessage && (
+              <div className="mx-4 mt-4 p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-rose-400 mt-0.5 shrink-0" />
+                <div className="font-medium leading-relaxed">{errorMessage}</div>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-zinc-400 uppercase mb-1">Asset Name</label>
@@ -62,8 +92,11 @@ export function AddToolModal() {
                   type="text"
                   required
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Jackhammer"
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
+                  placeholder="e.g. 2 Wheel Trolly"
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500"
                 />
               </div>
@@ -75,9 +108,12 @@ export function AddToolModal() {
                     type="text"
                     required
                     value={toolId}
-                    onChange={(e) => setToolId(e.target.value)}
-                    placeholder="e.g. TL-001"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500"
+                    onChange={(e) => {
+                      setToolId(e.target.value);
+                      if (errorMessage) setErrorMessage(null);
+                    }}
+                    placeholder="e.g. TL-007"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500 font-mono"
                   />
                 </div>
                 <div>
@@ -86,9 +122,12 @@ export function AddToolModal() {
                     type="text"
                     required
                     value={toolType}
-                    onChange={(e) => setToolType(e.target.value)}
-                    placeholder="e.g. GENERAL"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500"
+                    onChange={(e) => {
+                      setToolType(e.target.value);
+                      if (errorMessage) setErrorMessage(null);
+                    }}
+                    placeholder="e.g. TROLLY"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500 uppercase"
                   />
                 </div>
               </div>
@@ -101,7 +140,7 @@ export function AddToolModal() {
                     required
                     min="1"
                     value={totalInventory}
-                    onChange={(e) => setTotalInventory(Number(e.target.value))}
+                    onChange={(e) => setTotalInventory(Math.max(1, parseInt(e.target.value) || 1))}
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500"
                   />
                 </div>
@@ -111,7 +150,7 @@ export function AddToolModal() {
                     type="number"
                     min="0"
                     value={repairCount}
-                    onChange={(e) => setRepairCount(Number(e.target.value))}
+                    onChange={(e) => setRepairCount(Math.max(0, parseInt(e.target.value) || 0))}
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-amber-400 focus:outline-none focus:border-amber-500"
                   />
                 </div>
@@ -124,7 +163,7 @@ export function AddToolModal() {
                   min="0"
                   step="10"
                   value={dailyRate}
-                  onChange={(e) => setDailyRate(Number(e.target.value))}
+                  onChange={(e) => setDailyRate(Math.max(0, parseFloat(e.target.value) || 0))}
                   placeholder="e.g. 150"
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-emerald-400 font-bold focus:outline-none focus:border-emerald-500"
                 />
@@ -133,7 +172,7 @@ export function AddToolModal() {
               <div className="pt-4 flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsOpen(false)}
+                  onClick={handleClose}
                   className="px-4 py-2 text-sm font-bold text-zinc-400 hover:text-white"
                 >
                   Cancel

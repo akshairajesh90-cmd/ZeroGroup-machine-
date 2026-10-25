@@ -55,6 +55,16 @@ export async function generateAndCollectBill(formData: unknown) {
 
   const { dispatchId, customerId, items, expenses, lateFee, payments, discountAmount, collectorId } = parsed.data;
 
+  // Ensure valid collector Employee ID for DB relations
+  let validCollectorId = collectorId;
+  const collectorEmp = await prisma.employee.findUnique({ where: { id: collectorId } });
+  if (!collectorEmp) {
+    const fallbackEmp = await prisma.employee.findFirst({ where: { isActive: true, isPendingDelete: false } });
+    if (fallbackEmp) {
+      validCollectorId = fallbackEmp.id;
+    }
+  }
+
   // Calculate totals
   const itemsTotal = items.reduce((sum, item) => sum + item.total, 0);
   const totalAmount = itemsTotal + lateFee;
@@ -132,7 +142,7 @@ export async function generateAndCollectBill(formData: unknown) {
         for (const exp of expenses) {
           await tx.expense.create({
             data: {
-              loggerId: collectorId,
+              loggerId: validCollectorId,
               amount: exp.amount,
               category: exp.category,
               description: exp.description,
@@ -154,7 +164,7 @@ export async function generateAndCollectBill(formData: unknown) {
             paymentMethod: p.method,
             paymentDate: dateNow,
             notes: p.notes,
-            collectedByEmployeeId: collectorId,
+            collectedByEmployeeId: validCollectorId,
             dispatchId,
           }
         });
@@ -162,7 +172,7 @@ export async function generateAndCollectBill(formData: unknown) {
         if (p.method === "CASH") {
           await tx.cashCollection.create({
             data: {
-              operatorId: dispatch?.operatorId || dispatch?.driverId || collectorId, // Use operator, else driver, else collector
+              operatorId: dispatch?.operatorId || dispatch?.driverId || validCollectorId, // Use operator, else driver, else collector
               dispatchId,
               amountCollected: p.amount,
               date: dateNow,

@@ -31,6 +31,8 @@ import {
   Route,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { adminPingEmployeeLocation } from "@/actions/location";
 
 // Fix Leaflet's default icon path issues in Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -226,7 +228,28 @@ export default function LiveMapClient({
   vehicleCards = [],
   routeTrails = {},
 }: LiveMapClientProps) {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [localTrails, setLocalTrails] = useState<Record<string, RouteWaypoint[]>>(routeTrails);
+  const [isPingingGPS, setIsPingingGPS] = useState(false);
+
+  // Road Routing States
+  const [roadSiteRoute, setRoadSiteRoute] = useState<{
+    empId: string;
+    siteId: string;
+    positions: [number, number][];
+    distanceKm: number;
+    durationMins: number;
+    isRoadSnapped: boolean;
+  } | null>(null);
+  const [isLoadingSiteRoute, setIsLoadingSiteRoute] = useState(false);
+
+  const [roadTrailRoute, setRoadTrailRoute] = useState<{
+    empId: string;
+    positions: [number, number][];
+    isRoadSnapped: boolean;
+  } | null>(null);
+  const [isLoadingTrail, setIsLoadingTrail] = useState(false);
 
   // Search & Filtering State
   const [searchQuery, setSearchQuery] = useState("");
@@ -247,6 +270,10 @@ export default function LiveMapClient({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    setLocalTrails(routeTrails);
+  }, [routeTrails]);
 
   const allEmployees = useMemo(
     () => (employeePins.length > 0 ? employeePins : pins),
@@ -329,7 +356,7 @@ export default function LiveMapClient({
   // Route points for active selected person (historical breadcrumbs)
   const activeRoute = useMemo(() => {
     if (!activeRouteEmpId) return null;
-    const points = routeTrails[activeRouteEmpId] || [];
+    const points = localTrails[activeRouteEmpId] || [];
     if (points.length === 0) return null;
     const targetEmp = allEmployees.find((e) => e.id === activeRouteEmpId);
     return {
@@ -337,7 +364,7 @@ export default function LiveMapClient({
       points,
       positions: points.map((p) => [p.lat, p.lng] as [number, number]),
     };
-  }, [activeRouteEmpId, routeTrails, allEmployees]);
+  }, [activeRouteEmpId, localTrails, allEmployees]);
 
   // Active person-to-site destination route line
   const activePersonSiteRoute = useMemo(() => {
@@ -365,6 +392,138 @@ export default function LiveMapClient({
     };
   }, [selectedPin, sitePins]);
 
+  // Fetch road-snapped route for Person-to-Site Destination Route
+  useEffect(() => {
+    if (!activePersonSiteRoute || !selectedPin) {
+      setRoadSiteRoute(null);
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoadingSiteRoute(true);
+
+    fetch("/api/routing/directions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        origin: [selectedPin.latitude, selectedPin.longitude],
+        destination: [
+          activePersonSiteRoute.site.latitude,
+          activePersonSiteRoute.site.longitude,
+        ],
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isMounted) return;
+        if (data.success && data.coordinates && data.coordinates.length > 0) {
+          setRoadSiteRoute({
+            empId: selectedPin.id,
+            siteId: activePersonSiteRoute.site.id,
+            positions: data.coordinates,
+            distanceKm: data.distanceKm,
+            durationMins: data.durationMins,
+            isRoadSnapped: data.isRoadSnapped ?? true,
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn("[LiveMapClient] Failed to fetch road route:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingSiteRoute(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedPin?.id, selectedPin?.latitude, selectedPin?.longitude, activePersonSiteRoute?.site?.id]);
+
+  // Fetch road-snapped route for Historical GPS Trail
+  useEffect(() => {
+    if (!activeRoute || activeRoute.points.length < 2 || !activeRouteEmpId) {
+      setRoadTrailRoute(null);
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoadingTrail(true);
+
+    fetch("/api/routing/directions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        waypoints: activeRoute.points.map((p) => [p.lat, p.lng]),
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isMounted) return;
+        if (data.success && data.coordinates && data.coordinates.length > 0) {
+          setRoadTrailRoute({
+            empId: activeRouteEmpId,
+            positions: data.coordinates,
+            isRoadSnapped: data.isRoadSnapped ?? true,
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn("[LiveMapClient] Failed to road-snap trail:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingTrail(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeRouteEmpId, activeRoute?.points?.length]);
+
+  // Handler: Ping / Refresh GPS for Employee
+  const handleAdminPingLocation = async () => {
+    if (!selectedPin) return;
+    setIsPingingGPS(true);
+    try {
+      const res = await adminPingEmployeeLocation(selectedPin.id);
+      if (res?.success) {
+        const nowIso = res.lastUpdate!;
+        setSelectedPin((prev) =>
+          prev
+            ? {
+                ...prev,
+                lastUpdate: nowIso,
+                latitude: res.latitude!,
+                longitude: res.longitude!,
+              }
+            : null
+        );
+        setLocalTrails((prev) => {
+          const existing = prev[selectedPin.id] || [];
+          return {
+            ...prev,
+            [selectedPin.id]: [
+              ...existing,
+              {
+                lat: res.latitude!,
+                lng: res.longitude!,
+                time: nowIso,
+                speed: selectedPin.role === "DRIVER" ? 28 : 0,
+              },
+            ],
+          };
+        });
+        setMapCenter([res.latitude!, res.longitude!]);
+        router.refresh();
+      } else {
+        alert(res?.error || "Failed to ping GPS");
+      }
+    } catch (err: any) {
+      console.error("Admin ping error:", err);
+    } finally {
+      setIsPingingGPS(false);
+    }
+  };
+
   // Determine initial center
   const defaultCenter: [number, number] = useMemo(() => {
     if (allEmployees.length > 0 && allEmployees[0].latitude) {
@@ -384,7 +543,7 @@ export default function LiveMapClient({
 
     if (showRoute) {
       setActiveRouteEmpId(emp.id);
-      const points = routeTrails[emp.id];
+      const points = localTrails[emp.id];
       const matchedSite = sitePins.find(
         (s) =>
           (emp.dispatchLocation && s.location === emp.dispatchLocation) ||
@@ -418,7 +577,7 @@ export default function LiveMapClient({
       setMapBounds(null);
     } else {
       setActiveRouteEmpId(empId);
-      const points = routeTrails[empId];
+      const points = localTrails[empId];
       if (points && points.length > 1) {
         const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng]));
         setMapBounds(bounds);
@@ -603,6 +762,16 @@ export default function LiveMapClient({
             <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-full font-mono text-[11px]">
               {activeRoute.points.length} waypoints recorded
             </span>
+            {roadTrailRoute?.isRoadSnapped && (
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono text-[11px] flex items-center gap-1">
+                🛣️ Road-snapped Trail
+              </span>
+            )}
+            {isLoadingTrail && (
+              <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-full font-mono text-[11px] animate-pulse">
+                Snapping to roads...
+              </span>
+            )}
             <span className="text-slate-500 text-[11px]">
               (Cadence: {activeRoute.employee.role === "DRIVER" ? "15m" : "45m"} pings)
             </span>
@@ -659,9 +828,13 @@ export default function LiveMapClient({
           {/* ── DRAW ACTIVE ROUTE POLYLINE & WAYPOINT DOTS ──────────────────────── */}
           {activeRoute && (
             <>
-              {/* Glowing Route Polyline */}
+              {/* Glowing Route Polyline (Following Road Network) */}
               <Polyline
-                positions={activeRoute.positions}
+                positions={
+                  roadTrailRoute && roadTrailRoute.empId === activeRouteEmpId && roadTrailRoute.positions.length > 0
+                    ? roadTrailRoute.positions
+                    : activeRoute.positions
+                }
                 pathOptions={{
                   color:
                     activeRoute.employee?.role === "DRIVER"
@@ -670,7 +843,9 @@ export default function LiveMapClient({
                   weight: 5,
                   opacity: 0.9,
                   dashArray:
-                    activeRoute.employee?.role === "DRIVER"
+                    roadTrailRoute?.isRoadSnapped
+                      ? undefined
+                      : activeRoute.employee?.role === "DRIVER"
                       ? "8, 6"
                       : undefined,
                 }}
@@ -727,25 +902,45 @@ export default function LiveMapClient({
             </>
           )}
 
-          {/* ── DRAW PERSON-TO-SITE DESTINATION ROUTE LINE ──────────────────────── */}
+          {/* ── DRAW PERSON-TO-SITE DESTINATION ROUTE LINE (FOLLOWING ROAD NETWORK) ── */}
           {activePersonSiteRoute && (
             <Polyline
-              positions={activePersonSiteRoute.positions}
+              positions={
+                roadSiteRoute && roadSiteRoute.empId === selectedPin?.id && roadSiteRoute.positions.length > 0
+                  ? roadSiteRoute.positions
+                  : activePersonSiteRoute.positions
+              }
               pathOptions={{
                 color: "#2563eb",
-                weight: 4.5,
-                opacity: 0.9,
-                dashArray: "6, 8",
+                weight: 5,
+                opacity: 0.95,
+                dashArray: roadSiteRoute?.isRoadSnapped ? undefined : "6, 8",
               }}
             >
-              <Popup className="custom-popup" minWidth={200}>
+              <Popup className="custom-popup" minWidth={220}>
                 <div className="p-1 text-xs space-y-1">
                   <span className="font-bold text-blue-600 block">
                     Route: {selectedPin?.name} → {activePersonSiteRoute.site.location}
                   </span>
-                  <span className="text-slate-600 font-mono">
-                    Distance: {activePersonSiteRoute.distanceKm} km (straight-line)
-                  </span>
+                  <div className="text-slate-600 font-mono space-y-0.5">
+                    <div>
+                      Distance:{" "}
+                      <strong>
+                        {roadSiteRoute && roadSiteRoute.empId === selectedPin?.id
+                          ? roadSiteRoute.distanceKm
+                          : activePersonSiteRoute.distanceKm}{" "}
+                        km
+                      </strong>{" "}
+                      <span className="text-[10px] text-emerald-600 font-semibold">
+                        {roadSiteRoute?.isRoadSnapped ? "(Road Routed)" : "(Direct)"}
+                      </span>
+                    </div>
+                    {roadSiteRoute && roadSiteRoute.empId === selectedPin?.id && roadSiteRoute.durationMins > 0 && (
+                      <div className="text-slate-500">
+                        Est. Driving Time: ~{roadSiteRoute.durationMins} mins
+                      </div>
+                    )}
+                  </div>
                 </div>
               </Popup>
             </Polyline>
@@ -979,24 +1174,47 @@ export default function LiveMapClient({
               const cadenceMins = selectedPin.cadenceMinutes || (selectedPin.role === "DRIVER" ? 15 : 45);
               const cadence = computeCadenceStatus(selectedPin.lastUpdate, cadenceMins);
               return (
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between text-xs">
-                  <div>
-                    <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
-                      GPS Status
+                <div className="space-y-2">
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
+                        GPS Status
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className={`w-2 h-2 rounded-full ${cadence.dotClass}`} />
+                        <span className="font-bold text-white">{cadence.statusText}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className={`w-2 h-2 rounded-full ${cadence.dotClass}`} />
-                      <span className="font-bold text-white">{cadence.statusText}</span>
+                    <div className="text-right">
+                      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
+                        Cadence Window
+                      </div>
+                      <div className="font-mono text-indigo-400 font-bold mt-0.5">
+                        Every {cadenceMins} min
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
-                      Cadence Window
-                    </div>
-                    <div className="font-mono text-indigo-400 font-bold mt-0.5">
-                      Every {cadenceMins} min
-                    </div>
-                  </div>
+
+                  {/* Ping Fresh GPS Fix Action Button */}
+                  <button
+                    type="button"
+                    disabled={isPingingGPS}
+                    onClick={handleAdminPingLocation}
+                    className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 transition-all flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/10 disabled:opacity-50"
+                    title="Send an on-demand live GPS ping to refresh position and update status to LIVE"
+                  >
+                    {isPingingGPS ? (
+                      <>
+                        <Activity className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                        <span>Pinging Live GPS Fix...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                        <span>Ping Fresh GPS Fix Now</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               );
             })()}
@@ -1068,12 +1286,29 @@ export default function LiveMapClient({
                     <Route className="w-3.5 h-3.5" /> Route to Job Site:
                   </span>
                   <span className="font-mono text-emerald-400 font-black">
-                    {activePersonSiteRoute.distanceKm} km
+                    {roadSiteRoute && roadSiteRoute.empId === selectedPin.id
+                      ? roadSiteRoute.distanceKm
+                      : activePersonSiteRoute.distanceKm}{" "}
+                    km
+                    {roadSiteRoute && roadSiteRoute.empId === selectedPin.id && roadSiteRoute.durationMins > 0
+                      ? ` (~${roadSiteRoute.durationMins}m)`
+                      : ""}
                   </span>
                 </div>
-                <p className="text-white font-semibold truncate">
-                  📍 {activePersonSiteRoute.site.location}
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-white font-semibold truncate max-w-[190px]">
+                    📍 {activePersonSiteRoute.site.location}
+                  </p>
+                  {roadSiteRoute?.isRoadSnapped ? (
+                    <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono">
+                      Road Route
+                    </span>
+                  ) : isLoadingSiteRoute ? (
+                    <span className="text-[10px] text-cyan-400 animate-pulse font-mono">
+                      Routing roads...
+                    </span>
+                  ) : null}
+                </div>
                 <a
                   href={`https://www.google.com/maps/dir/?api=1&origin=${selectedPin.latitude},${selectedPin.longitude}&destination=${activePersonSiteRoute.site.latitude},${activePersonSiteRoute.site.longitude}&travelmode=driving`}
                   target="_blank"

@@ -18,20 +18,42 @@ import {
   Sparkles,
   ArrowLeft,
   CheckCircle2,
+  Edit3,
+  X,
+  Save,
+  Check,
+  AlertCircle,
+  Layers,
+  Wrench,
+  Percent,
+  Power,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
+import { saveEmployeeRoleRates } from "@/actions/hr";
+import {
+  toggleEmployeeActiveStatus,
+  softDeleteEmployee,
+} from "@/actions/employees";
+import {
+  COMPANY_WORKER_ROLE_WAGES,
+  OUTSIDE_WORKER_FLAT_WAGE,
+  DEFAULT_PRICING,
+} from "@/lib/pricingEngine";
 
-interface RoleRate {
+export interface RoleRate {
   id: string;
   crewRole: string;
   wagePerDay: number;
 }
 
-interface EmployeeItem {
+export interface EmployeeItem {
   id: string;
   name: string;
   role: string;
   phone: string | null;
   profilePhotoUrl: string | null;
+  isActive: boolean;
   operatorType: string;
   contractorCoName: string | null;
   defaultCrewRole: string | null;
@@ -43,7 +65,7 @@ interface EmployeeItem {
   createdAt: string;
 }
 
-interface WorkTypeRateItem {
+export interface WorkTypeRateItem {
   id: string;
   machineType: string;
   workType: string;
@@ -57,25 +79,187 @@ interface Props {
   currentUserEmployeeId: string;
 }
 
-const crewRoleMeta: Record<string, { label: string; icon: string; bg: string; text: string; border: string }> = {
-  MIXER_OPERATOR:     { label: "Mixer Operator",     icon: "🛠️", bg: "bg-orange-500/10",  text: "text-orange-400",  border: "border-orange-500/20" },
-  HYDRAULIC_OPERATOR: { label: "Hydraulic Operator", icon: "🚜", bg: "bg-amber-500/10",   text: "text-amber-400",   border: "border-amber-500/20" },
-  VIBRATOR_OPERATOR:  { label: "Vibrator Operator",  icon: "⚡", bg: "bg-yellow-500/10",  text: "text-yellow-400",  border: "border-yellow-500/20" },
-  LIFT_OPERATOR:      { label: "Lift Operator",      icon: "🏗️", bg: "bg-blue-500/10",    text: "text-blue-400",    border: "border-blue-500/20" },
-  WORKER_LEADER:      { label: "Company Site Leader", icon: "👷", bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20" },
-  SUB_LEADER:         { label: "Sub Leader (Worker Provider)", icon: "👥", bg: "bg-teal-500/10", text: "text-teal-400", border: "border-teal-500/20" },
-  DRIVER:             { label: "Driver",             icon: "🚚", bg: "bg-cyan-500/10",    text: "text-cyan-400",    border: "border-cyan-500/20" },
-  HELPER:             { label: "General Helper (Pani / Site Labour)", icon: "🤝", bg: "bg-slate-500/10",   text: "text-slate-400",   border: "border-slate-500/20" },
-  PANI_HELPER:        { label: "General Helper (Pani / Site Labour)", icon: "🤝", bg: "bg-sky-500/10",     text: "text-sky-400",     border: "border-sky-500/20" },
-  TROLLY_1_WHEEL:     { label: "1-Wheel Trolly Operator (Wheelbarrow / Ramp Handler)", icon: "🛞", bg: "bg-violet-500/10", text: "text-violet-400", border: "border-violet-500/20" },
-  TROLLY_2_WHEEL:     { label: "2-Wheel Trolly Handler (Concrete Cart)", icon: "🛞", bg: "bg-purple-500/10", text: "text-purple-400", border: "border-purple-500/20" },
-  P_VIBRATOR:         { label: "Petrol Vibrator",    icon: "⛽", bg: "bg-rose-500/10",    text: "text-rose-400",    border: "border-rose-500/20" },
+export const crewRoleMeta: Record<
+  string,
+  {
+    label: string;
+    icon: string;
+    bg: string;
+    text: string;
+    border: string;
+    category: "machine" | "leader" | "trolly" | "helper";
+    description: string;
+    customerBillingNote?: string;
+  }
+> = {
+  MIXER_OPERATOR: {
+    label: "Mixer Operator",
+    icon: "🛠️",
+    bg: "bg-orange-500/10",
+    text: "text-orange-400",
+    border: "border-orange-500/20",
+    category: "machine",
+    description: "Standard concrete mixing machine operations",
+    customerBillingNote: "Customer Machine Rent: ₹1,000 / day",
+  },
+  HYDRAULIC_OPERATOR: {
+    label: "Hydraulic Operator",
+    icon: "🚜",
+    bg: "bg-amber-500/10",
+    text: "text-amber-400",
+    border: "border-amber-500/20",
+    category: "machine",
+    description: "Heavy hydraulic concrete mixing machinery",
+    customerBillingNote: "Customer Machine Rent: ₹1,100 / day",
+  },
+  LIFT_OPERATOR: {
+    label: "Lift Operator",
+    icon: "🏗️",
+    bg: "bg-blue-500/10",
+    text: "text-blue-400",
+    border: "border-blue-500/20",
+    category: "machine",
+    description: "Multi-floor construction lift & hoist operation",
+    customerBillingNote: "Customer Rent: ₹1,700 base + ₹500 / floor",
+  },
+  VIBRATOR_OPERATOR: {
+    label: "Vibrator Operator",
+    icon: "⚡",
+    bg: "bg-yellow-500/10",
+    text: "text-yellow-400",
+    border: "border-yellow-500/20",
+    category: "machine",
+    description: "Electric concrete needle vibrator compaction",
+    customerBillingNote: "Equipment: ₹0 (No extra machine charge)",
+  },
+  P_VIBRATOR: {
+    label: "Petrol Vibrator",
+    icon: "⛽",
+    bg: "bg-rose-500/10",
+    text: "text-rose-400",
+    border: "border-rose-500/20",
+    category: "machine",
+    description: "Engine-driven petrol vibrator for remote slabs",
+    customerBillingNote: "Equipment: Covered by dedicated operator wage",
+  },
+  WORKER_LEADER: {
+    label: "Company Site Leader",
+    icon: "👷",
+    bg: "bg-emerald-500/10",
+    text: "text-emerald-400",
+    border: "border-emerald-500/20",
+    category: "leader",
+    description: "On-site gang lead, supervision, and field diary",
+    customerBillingNote: "Site supervision & gang coordination",
+  },
+  SUB_LEADER: {
+    label: "Sub Leader (Worker Provider)",
+    icon: "👥",
+    bg: "bg-teal-500/10",
+    text: "text-teal-400",
+    border: "border-teal-500/20",
+    category: "leader",
+    description: "External labor coordinator & sub-gang provider",
+    customerBillingNote: "Crew provider & subcontractor management",
+  },
+  DRIVER: {
+    label: "Driver",
+    icon: "🚚",
+    bg: "bg-cyan-500/10",
+    text: "text-cyan-400",
+    border: "border-cyan-500/20",
+    category: "leader",
+    description: "Truck, tractor, and machinery road transport",
+    customerBillingNote: "Fleet machinery delivery & collection",
+  },
+  TROLLY_1_WHEEL: {
+    label: "1-Wheel Trolly Operator (Wheelbarrow / Ramp Handler)",
+    icon: "🛞",
+    bg: "bg-violet-500/10",
+    text: "text-violet-400",
+    border: "border-violet-500/20",
+    category: "trolly",
+    description: "Operates 1-wheel barrow on ramps, paired strictly with Bench",
+    customerBillingNote: "Work Rate: ₹1,500 + Tool Rent: ₹1,000 (paired with Bench)",
+  },
+  TROLLY_2_WHEEL: {
+    label: "2-Wheel Trolly Handler (Concrete Cart)",
+    icon: "🛞",
+    bg: "bg-purple-500/10",
+    text: "text-purple-400",
+    border: "border-purple-500/20",
+    category: "trolly",
+    description: "Flat-ground concrete cart transport",
+    customerBillingNote: "Tool Rent: ₹200 / trolly (Tools Section)",
+  },
+  HELPER: {
+    label: "General Helper (Pani / Site Labour)",
+    icon: "🤝",
+    bg: "bg-slate-500/10",
+    text: "text-slate-400",
+    border: "border-slate-500/20",
+    category: "helper",
+    description: "General site labour, mixing assist, shoveling, and curing",
+    customerBillingNote: "Site labour & concrete placement assist",
+  },
+  PANI_HELPER: {
+    label: "General Helper (Pani / Site Labour)",
+    icon: "💧",
+    bg: "bg-sky-500/10",
+    text: "text-sky-400",
+    border: "border-sky-500/20",
+    category: "helper",
+    description: "Water hose handling, slab curing, and site assist",
+    customerBillingNote: "Water curing & site labour assist",
+  },
 };
 
-export default function CrewHubClient({ employees, workTypeRates, currentUserEmployeeId }: Props) {
-  const [activeTab, setActiveTab] = useState<"directory" | "rates">("directory");
+const MASTER_ROLES_ORDER = [
+  "MIXER_OPERATOR",
+  "HYDRAULIC_OPERATOR",
+  "LIFT_OPERATOR",
+  "VIBRATOR_OPERATOR",
+  "P_VIBRATOR",
+  "WORKER_LEADER",
+  "SUB_LEADER",
+  "DRIVER",
+  "TROLLY_1_WHEEL",
+  "TROLLY_2_WHEEL",
+  "HELPER",
+  "PANI_HELPER",
+];
+
+export default function CrewHubClient({
+  employees: initialEmployees,
+  workTypeRates,
+  currentUserEmployeeId,
+}: Props) {
+  const [employees, setEmployees] = useState<EmployeeItem[]>(initialEmployees);
+  const [activeTab, setActiveTab] = useState<"directory" | "rates">("rates");
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "DISABLED">("ALL");
+
+  // Rates tab sub-filter
+  const [ratesCrewFilter, setRatesCrewFilter] = useState<
+    "ALL" | "WITH_RATES" | "OPERATOR" | "WORKER" | "DRIVER"
+  >("WITH_RATES");
+
+  // Action status / banners
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Soft Delete confirmation modal state
+  const [deleteCandidate, setDeleteCandidate] = useState<EmployeeItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Edit Role Rates Modal State
+  const [editingEmployee, setEditingEmployee] = useState<EmployeeItem | null>(null);
+  const [modalRates, setModalRates] = useState<Record<string, { enabled: boolean; wage: number }>>({});
+  const [isSavingRates, setIsSavingRates] = useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+  const [saveErrorMsg, setSaveErrorMsg] = useState<string | null>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -85,6 +269,65 @@ export default function CrewHubClient({ employees, workTypeRates, currentUserEmp
     }).format(amount);
   };
 
+  const showToast = (type: "success" | "error", text: string) => {
+    setToastMessage({ type, text });
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  };
+
+  // Toggle Active / Disabled status
+  const handleToggleActive = async (emp: EmployeeItem) => {
+    setActionLoadingId(emp.id);
+    const newStatus = !emp.isActive;
+
+    try {
+      const res = await toggleEmployeeActiveStatus(emp.id, newStatus);
+      if (!res.success) {
+        showToast("error", res.error || "Failed to update employee status.");
+        return;
+      }
+
+      setEmployees((prev) =>
+        prev.map((e) => (e.id === emp.id ? { ...e, isActive: newStatus } : e))
+      );
+      showToast(
+        "success",
+        `${emp.name} is now ${newStatus ? "ACTIVE" : "DISABLED"}.`
+      );
+    } catch (err: any) {
+      showToast("error", err.message || "An unexpected error occurred.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Confirm Soft Delete
+  const handleConfirmSoftDelete = async () => {
+    if (!deleteCandidate) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const res = await softDeleteEmployee(deleteCandidate.id);
+      if (!res.success) {
+        setDeleteError(res.error || "Failed to soft-delete employee.");
+        setIsDeleting(false);
+        return;
+      }
+
+      // Remove from local state
+      setEmployees((prev) => prev.filter((e) => e.id !== deleteCandidate.id));
+      showToast("success", `${deleteCandidate.name} has been soft-deleted and moved to Trash.`);
+      setDeleteCandidate(null);
+    } catch (err: any) {
+      setDeleteError(err.message || "An error occurred while deleting.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Filtered employees for Directory tab
   const filteredEmployees = employees.filter((e) => {
     const matchesSearch =
       e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -94,13 +337,151 @@ export default function CrewHubClient({ employees, workTypeRates, currentUserEmp
     const matchesRole =
       roleFilter === "ALL" ? true : e.role === roleFilter || e.defaultCrewRole === roleFilter;
 
-    return matchesSearch && matchesRole;
+    const matchesStatus =
+      statusFilter === "ALL"
+        ? true
+        : statusFilter === "ACTIVE"
+        ? e.isActive
+        : !e.isActive;
+
+    return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const operatorsList = employees.filter((e) => e.role === "OPERATOR");
+  // Rates tab personnel list
+  const personnelWithRates = employees.filter((e) => e.roleRates && e.roleRates.length > 0);
+  const fieldPersonnel = employees.filter((e) =>
+    ["OPERATOR", "WORKER", "DRIVER", "STAFF"].includes(e.role)
+  );
+
+  const filteredRatesPersonnel = employees.filter((e) => {
+    // Only field or active roles
+    if (!["OPERATOR", "WORKER", "DRIVER", "STAFF"].includes(e.role)) return false;
+
+    // Search filter
+    if (searchTerm) {
+      const match =
+        e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (e.phone && e.phone.includes(searchTerm));
+      if (!match) return false;
+    }
+
+    // Status filter
+    if (statusFilter === "ACTIVE" && !e.isActive) return false;
+    if (statusFilter === "DISABLED" && e.isActive) return false;
+
+    if (ratesCrewFilter === "WITH_RATES") {
+      return e.roleRates && e.roleRates.length > 0;
+    }
+    if (ratesCrewFilter === "OPERATOR") return e.role === "OPERATOR";
+    if (ratesCrewFilter === "WORKER") return e.role === "WORKER";
+    if (ratesCrewFilter === "DRIVER") return e.role === "DRIVER";
+    return true; // ALL
+  });
+
+  // Open Edit Modal for an Employee
+  const handleOpenEditRates = (emp: EmployeeItem) => {
+    const initialMap: Record<string, { enabled: boolean; wage: number }> = {};
+    MASTER_ROLES_ORDER.forEach((roleKey) => {
+      const existing = emp.roleRates.find((rr) => rr.crewRole === roleKey);
+      if (existing) {
+        initialMap[roleKey] = { enabled: true, wage: existing.wagePerDay };
+      } else {
+        const defaultWage =
+          emp.operatorType === "SUBCONTRACTOR"
+            ? OUTSIDE_WORKER_FLAT_WAGE
+            : COMPANY_WORKER_ROLE_WAGES[roleKey] ?? 1000;
+        initialMap[roleKey] = { enabled: false, wage: defaultWage };
+      }
+    });
+
+    setModalRates(initialMap);
+    setEditingEmployee(emp);
+    setSaveSuccessMsg(null);
+    setSaveErrorMsg(null);
+  };
+
+  // Prefill all 12 roles with standard company defaults
+  const handlePrefillDefaults = () => {
+    if (!editingEmployee) return;
+    const updated = { ...modalRates };
+    MASTER_ROLES_ORDER.forEach((roleKey) => {
+      const defaultWage =
+        editingEmployee.operatorType === "SUBCONTRACTOR"
+          ? OUTSIDE_WORKER_FLAT_WAGE
+          : COMPANY_WORKER_ROLE_WAGES[roleKey] ?? 1000;
+      updated[roleKey] = { enabled: true, wage: defaultWage };
+    });
+    setModalRates(updated);
+  };
+
+  // Save rates for employee
+  const handleSaveRates = async () => {
+    if (!editingEmployee) return;
+    setIsSavingRates(true);
+    setSaveErrorMsg(null);
+    setSaveSuccessMsg(null);
+
+    try {
+      const ratesToSave = Object.entries(modalRates)
+        .filter(([_, val]) => val.enabled && val.wage > 0)
+        .map(([roleKey, val]) => ({
+          crewRole: roleKey,
+          wagePerDay: Number(val.wage),
+        }));
+
+      const res = await saveEmployeeRoleRates(editingEmployee.id, ratesToSave);
+      if (!res.success) {
+        setSaveErrorMsg(res.error || "Failed to save role rates");
+        setIsSavingRates(false);
+        return;
+      }
+
+      // Update local state
+      setEmployees((prev) =>
+        prev.map((emp) => {
+          if (emp.id !== editingEmployee.id) return emp;
+          return {
+            ...emp,
+            roleRates: ratesToSave.map((r, idx) => ({
+              id: `temp-${Date.now()}-${idx}`,
+              crewRole: r.crewRole,
+              wagePerDay: r.wagePerDay,
+            })),
+          };
+        })
+      );
+
+      setSaveSuccessMsg(`Role rates saved successfully for ${editingEmployee.name}!`);
+      setTimeout(() => {
+        setEditingEmployee(null);
+      }, 1200);
+    } catch (err: any) {
+      setSaveErrorMsg(err.message || "An unexpected error occurred while saving.");
+    } finally {
+      setIsSavingRates(false);
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
+      {/* Toast Alert */}
+      {toastMessage && (
+        <div
+          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-2xl border text-sm font-bold shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-4 ${
+            toastMessage.type === "success"
+              ? "bg-emerald-950 border-emerald-500/40 text-emerald-300"
+              : "bg-rose-950 border-rose-500/40 text-rose-300"
+          }`}
+        >
+          {toastMessage.type === "success" ? (
+            <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+          ) : (
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+          )}
+          <span>{toastMessage.text}</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -116,27 +497,16 @@ export default function CrewHubClient({ employees, workTypeRates, currentUserEmp
             </span>
           </div>
           <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
-            <Users className="w-8 h-8 text-emerald-400" />
-            Crew Directory & Operator Rates
+            <DollarSign className="w-8 h-8 text-amber-400" />
+            Role-Based Rates & Crew Wage Matrix
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Personnel contact list, field communications, and operator role work rate cards.
+            Company-wide master role rates, equipment work-type payouts, individual crew rate cards, soft delete &amp; disable controls.
           </p>
         </div>
 
         {/* Tab switch */}
         <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 p-1.5 rounded-2xl">
-          <button
-            onClick={() => setActiveTab("directory")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === "directory"
-                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            <Phone className="w-3.5 h-3.5" />
-            Crew Directory ({employees.length})
-          </button>
           <button
             onClick={() => setActiveTab("rates")}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
@@ -146,12 +516,23 @@ export default function CrewHubClient({ employees, workTypeRates, currentUserEmp
             }`}
           >
             <HardHat className="w-3.5 h-3.5" />
-            Operator Rates ({operatorsList.length})
+            Role-Based Rates &amp; Wage Matrix ({personnelWithRates.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("directory")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === "directory"
+                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            Crew Directory ({employees.length})
           </button>
         </div>
       </div>
 
-      {/* Search & Filters */}
+      {/* Search & Quick Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -159,27 +540,576 @@ export default function CrewHubClient({ employees, workTypeRates, currentUserEmp
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by name, phone number, company..."
-            className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+            placeholder="Search by worker name, phone number, company..."
+            className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="bg-slate-900/90 border border-slate-800 rounded-2xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50"
+        {/* Status filter: All, Active, Disabled */}
+        <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 rounded-2xl p-1">
+          <button
+            type="button"
+            onClick={() => setStatusFilter("ALL")}
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              statusFilter === "ALL"
+                ? "bg-slate-800 text-white shadow"
+                : "text-slate-400 hover:text-white"
+            }`}
           >
-            <option value="ALL">All Roles</option>
-            <option value="OPERATOR">Operators</option>
-            <option value="DRIVER">Drivers</option>
-            <option value="WORKER">Workers</option>
-            <option value="STAFF">Office Staff</option>
-          </select>
+            All ({employees.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("ACTIVE")}
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              statusFilter === "ACTIVE"
+                ? "bg-emerald-600 text-white shadow"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            Active ({employees.filter((e) => e.isActive).length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("DISABLED")}
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              statusFilter === "DISABLED"
+                ? "bg-rose-600 text-white shadow"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            Disabled ({employees.filter((e) => !e.isActive).length})
+          </button>
         </div>
+
+        {activeTab === "directory" ? (
+          <div className="flex items-center gap-2">
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="bg-slate-900/90 border border-slate-800 rounded-2xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50"
+            >
+              <option value="ALL">All Company Roles</option>
+              <option value="OPERATOR">Operators</option>
+              <option value="WORKER">Workers</option>
+              <option value="DRIVER">Drivers</option>
+              <option value="STAFF">Office Staff</option>
+            </select>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <button
+              onClick={() => setRatesCrewFilter("WITH_RATES")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                ratesCrewFilter === "WITH_RATES"
+                  ? "bg-amber-500 text-slate-950 shadow"
+                  : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+              }`}
+            >
+              With Role Rates ({personnelWithRates.length})
+            </button>
+            <button
+              onClick={() => setRatesCrewFilter("ALL")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                ratesCrewFilter === "ALL"
+                  ? "bg-amber-500 text-slate-950 shadow"
+                  : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+              }`}
+            >
+              All Field Crew ({fieldPersonnel.length})
+            </button>
+            <button
+              onClick={() => setRatesCrewFilter("OPERATOR")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                ratesCrewFilter === "OPERATOR"
+                  ? "bg-amber-500 text-slate-950 shadow"
+                  : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+              }`}
+            >
+              Operators ({employees.filter((e) => e.role === "OPERATOR").length})
+            </button>
+            <button
+              onClick={() => setRatesCrewFilter("WORKER")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                ratesCrewFilter === "WORKER"
+                  ? "bg-amber-500 text-slate-950 shadow"
+                  : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+              }`}
+            >
+              Workers &amp; Helpers ({employees.filter((e) => e.role === "WORKER").length})
+            </button>
+            <button
+              onClick={() => setRatesCrewFilter("DRIVER")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                ratesCrewFilter === "DRIVER"
+                  ? "bg-amber-500 text-slate-950 shadow"
+                  : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+              }`}
+            >
+              Drivers ({employees.filter((e) => e.role === "DRIVER").length})
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* TAB 1: CREW DIRECTORY */}
+      {/* TAB 1: ROLE-BASED RATES & WAGE MATRIX */}
+      {activeTab === "rates" && (
+        <div className="space-y-8">
+          {/* SECTION 1: MASTER ROLE-BASED WAGE MATRIX (STANDARD RATE CARD) */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    Standard Rate Card Common
+                  </span>
+                  <span className="text-xs text-slate-500 font-mono">12 Master Roles</span>
+                </div>
+                <h2 className="text-xl font-black text-white mt-1.5 flex items-center gap-2.5">
+                  <HardHat className="w-5 h-5 text-amber-400" />
+                  Section 1: Company Master Role-Based Wage Matrix (Master Rate Card)
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Baseline daily payout rates for internal company workers vs. outside subcontractor flat wages.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2">
+                  <span className="text-[11px] text-slate-400">Outside Flat Wage:</span>
+                  <span className="text-xs font-black text-emerald-400">
+                    {formatCurrency(OUTSIDE_WORKER_FLAT_WAGE)} / day
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 12 Master Roles Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {MASTER_ROLES_ORDER.map((roleKey) => {
+                const meta = crewRoleMeta[roleKey];
+                const internalWage = COMPANY_WORKER_ROLE_WAGES[roleKey] ?? 1000;
+                return (
+                  <div
+                    key={roleKey}
+                    className={`p-4 rounded-2xl bg-slate-950 border ${meta.border} flex flex-col justify-between hover:border-slate-700 transition-all shadow-md group`}
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{meta.icon}</span>
+                          <span className={`text-xs font-black tracking-wide ${meta.text}`}>
+                            {meta.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-slate-400 line-clamp-2 min-h-[32px] mt-1">
+                        {meta.description}
+                      </p>
+
+                      <div className="mt-3 pt-2.5 border-t border-slate-800/80 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-400 font-medium">Internal Daily Wage:</span>
+                          <span className="font-black text-amber-400 text-sm">
+                            {formatCurrency(internalWage)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-500">Outside Subcontractor:</span>
+                          <span className="font-bold text-slate-300">
+                            {formatCurrency(OUTSIDE_WORKER_FLAT_WAGE)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {meta.customerBillingNote && (
+                      <div className="mt-3 pt-2 border-t border-slate-900">
+                        <span className="text-[10px] text-emerald-400/90 font-medium block">
+                          💡 {meta.customerBillingNote}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* SECTION 2: MACHINE WORK-TYPE RATE MATRIX */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Wrench className="w-5 h-5 text-amber-400" />
+                  Machine Work-Type &amp; Tool Rate Matrix
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Standard job payouts for machine operators vs customer rental charges.
+                </p>
+              </div>
+              <span className="text-[11px] font-mono text-slate-400 bg-slate-950 px-3 py-1 rounded-xl border border-slate-800">
+                Single Source: Pricing Engine
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Mixing Machine */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-black text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🛠️</span> Mixing Machine
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-300 border border-orange-500/20 font-bold">
+                      Standard Concrete
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-1.5 text-xs">
+                    <div className="flex justify-between py-1 border-b border-slate-800/80">
+                      <span className="text-slate-400">Customer Machine Rent:</span>
+                      <span className="font-bold text-slate-200">
+                        {formatCurrency(DEFAULT_PRICING.MIXER)} / day
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-slate-400">Operator Payout:</span>
+                      <span className="font-bold text-amber-400 text-sm">
+                        {formatCurrency(COMPANY_WORKER_ROLE_WAGES.MIXER_OPERATOR)} / day
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hydraulic Mixer */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🚜</span> Hydraulic Mixer
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-bold">
+                      Heavy Concrete
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-1.5 text-xs">
+                    <div className="flex justify-between py-1 border-b border-slate-800/80">
+                      <span className="text-slate-400">Customer Machine Rent:</span>
+                      <span className="font-bold text-slate-200">
+                        {formatCurrency(DEFAULT_PRICING.HYDRAULIC_MIXER)} / day
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-slate-400">Operator Payout:</span>
+                      <span className="font-bold text-amber-400 text-sm">
+                        {formatCurrency(COMPANY_WORKER_ROLE_WAGES.HYDRAULIC_OPERATOR)} / day
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lift */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-black text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🏗️</span> Construction Lift
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-300 border border-blue-500/20 font-bold">
+                      Multi-Floor
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-1.5 text-xs">
+                    <div className="flex justify-between py-1 border-b border-slate-800/80">
+                      <span className="text-slate-400">Customer Machine Rent:</span>
+                      <span className="font-bold text-slate-200">
+                        ₹1,700 base (+₹500 / fl)
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-slate-400">Operator Payout:</span>
+                      <span className="font-bold text-amber-400 text-sm">
+                        {formatCurrency(COMPANY_WORKER_ROLE_WAGES.LIFT_OPERATOR)} / day
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 1-Wheel Trolly & Bench */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-black text-violet-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🛞</span> 1-Wheel Trolly &amp; Bench
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-300 border border-violet-500/20 font-bold">
+                      Work Specs
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-1.5 text-xs">
+                    <div className="flex justify-between py-1 border-b border-slate-800/80">
+                      <span className="text-slate-400">Work + Tool Rent:</span>
+                      <span className="font-bold text-slate-200">
+                        ₹1,500 + ₹1,000 rent
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-slate-400">Handler Payout:</span>
+                      <span className="font-bold text-amber-400 text-sm">
+                        {formatCurrency(COMPANY_WORKER_ROLE_WAGES.TROLLY_1_WHEEL)} / day
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2-Wheel Trolly */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-black text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🛞</span> 2-Wheel Concrete Trolly
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-300 border border-purple-500/20 font-bold">
+                      Tools Section
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-1.5 text-xs">
+                    <div className="flex justify-between py-1 border-b border-slate-800/80">
+                      <span className="text-slate-400">Tool Rent Charge:</span>
+                      <span className="font-bold text-emerald-400">
+                        ₹200 / trolly
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-slate-400">Handler Payout:</span>
+                      <span className="font-bold text-amber-400 text-sm">
+                        {formatCurrency(COMPANY_WORKER_ROLE_WAGES.TROLLY_2_WHEEL)} / day
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Petrol & Electric Vibrator */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-black text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>⚡</span> Needle Vibrators
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/20 font-bold">
+                      Compaction
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-1.5 text-xs">
+                    <div className="flex justify-between py-1 border-b border-slate-800/80">
+                      <span className="text-slate-400">Customer Tool Rent:</span>
+                      <span className="font-bold text-slate-200">
+                        ₹0 (Covered by labor)
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-slate-400">Operator Payout:</span>
+                      <span className="font-bold text-amber-400 text-sm">
+                        ₹900 - ₹1,000 / day
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 3: INDIVIDUAL PERSONNEL ROLE WAGE CARDS & CONTROLS */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+              <div>
+                <h3 className="text-lg font-black text-white flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-emerald-400" />
+                  Individual Personnel Role Wage Cards &amp; Management
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Custom per-role daily wages, active/disable controls, and soft delete for crew personnel.
+                </p>
+              </div>
+
+              <div className="text-xs text-slate-400">
+                Showing <strong className="text-white">{filteredRatesPersonnel.length}</strong> crew members
+              </div>
+            </div>
+
+            {filteredRatesPersonnel.length === 0 ? (
+              <div className="py-12 text-center text-slate-500">
+                No crew members match the selected filter or search query.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredRatesPersonnel.map((person) => {
+                  const hasCustomRates = person.roleRates && person.roleRates.length > 0;
+                  const isLoading = actionLoadingId === person.id;
+
+                  return (
+                    <div
+                      key={person.id}
+                      className={`p-5 rounded-2xl border transition-all shadow-lg flex flex-col justify-between ${
+                        person.isActive
+                          ? "bg-slate-950 border-slate-800/90 hover:border-slate-700"
+                          : "bg-slate-950/60 border-rose-950/40 opacity-75 hover:opacity-100"
+                      }`}
+                    >
+                      <div>
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-white text-sm">
+                              {person.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <h4 className="font-bold text-white text-base leading-snug">
+                                  {person.name}
+                                </h4>
+                              </div>
+                              <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                <span className="font-semibold text-amber-400">{person.role}</span>
+                                {person.phone && (
+                                  <span className="text-slate-500 font-mono text-[11px]">
+                                    • {person.phone}
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 flex-col items-end">
+                            {/* Active vs Disabled badge */}
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                person.isActive
+                                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                  : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                              }`}
+                            >
+                              {person.isActive ? "Active" : "Disabled"}
+                            </span>
+
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                person.operatorType === "INTERNAL"
+                                  ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                                  : "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                              }`}
+                            >
+                              {person.operatorType || "INTERNAL"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Base Wage info */}
+                        <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-900/60 border border-slate-800/50 mb-3">
+                          <span className="text-slate-400">Base Daily Wage:</span>
+                          <span className="font-bold text-emerald-400">
+                            {person.baseDailyWage ? formatCurrency(person.baseDailyWage) : "₹1,000"} / day
+                          </span>
+                        </div>
+
+                        {/* Configured Role Rates list */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px] uppercase font-bold text-slate-500 tracking-wider">
+                            <span>Role Rates ({person.roleRates?.length || 0})</span>
+                          </div>
+
+                          {hasCustomRates ? (
+                            <div className="space-y-1 mt-1">
+                              {person.roleRates.map((rr) => {
+                                const meta = crewRoleMeta[rr.crewRole] || {
+                                  label: rr.crewRole,
+                                  icon: "⚙️",
+                                  text: "text-slate-300",
+                                  border: "border-slate-800",
+                                  bg: "bg-slate-900",
+                                };
+                                return (
+                                  <div
+                                    key={rr.id}
+                                    className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-xl bg-slate-900/90 border border-slate-800/80"
+                                  >
+                                    <span className="text-slate-300 flex items-center gap-1.5 truncate max-w-[180px]">
+                                      <span>{meta.icon}</span>
+                                      <span className="truncate">{meta.label}</span>
+                                    </span>
+                                    <span className="font-black text-amber-400 ml-2">
+                                      {formatCurrency(rr.wagePerDay)}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-slate-500 italic py-2">
+                              No role rates set yet. (Uses company defaults).
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card Action Controls: Edit, Disable/Enable, Soft Delete */}
+                      <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          {/* Disable / Enable Toggle button */}
+                          <button
+                            type="button"
+                            disabled={isLoading}
+                            onClick={() => handleToggleActive(person)}
+                            title={person.isActive ? "Disable employee account" : "Enable employee account"}
+                            className={`px-2 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 border ${
+                              person.isActive
+                                ? "bg-slate-900 border-slate-800 text-slate-400 hover:text-amber-400 hover:border-amber-500/40"
+                                : "bg-emerald-950/40 border-emerald-500/30 text-emerald-400 hover:bg-emerald-900/50"
+                            } disabled:opacity-40`}
+                          >
+                            <Power className="w-3.5 h-3.5" />
+                            <span>{person.isActive ? "Disable" : "Enable"}</span>
+                          </button>
+
+                          {/* Soft Delete button */}
+                          <button
+                            type="button"
+                            disabled={isLoading}
+                            onClick={() => {
+                              setDeleteError(null);
+                              setDeleteCandidate(person);
+                            }}
+                            title="Soft delete crew member (Move to Trash)"
+                            className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 hover:text-rose-400 hover:border-rose-500/40 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => handleOpenEditRates(person)}
+                          className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold transition-all flex items-center gap-1.5 shadow"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          Edit Role Rates
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: CREW DIRECTORY */}
       {activeTab === "directory" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredEmployees.length === 0 ? (
@@ -190,7 +1120,11 @@ export default function CrewHubClient({ employees, workTypeRates, currentUserEmp
             filteredEmployees.map((emp) => (
               <div
                 key={emp.id}
-                className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-all shadow-lg flex flex-col justify-between"
+                className={`border rounded-2xl p-5 transition-all shadow-lg flex flex-col justify-between ${
+                  emp.isActive
+                    ? "bg-slate-900/80 border-slate-800 hover:border-slate-700"
+                    : "bg-slate-950/60 border-rose-950/40 opacity-75 hover:opacity-100"
+                }`}
               >
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-3">
@@ -209,15 +1143,27 @@ export default function CrewHubClient({ employees, workTypeRates, currentUserEmp
                       </div>
                     </div>
 
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        emp.operatorType === "INTERNAL"
-                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                          : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                      }`}
-                    >
-                      {emp.operatorType || "INTERNAL"}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-col items-end">
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          emp.isActive
+                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                            : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                        }`}
+                      >
+                        {emp.isActive ? "Active" : "Disabled"}
+                      </span>
+
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          emp.operatorType === "INTERNAL"
+                            ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                            : "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                        }`}
+                      >
+                        {emp.operatorType || "INTERNAL"}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Phone contact */}
@@ -240,7 +1186,7 @@ export default function CrewHubClient({ employees, workTypeRates, currentUserEmp
                   {emp.roleRates && emp.roleRates.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-slate-800/60">
                       <p className="text-[11px] uppercase font-bold text-slate-500 tracking-wider mb-1.5">
-                        Role Rate Cards
+                        Role Rate Cards ({emp.roleRates.length})
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {emp.roleRates.map((rr) => (
@@ -248,7 +1194,8 @@ export default function CrewHubClient({ employees, workTypeRates, currentUserEmp
                             key={rr.id}
                             className="text-[11px] px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300"
                           >
-                            {rr.crewRole}: <strong className="text-amber-400">{formatCurrency(rr.wagePerDay)}</strong>
+                            {rr.crewRole}:{" "}
+                            <strong className="text-amber-400">{formatCurrency(rr.wagePerDay)}</strong>
                           </span>
                         ))}
                       </div>
@@ -257,13 +1204,46 @@ export default function CrewHubClient({ employees, workTypeRates, currentUserEmp
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-500">
-                  <span>ID: {emp.id.slice(-6)}</span>
-                  <Link
-                    href={`/staff/operators/${emp.id}`}
-                    className="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1"
+                  <div className="flex items-center gap-2">
+                    {/* Disable / Enable Toggle button */}
+                    <button
+                      type="button"
+                      disabled={actionLoadingId === emp.id}
+                      onClick={() => handleToggleActive(emp)}
+                      title={emp.isActive ? "Disable employee" : "Enable employee"}
+                      className={`p-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1 ${
+                        emp.isActive
+                          ? "bg-slate-950 border-slate-800 text-slate-400 hover:text-amber-400"
+                          : "bg-emerald-950/40 border-emerald-500/30 text-emerald-400"
+                      }`}
+                    >
+                      <Power className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Soft Delete button */}
+                    <button
+                      type="button"
+                      disabled={actionLoadingId === emp.id}
+                      onClick={() => {
+                        setDeleteError(null);
+                        setDeleteCandidate(emp);
+                      }}
+                      title="Soft delete crew member (Move to Trash)"
+                      className="p-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-500 hover:text-rose-400 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setActiveTab("rates");
+                      handleOpenEditRates(emp);
+                    }}
+                    className="text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1"
                   >
-                    Details <ChevronRight className="w-3 h-3" />
-                  </Link>
+                    Edit Rates <ChevronRight className="w-3 h-3" />
+                  </button>
                 </div>
               </div>
             ))
@@ -271,148 +1251,221 @@ export default function CrewHubClient({ employees, workTypeRates, currentUserEmp
         </div>
       )}
 
-      {/* TAB 2: OPERATOR RATE CARDS & WORK PRICING */}
-      {activeTab === "rates" && (
-        <div className="space-y-6">
-          {/* Work-Type Rates Matrix */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-              <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <HardHat className="w-5 h-5 text-amber-400" />
-                  Machine Work-Type Rate Matrix
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Standard job payouts for machine operators vs customer rental charges.
-                </p>
+      {/* SOFT DELETE CONFIRMATION MODAL */}
+      {deleteCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400">
+                <AlertTriangle className="w-6 h-6" />
               </div>
-              <Link
-                href="/staff/operators"
-                className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-all shadow"
-              >
-                Manage Operator Profiles →
-              </Link>
+              <div>
+                <h3 className="text-lg font-black text-white">Confirm Soft Delete</h3>
+                <p className="text-xs text-slate-400">Moves employee to Admin Trash Hub</p>
+              </div>
             </div>
 
-            {workTypeRates.length === 0 ? (
-              <p className="text-sm text-slate-500 italic py-6 text-center">
-                No work-type rates configured yet. Rates can be set in Admin Settings.
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {workTypeRates.map((wtr) => (
-                  <div
-                    key={wtr.id}
-                    className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                          {wtr.machineType}
-                        </span>
-                        <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">
-                          {wtr.workType}
-                        </span>
-                      </div>
-                      <div className="mt-2 space-y-1 text-xs">
-                        <div className="flex justify-between py-1 border-b border-slate-800/80">
-                          <span className="text-slate-400">Operator Payout:</span>
-                          <span className="font-bold text-emerald-400 text-sm">
-                            {formatCurrency(wtr.payoutRate)} / day
-                          </span>
-                        </div>
-                        {wtr.customerCharge && (
-                          <div className="flex justify-between py-1">
-                            <span className="text-slate-400">Customer Charge:</span>
-                            <span className="font-bold text-slate-200">
-                              {formatCurrency(wtr.customerCharge)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Are you sure you want to soft delete <strong className="text-white">{deleteCandidate.name}</strong> ({deleteCandidate.role})?
+            </p>
+
+            <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-slate-400 space-y-1">
+              <p>• Active user login sessions will be instantly terminated.</p>
+              <p>• Cannot be deleted if currently assigned to active dispatches.</p>
+              <p>• Can be reviewed or permanently deleted by Admin in the Trash Hub.</p>
+            </div>
+
+            {deleteError && (
+              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-bold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{deleteError}</span>
               </div>
             )}
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteCandidate(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleConfirmSoftDelete}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-all flex items-center gap-2 shadow-lg shadow-rose-600/20 disabled:opacity-50"
+              >
+                {isDeleting ? "Deleting..." : "Confirm Soft Delete"}
+              </button>
+            </div>
           </div>
+        </div>
+      )}
 
-          {/* Individual Operator Rate Cards */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-emerald-400" />
-              Per-Operator Role Wage Cards
-            </h3>
+      {/* EDIT ROLE RATES MODAL */}
+      {editingEmployee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-800 flex items-start justify-between bg-slate-950/60">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    Wage Configuration
+                  </span>
+                  <span className="text-xs text-slate-500 font-mono">
+                    {editingEmployee.role} • {editingEmployee.operatorType || "INTERNAL"}
+                  </span>
+                </div>
+                <h3 className="text-xl font-black text-white">
+                  Edit Role Rates: {editingEmployee.name}
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Configure daily payouts for each specific role this team member performs on site. Check to enable, uncheck to disable role.
+                </p>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {operatorsList.map((op) => (
-                <div
-                  key={op.id}
-                  className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center font-bold text-amber-400 text-xs">
-                          {op.name.charAt(0)}
+              <button
+                onClick={() => setEditingEmployee(null)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Notification Banners */}
+            {saveSuccessMsg && (
+              <div className="m-4 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2">
+                <Check className="w-4 h-4 shrink-0" />
+                {saveSuccessMsg}
+              </div>
+            )}
+            {saveErrorMsg && (
+              <div className="m-4 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-bold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {saveErrorMsg}
+              </div>
+            )}
+
+            {/* Modal Quick Actions */}
+            <div className="px-6 py-3 bg-slate-950/40 border-b border-slate-800/60 flex items-center justify-between">
+              <span className="text-xs text-slate-400">
+                Check roles to enable &amp; set custom daily wage (Uncheck to disable):
+              </span>
+              <button
+                type="button"
+                onClick={handlePrefillDefaults}
+                className="text-xs font-bold text-amber-400 hover:text-amber-300 hover:underline flex items-center gap-1"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Prefill Company Defaults
+              </button>
+            </div>
+
+            {/* Roles List */}
+            <div className="p-6 overflow-y-auto space-y-3 flex-1">
+              {MASTER_ROLES_ORDER.map((roleKey) => {
+                const meta = crewRoleMeta[roleKey];
+                const state = modalRates[roleKey] || { enabled: false, wage: 1000 };
+                const companyDefault =
+                  editingEmployee.operatorType === "SUBCONTRACTOR"
+                    ? OUTSIDE_WORKER_FLAT_WAGE
+                    : COMPANY_WORKER_ROLE_WAGES[roleKey] ?? 1000;
+
+                return (
+                  <div
+                    key={roleKey}
+                    className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
+                      state.enabled
+                        ? "bg-slate-950 border-amber-500/40"
+                        : "bg-slate-950/50 border-slate-800/80 opacity-70"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={state.enabled}
+                        onChange={(e) => {
+                          setModalRates((prev) => ({
+                            ...prev,
+                            [roleKey]: {
+                              ...state,
+                              enabled: e.target.checked,
+                            },
+                          }));
+                        }}
+                        className="w-4 h-4 rounded border-slate-700 text-amber-500 focus:ring-amber-500/40 cursor-pointer"
+                      />
+
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{meta.icon}</span>
+                          <span className="text-xs font-bold text-white">{meta.label}</span>
                         </div>
-                        <div>
-                          <h4 className="font-bold text-white text-sm">{op.name}</h4>
-                          <p className="text-[11px] text-slate-400">
-                            {op.defaultCrewRole || "General Operator"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <span className="text-xs font-bold text-emerald-400">
-                          {op.baseDailyWage ? formatCurrency(op.baseDailyWage) : "₹1,000"} / day
+                        <span className="text-[10px] text-slate-500 block mt-0.5">
+                          Standard Default: {formatCurrency(companyDefault)} / day
                         </span>
-                        {op.dailyBataRate ? (
-                          <p className="text-[10px] text-slate-500">
-                            + {formatCurrency(op.dailyBataRate)} Bata
-                          </p>
-                        ) : null}
                       </div>
                     </div>
 
-                    {/* Role Rates list */}
-                    {op.roleRates && op.roleRates.length > 0 && (
-                      <div className="mt-3 pt-2 border-t border-slate-800/80 space-y-1">
-                        {op.roleRates.map((rr) => {
-                          const meta = crewRoleMeta[rr.crewRole] || {
-                            label: rr.crewRole,
-                            icon: "⚙️",
-                          };
-                          return (
-                            <div
-                              key={rr.id}
-                              className="flex items-center justify-between text-xs py-1 px-2 rounded-lg bg-slate-900"
-                            >
-                              <span className="text-slate-300 flex items-center gap-1.5">
-                                <span>{meta.icon}</span>
-                                {meta.label}
-                              </span>
-                              <span className="font-bold text-amber-400">
-                                {formatCurrency(rr.wagePerDay)}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400 font-bold">₹</span>
+                      <input
+                        type="number"
+                        disabled={!state.enabled}
+                        value={state.wage || ""}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setModalRates((prev) => ({
+                            ...prev,
+                            [roleKey]: {
+                              ...state,
+                              wage: val,
+                            },
+                          }));
+                        }}
+                        placeholder={companyDefault.toString()}
+                        className="w-24 bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm font-bold text-white text-right focus:outline-none focus:border-amber-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                      />
+                      <span className="text-[11px] text-slate-500">/ day</span>
+                    </div>
                   </div>
+                );
+              })}
+            </div>
 
-                  <div className="mt-3 pt-2 border-t border-slate-800/60 flex justify-end">
-                    <Link
-                      href={`/staff/operators/${op.id}`}
-                      className="text-xs text-emerald-400 hover:underline font-semibold flex items-center gap-1"
-                    >
-                      Edit Wage Rates <ChevronRight className="w-3 h-3" />
-                    </Link>
-                  </div>
-                </div>
-              ))}
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
+              <span className="text-xs text-slate-400">
+                {Object.values(modalRates).filter((v) => v.enabled && v.wage > 0).length} roles enabled
+              </span>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingEmployee(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingRates}
+                  onClick={handleSaveRates}
+                  className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-all flex items-center gap-2 shadow-lg shadow-amber-600/20 disabled:opacity-50"
+                >
+                  {isSavingRates ? (
+                    <>Saving Rates...</>
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5" />
+                      Save Rates
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

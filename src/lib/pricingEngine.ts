@@ -32,9 +32,9 @@ export const DEFAULT_PRICING = {
   LIFT_BASE:             1700,  // Ground floor base price
   LIFT_PER_FLOOR:         500,  // Add per additional floor above ground
 
-  // Trolley (charged to customer, includes worker wage)
-  TROLLY_1_WHEEL:        1500,
-  TROLLY_2_WHEEL:        1100,
+  // Trolley (charged to customer)
+  TROLLY_1_WHEEL:        1500,  // 1-Wheel Trolly paired with Bench in Work Specs
+  TROLLY_2_WHEEL:         200,  // 2-Wheel Trolly tool rental: ₹200 per trolly
 
   // Vibrator (charged to customer)
   PETROL_VIBRATOR_CUSTOMER_CHARGE: 0,   // No separate equipment charge — worker wage covers it

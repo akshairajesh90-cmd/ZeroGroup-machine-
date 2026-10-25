@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
 export async function updateEmployeeLocation(
   latitude: number,
@@ -127,6 +128,72 @@ export async function updateDispatchLocation(
     return { success: true, mapLink };
   } catch (err: any) {
     console.error("Failed to update dispatch location:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function adminPingEmployeeLocation(
+  employeeId: string,
+  latitude?: number,
+  longitude?: number
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: "Unauthenticated" };
+    }
+
+    const allowedRoles = ["ADMIN", "OWNER", "STAFF"];
+    if (!allowedRoles.includes(session.user.role)) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId },
+    });
+
+    if (!employee) {
+      return { success: false, error: "Employee not found" };
+    }
+
+    const now = new Date();
+    // Default to provided coords, or existing coords (or depot fallback)
+    const targetLat = latitude ?? (employee.lastLatitude ? Number(employee.lastLatitude) : 9.5915);
+    const targetLng = longitude ?? (employee.lastLongitude ? Number(employee.lastLongitude) : 76.5234);
+
+    await prisma.employee.update({
+      where: { id: employeeId },
+      data: {
+        lastLatitude: targetLat,
+        lastLongitude: targetLng,
+        lastLocationUpdate: now,
+        lastSeenAt: now,
+        lastSyncStatus: "ONLINE",
+      },
+    });
+
+    await prisma.locationPing.create({
+      data: {
+        employeeId: employee.id,
+        latitude: targetLat,
+        longitude: targetLng,
+        accuracy: 8,
+        source: "ADMIN_REFRESH",
+        timestamp: now,
+      },
+    });
+
+    revalidatePath("/admin/live/map");
+    revalidatePath("/staff/live/map");
+
+    return {
+      success: true,
+      lastUpdate: now.toISOString(),
+      latitude: targetLat,
+      longitude: targetLng,
+    };
+  } catch (err: any) {
+    console.error("Failed to admin-ping employee location:", err);
     return { success: false, error: err.message };
   }
 }
