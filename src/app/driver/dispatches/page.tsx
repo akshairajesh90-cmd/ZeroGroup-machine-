@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format, isToday, isThisWeek, subDays } from "date-fns";
-import { ChevronRight, MapPin, Wrench, Zap } from "lucide-react";
+import { ChevronRight, MapPin, Wrench, Zap, Layers, Cpu } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +16,11 @@ const STATUS_STYLE: Record<string, { label: string; cls: string; dot: string }> 
   POSTPONED:   { label: "Postponed",   cls: "bg-slate-500/15 text-slate-400 border-slate-500/30", dot: "bg-slate-400" },
 };
 
-const MACHINE_EMOJI: Record<string, string> = {
-  MIXER: "🪣", LIFT: "🏗️", VIBRATOR: "🔧", PANI: "💧", INDEPENDENT: "👷",
-};
+function MachineIcon({ type }: { type?: string | null }) {
+  if (type === "HYDRAULIC_MIXER") return <Cpu className="w-5 h-5 text-amber-400" />;
+  if (type === "LIFT") return <Layers className="w-5 h-5 text-blue-400" />;
+  return <Wrench className="w-5 h-5 text-indigo-400" />;
+}
 
 export default async function DispatchesPage() {
   const session = await auth();
@@ -52,14 +54,13 @@ export default async function DispatchesPage() {
 
   function DispatchCard({ d }: { d: typeof dispatches[number] }) {
     const s = STATUS_STYLE[d.status] ?? STATUS_STYLE.PENDING;
-    const emoji = MACHINE_EMOJI[d.machine?.type ?? ""] ?? "⚙️";
     return (
       <Link
         href={`/driver/orders/${d.id}`}
         className="flex items-center gap-4 bg-slate-900/70 border border-white/5 hover:border-cyan-500/30 rounded-2xl p-4 transition-all active:scale-[0.98] group"
       >
-        <div className="w-12 h-12 rounded-xl bg-slate-800 border border-white/5 flex items-center justify-center text-2xl shrink-0">
-          {emoji}
+        <div className="w-12 h-12 rounded-xl bg-slate-800 border border-white/5 flex items-center justify-center shrink-0">
+          <MachineIcon type={d.machine?.type} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">

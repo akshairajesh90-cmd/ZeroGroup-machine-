@@ -47,8 +47,8 @@ const crewRoleMeta: Record<string, { label: string; icon: string; bg: string; te
   WORKER_LEADER:      { label: "Worker Leader",      icon: "👷", bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20" },
   SUB_LEADER:         { label: "Sub Leader",         icon: "👥", bg: "bg-teal-500/10",    text: "text-teal-400",    border: "border-teal-500/20" },
   DRIVER:             { label: "Driver",             icon: "🚚", bg: "bg-cyan-500/10",    text: "text-cyan-400",    border: "border-cyan-500/20" },
-  HELPER:             { label: "Helper",             icon: "🤝", bg: "bg-slate-500/10",   text: "text-slate-400",   border: "border-slate-500/20" },
-  PANI_HELPER:        { label: "Pani Helper",        icon: "💧", bg: "bg-sky-500/10",     text: "text-sky-400",     border: "border-sky-500/20" },
+  HELPER:             { label: "General Helper (Pani)", icon: "🤝", bg: "bg-slate-500/10",   text: "text-slate-400",   border: "border-slate-500/20" },
+  PANI_HELPER:        { label: "General Helper (Pani)", icon: "🤝", bg: "bg-slate-500/10",   text: "text-slate-400",   border: "border-slate-500/20" },
   TROLLY_1_WHEEL:     { label: "1-Wheel Trolly",     icon: "🛞", bg: "bg-violet-500/10",  text: "text-violet-400",  border: "border-violet-500/20" },
   TROLLY_2_WHEEL:     { label: "2-Wheel Trolly",     icon: "🛞", bg: "bg-purple-500/10",  text: "text-purple-400",  border: "border-purple-500/20" },
   P_VIBRATOR:         { label: "Petrol Vibrator",    icon: "⛽", bg: "bg-rose-500/10",    text: "text-rose-400",    border: "border-rose-500/20" },
@@ -163,13 +163,13 @@ export default function OperatorsClientPage({ operators: initialOperators }: Pro
               className="appearance-none rounded-2xl border border-zinc-800 bg-zinc-900/60 pl-11 pr-8 py-3 text-sm text-amber-300 font-bold focus:border-amber-500/50 focus:outline-none transition-all"
             >
               <option value="ALL">All Crew Roles</option>
-              <option value="MIXER_OPERATOR">🛠️ Mixer Operator</option>
-              <option value="HYDRAULIC_OPERATOR">🚜 Hydraulic Operator</option>
-              <option value="VIBRATOR_OPERATOR">⚡ Vibrator Operator</option>
-              <option value="LIFT_OPERATOR">🏗️ Lift Operator</option>
-              <option value="WORKER_LEADER">👷 Worker Leader</option>
-              <option value="DRIVER">🚚 Driver</option>
-              <option value="UNALLOCATED">⚪ Unallocated</option>
+              <option value="MIXER_OPERATOR">Mixer Operator</option>
+              <option value="HYDRAULIC_OPERATOR">Hydraulic Operator</option>
+              <option value="VIBRATOR_OPERATOR">Vibrator Operator</option>
+              <option value="LIFT_OPERATOR">Lift Operator</option>
+              <option value="WORKER_LEADER">Worker Leader</option>
+              <option value="DRIVER">Driver</option>
+              <option value="UNALLOCATED">Unallocated</option>
             </select>
           </div>
 

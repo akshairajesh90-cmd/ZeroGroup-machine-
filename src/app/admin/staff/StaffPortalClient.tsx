@@ -28,8 +28,7 @@ const CREW_ROLES: { value: string; label: string; group: string }[] = [
   { value: "LIFT_OPERATOR",      label: "Lift Operator",       group: "Machine Ops" },
   { value: "WORKER_LEADER",      label: "Company Site Leader", group: "Site Labour" },
   { value: "SUB_LEADER",         label: "Sub Leader (Worker Provider)", group: "Site Labour" },
-  { value: "HELPER",             label: "General Helper",      group: "Site Labour" },
-  { value: "PANI_HELPER",        label: "Pani Helper",         group: "Site Labour" },
+  { value: "HELPER",             label: "General Helper (Pani / Site Labour)", group: "Site Labour" },
   { value: "TROLLY_1_WHEEL",     label: "1-Wheel Trolly Operator (Wheelbarrow / Ramp Handler)", group: "Site Labour" },
   { value: "TROLLY_2_WHEEL",     label: "2-Wheel Trolly Handler (Concrete Cart)", group: "Site Labour" },
 ];
@@ -133,6 +132,18 @@ export default function StaffPortalClient({
   };
 
   const toggleCrewRole = (val: string) => {
+    if (val === "HELPER") {
+      setFormData(prev => {
+        const hasHelper = prev.capableRoles.includes("HELPER") || prev.capableRoles.includes("PANI_HELPER");
+        return {
+          ...prev,
+          capableRoles: hasHelper
+            ? prev.capableRoles.filter(r => r !== "HELPER" && r !== "PANI_HELPER")
+            : [...prev.capableRoles, "HELPER", "PANI_HELPER"],
+        };
+      });
+      return;
+    }
     setFormData(prev => ({
       ...prev,
       capableRoles: prev.capableRoles.includes(val)
@@ -280,15 +291,29 @@ export default function StaffPortalClient({
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-1">
-                          {(emp.capableRoles || []).map((cr: string) => {
-                            const customRate = emp.roleRates?.find((rr: any) => rr.crewRole === cr);
-                            return (
-                              <span key={cr} className="px-2 py-1 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 rounded text-[11px] font-semibold flex items-center gap-1.5">
-                                {CREW_ROLES.find(r => r.value === cr)?.label || cr}
-                                {customRate && <span className="text-emerald-400">₹{customRate.wagePerDay}</span>}
-                              </span>
-                            );
-                          })}
+                          {(() => {
+                            const rendered = new Set<string>();
+                            return (emp.capableRoles || []).map((cr: string) => {
+                              if (cr === "HELPER" || cr === "PANI_HELPER") {
+                                if (rendered.has("HELPER")) return null;
+                                rendered.add("HELPER");
+                                const customRate = emp.roleRates?.find((rr: any) => rr.crewRole === "HELPER" || rr.crewRole === "PANI_HELPER");
+                                return (
+                                  <span key="helper-unified" className="px-2 py-1 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 rounded text-[11px] font-semibold flex items-center gap-1.5">
+                                    General Helper (Pani / Site Labour)
+                                    {customRate && <span className="text-emerald-400">₹{customRate.wagePerDay}</span>}
+                                  </span>
+                                );
+                              }
+                              const customRate = emp.roleRates?.find((rr: any) => rr.crewRole === cr);
+                              return (
+                                <span key={cr} className="px-2 py-1 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 rounded text-[11px] font-semibold flex items-center gap-1.5">
+                                  {CREW_ROLES.find(r => r.value === cr)?.label || cr}
+                                  {customRate && <span className="text-emerald-400">₹{customRate.wagePerDay}</span>}
+                                </span>
+                              );
+                            });
+                          })()}
                           {(!emp.capableRoles || emp.capableRoles.length === 0) && <span className="text-slate-600 text-xs">—</span>}
                         </div>
                       </td>
@@ -464,7 +489,9 @@ export default function StaffPortalClient({
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 border-b border-slate-800 pb-1">{group}</p>
                     <div className="grid grid-cols-2 gap-2">
                       {CREW_ROLES.filter(r => r.group === group).map(r => {
-                        const isSelected = formData.capableRoles.includes(r.value);
+                        const isSelected = r.value === "HELPER"
+                          ? (formData.capableRoles.includes("HELPER") || formData.capableRoles.includes("PANI_HELPER"))
+                          : formData.capableRoles.includes(r.value);
                         return (
                           <div key={r.value} className={`flex flex-col gap-2 p-2.5 rounded-lg border transition-all ${isSelected ? "border-indigo-500/60 bg-indigo-500/5" : "border-slate-800 bg-slate-950/40 hover:border-slate-700"}`}>
                             <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-200">

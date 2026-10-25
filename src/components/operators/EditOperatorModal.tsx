@@ -29,8 +29,7 @@ export const ALL_CREW_ROLES = [
   { id: "WORKER_LEADER",      label: "Company Site Leader", shortLabel: "Leader",    icon: "👷", color: "emerald" },
   { id: "SUB_LEADER",         label: "Sub Leader (Worker Provider)", shortLabel: "Sub-Leader",icon: "👥", color: "teal" },
   { id: "DRIVER",             label: "Driver",             shortLabel: "Driver",    icon: "🚚", color: "cyan" },
-  { id: "HELPER",             label: "General Helper",     shortLabel: "Helper",    icon: "🤝", color: "slate" },
-  { id: "PANI_HELPER",        label: "Pani Helper",        shortLabel: "Pani",      icon: "💧", color: "sky" },
+  { id: "HELPER",             label: "General Helper (Pani / Site Labour)", shortLabel: "Helper (Pani)", icon: "🤝", color: "slate" },
   { id: "TROLLY_1_WHEEL",     label: "1-Wheel Trolly Operator (Wheelbarrow / Ramp Handler)", shortLabel: "1W Trolly", icon: "🛞", color: "violet" },
   { id: "TROLLY_2_WHEEL",     label: "2-Wheel Trolly Handler (Concrete Cart)", shortLabel: "2W Trolly", icon: "🛞", color: "purple" },
   { id: "P_VIBRATOR",         label: "Petrol Vibrator",    shortLabel: "P-Vibrator",icon: "⛽", color: "rose" },
@@ -109,17 +108,26 @@ export default function EditOperatorModal({ operator, onClose, onSuccess }: Edit
 
   const toggleRole = (roleId: string) => {
     let next: string[];
-    if (capableRoles.includes(roleId)) {
-      if (capableRoles.length === 1) {
+    const isHelper = roleId === "HELPER";
+    const hasRole = isHelper
+      ? capableRoles.includes("HELPER") || capableRoles.includes("PANI_HELPER")
+      : capableRoles.includes(roleId);
+
+    if (hasRole) {
+      if (capableRoles.length <= (isHelper ? 2 : 1)) {
         // Keep at least one role
         return;
       }
-      next = capableRoles.filter((r) => r !== roleId);
-      if (defaultCrewRole === roleId) {
+      next = isHelper
+        ? capableRoles.filter((r) => r !== "HELPER" && r !== "PANI_HELPER")
+        : capableRoles.filter((r) => r !== roleId);
+      if (defaultCrewRole === roleId || (isHelper && (defaultCrewRole === "HELPER" || defaultCrewRole === "PANI_HELPER"))) {
         setDefaultCrewRole(next[0] || "");
       }
     } else {
-      next = [...capableRoles, roleId];
+      next = isHelper
+        ? Array.from(new Set([...capableRoles, "HELPER", "PANI_HELPER"]))
+        : [...capableRoles, roleId];
       if (!defaultCrewRole) {
         setDefaultCrewRole(roleId);
       }
@@ -342,7 +350,9 @@ export default function EditOperatorModal({ operator, onClose, onSuccess }: Edit
             {/* Role Grid Chips */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
               {ALL_CREW_ROLES.map((r) => {
-                const isSelected = capableRoles.includes(r.id);
+                const isSelected = r.id === "HELPER"
+                  ? capableRoles.includes("HELPER") || capableRoles.includes("PANI_HELPER")
+                  : capableRoles.includes(r.id);
                 const isDefault = defaultCrewRole === r.id;
                 return (
                   <button
