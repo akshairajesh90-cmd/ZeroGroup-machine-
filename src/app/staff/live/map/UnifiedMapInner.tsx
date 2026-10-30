@@ -49,6 +49,25 @@ const operatorMarkerIcon = new L.Icon({
   shadowSize: [41, 41],
 });
 
+// Dedicated Store / Base Yard Building Icon (Emerald Warehouse)
+const storeMarkerIcon = L.divIcon({
+  className: "custom-store-marker",
+  html: `
+    <div style="position: relative; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;">
+      <div style="width: 38px; height: 38px; background: #059669; border: 3px solid #ffffff; box-shadow: 0 4px 16px rgba(0,0,0,0.5); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+      </div>
+      <span style="position: absolute; top: -3px; right: -3px; width: 12px; height: 12px; background: #fbbf24; border: 2.5px solid #ffffff; border-radius: 50%; box-shadow: 0 0 6px #fbbf24;"></span>
+    </div>
+  `,
+  iconSize: [42, 42],
+  iconAnchor: [21, 21],
+  popupAnchor: [0, -21],
+});
+
 // Dynamic Heading-Bearing Rotated Vehicle Icon
 function createVehicleIcon(bearing: number = 0, speed: number = 0, isSelected: boolean = false) {
   const isMoving = speed >= 3;
@@ -140,9 +159,19 @@ export interface MapRouteWaypoint {
   speed?: number | null;
 }
 
+export interface StoreLocationProps {
+  storeName: string;
+  storeAddress: string;
+  storeLatitude: number;
+  storeLongitude: number;
+}
+
 interface UnifiedMapInnerProps {
   drivers: MapDriverPin[];
   sites: MapSitePin[];
+  storeLocation?: StoreLocationProps | null;
+  onOpenEditStore?: () => void;
+  onOpenEditSite?: (siteId: string) => void;
   selectedDispatchId: string | null;
   onSelectDispatch: (id: string) => void;
   flyToCenter: [number, number] | null;
@@ -153,6 +182,9 @@ interface UnifiedMapInnerProps {
 export default function UnifiedMapInner({
   drivers,
   sites,
+  storeLocation,
+  onOpenEditStore,
+  onOpenEditSite,
   selectedDispatchId,
   onSelectDispatch,
   flyToCenter,
@@ -181,6 +213,45 @@ export default function UnifiedMapInner({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+
+        {/* 🏬 CENTRAL STORE / BASE YARD MARKER */}
+        {storeLocation && (
+          <Marker
+            position={[storeLocation.storeLatitude, storeLocation.storeLongitude]}
+            icon={storeMarkerIcon}
+          >
+            <Popup className="custom-popup">
+              <div className="p-1 min-w-[210px] text-xs space-y-1.5">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+                  <h4 className="font-black text-slate-900 text-sm flex items-center gap-1.5">
+                    🏬 {storeLocation.storeName}
+                  </h4>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                    Base Yard
+                  </span>
+                </div>
+                <p className="text-slate-600 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>{storeLocation.storeAddress}</span>
+                </p>
+                <div className="text-[10px] text-slate-400 font-mono">
+                  GPS: {storeLocation.storeLatitude.toFixed(4)}, {storeLocation.storeLongitude.toFixed(4)}
+                </div>
+                {onOpenEditStore && (
+                  <div className="pt-1.5 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => onOpenEditStore()}
+                      className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-center text-xs transition-colors shadow"
+                    >
+                      ✏️ Edit Store Location
+                    </button>
+                  </div>
+                )}
+              </div>
+            </Popup>
+          </Marker>
+        )}
 
         {/* 1. TODAY'S ROUTE TRAIL (Glowing blue polyline) */}
         {activeTrail.length > 1 && (
@@ -288,21 +359,33 @@ export default function UnifiedMapInner({
                       Driver: <strong>{site.driverName}</strong>
                     </p>
                   )}
-                  <div className="pt-1 border-t flex justify-between items-center">
+                  <div className="pt-1.5 border-t flex justify-between items-center gap-1.5 flex-wrap">
                     <a
                       href={`https://www.google.com/maps/search/?api=1&query=${site.lat},${site.lng}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-emerald-600 hover:underline font-bold inline-flex items-center gap-1"
+                      className="text-emerald-600 hover:underline font-bold inline-flex items-center gap-1 text-[11px]"
                     >
-                      Google Maps <ExternalLink className="w-3 h-3" />
+                      Maps <ExternalLink className="w-3 h-3" />
                     </a>
-                    <button
-                      onClick={() => onSelectDispatch(site.id)}
-                      className="px-2 py-0.5 bg-slate-900 text-white rounded font-bold hover:bg-slate-800"
-                    >
-                      View Card
-                    </button>
+                    <div className="flex items-center gap-1">
+                      {onOpenEditSite && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenEditSite(site.id)}
+                          className="px-2 py-0.5 bg-amber-500/10 text-amber-800 border border-amber-300 rounded font-bold hover:bg-amber-500/20 text-[11px]"
+                          title="Edit GPS Coordinates"
+                        >
+                          ✏️ Edit
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onSelectDispatch(site.id)}
+                        className="px-2 py-0.5 bg-slate-900 text-white rounded font-bold hover:bg-slate-800 text-[11px]"
+                      >
+                        Card →
+                      </button>
+                    </div>
                   </div>
                 </div>
               </Popup>

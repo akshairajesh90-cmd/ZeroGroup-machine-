@@ -11,6 +11,7 @@ import {
 import ShiftTracker from "./ShiftTracker";
 import { CollectPaymentButton } from "@/components/shared/CollectPaymentButton";
 import DriverSitePinger from "@/components/driver/DriverSitePinger";
+import SeniorDriverAutopilot from "@/components/driver/SeniorDriverAutopilot";
 
 export const dynamic = "force-dynamic";
 
@@ -109,12 +110,34 @@ export default async function DriverHomePage() {
 
   return (
     <div className="space-y-5 pb-6">
-      {/* ── Shift Tracker (Clock-In) ──────────────────── */}
-      {["DRIVER", "OWNER", "ADMIN"].includes(employee?.role ?? "") && (
-        <ShiftTracker 
-          activeShift={formattedActiveShift} 
-          availableVehicles={availableVehicles} 
-        />
+      {/* ── SENIOR DRIVER AUTOPILOT (ZERO-CLICK PASSIVE MODE) ────── */}
+      <SeniorDriverAutopilot
+        driverName={employee?.name || "Driver"}
+        vehiclePlate={todayJob?.vehicle?.licensePlate || activeShift?.vehicle?.licensePlate}
+        vehicleType={todayJob?.vehicle?.type || activeShift?.vehicle?.type}
+        machineId={todayJob?.machine?.machineId}
+        customerName={todayJob?.customer?.name}
+        location={todayJob?.location}
+        latitude={todayJob?.latitude ? Number(todayJob.latitude) : null}
+        longitude={todayJob?.longitude ? Number(todayJob.longitude) : null}
+        mapLink={todayJob?.mapLink}
+        status={todayJob?.status || (activeShift ? "EN_ROUTE" : "PENDING")}
+        dispatchId={todayJob?.id}
+      />
+
+      {/* ── Optional Manual Shift Tracker for Admin / Testing Fallback ──────────────────── */}
+      {isGodMode && (
+        <details className="bg-slate-900/60 border border-slate-800 rounded-2xl p-3 text-xs text-slate-400">
+          <summary className="font-bold text-slate-300 cursor-pointer">
+            ⚙️ Admin / Manual Override Shift Controls
+          </summary>
+          <div className="mt-3">
+            <ShiftTracker 
+              activeShift={formattedActiveShift} 
+              availableVehicles={availableVehicles} 
+            />
+          </div>
+        </details>
       )}
 
       {/* ── Greeting ─────────────────────────────────── */}

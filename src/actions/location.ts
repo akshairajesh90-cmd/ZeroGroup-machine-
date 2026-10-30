@@ -213,6 +213,109 @@ export async function updateEmployeeLocation(
       console.warn("[KeralaGIS] Dwell cluster check non-blocking error:", gisErr);
     }
 
+    // 4. Zero-Click Autopilot Geofence Automation Engine
+    try {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      // A. TRIGGER 1: Auto-advance PENDING/ACCEPTED -> EN_ROUTE when truck leaves Base Yard (>250m, >=15 km/h)
+      const pendingDispatch = await prisma.dailyDispatch.findFirst({
+        where: {
+          driverId: employee.id,
+          status: { in: ["PENDING", "ACCEPTED"] },
+          dateOfService: { gte: todayStart },
+          isPendingDelete: false,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (pendingDispatch && currentSpeed >= 15) {
+        const settings = await prisma.systemSettings.findFirst();
+        const yardLat = settings?.storeLatitude ? Number(settings.storeLatitude) : 9.5916;
+        const yardLng = settings?.storeLongitude ? Number(settings.storeLongitude) : 76.5222;
+
+        const distFromYard = calculateDistanceMeters(yardLat, yardLng, latitude, longitude);
+        if (distFromYard > 250) {
+          await prisma.$transaction(async (tx) => {
+            await tx.dailyDispatch.update({
+              where: { id: pendingDispatch.id },
+              data: { status: "EN_ROUTE" },
+            });
+            await tx.dispatchStatusHistory.create({
+              data: {
+                dispatchId: pendingDispatch.id,
+                oldStatus: pendingDispatch.status,
+                newStatus: "EN_ROUTE",
+                changedById: employee.id,
+                reason: `Auto-Departed Store Yard based on GPS displacement (${Math.round(distFromYard)}m from yard, ${currentSpeed} km/h)`,
+              },
+            });
+            if (pendingDispatch.vehicleId) {
+              await tx.vehicle.update({
+                where: { id: pendingDispatch.vehicleId },
+                data: { status: "IN_USE" },
+              });
+              const existingShift = await tx.shiftLog.findFirst({
+                where: { driverId: employee.id, endTime: null },
+              });
+              if (!existingShift) {
+                await tx.shiftLog.create({
+                  data: {
+                    driverId: employee.id,
+                    vehicleId: pendingDispatch.vehicleId,
+                    date: new Date(),
+                    startTime: now,
+                  },
+                });
+              }
+            }
+          });
+        }
+      }
+
+      // B. TRIGGER 2: Auto-advance EN_ROUTE -> IN_PROGRESS when truck arrives at customer site (<=100m)
+      const enRouteDispatch = await prisma.dailyDispatch.findFirst({
+        where: {
+          driverId: employee.id,
+          status: "EN_ROUTE",
+          latitude: { not: null },
+          longitude: { not: null },
+          isPendingDelete: false,
+        },
+        orderBy: { updatedAt: "desc" },
+      });
+
+      if (enRouteDispatch && enRouteDispatch.latitude && enRouteDispatch.longitude) {
+        const distToSite = calculateDistanceMeters(
+          Number(enRouteDispatch.latitude),
+          Number(enRouteDispatch.longitude),
+          latitude,
+          longitude
+        );
+
+        if (distToSite <= 100) {
+          // If within 100m of customer site, auto-advance to IN_PROGRESS
+          await prisma.$transaction(async (tx) => {
+            await tx.dailyDispatch.update({
+              where: { id: enRouteDispatch.id },
+              data: { status: "IN_PROGRESS", isCentroidVerified: true },
+            });
+            await tx.dispatchStatusHistory.create({
+              data: {
+                dispatchId: enRouteDispatch.id,
+                oldStatus: "EN_ROUTE",
+                newStatus: "IN_PROGRESS",
+                changedById: employee.id,
+                reason: `Auto-Arrived On Site (within ${Math.round(distToSite)}m of customer site coordinates)`,
+              },
+            });
+          });
+        }
+      }
+    } catch (geofenceErr) {
+      console.warn("[Autopilot Geofence Engine] Non-blocking evaluation error:", geofenceErr);
+    }
+
     return { success: true };
   } catch (err: any) {
     console.error("Failed to update employee location:", err);

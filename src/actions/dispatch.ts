@@ -300,12 +300,10 @@ export async function createDailyDispatch(formData: unknown) {
 
     if (!process.env.CLI_TEST_ROLE) {
       revalidatePath("/admin/dispatch");
-    }
-    if (!process.env.CLI_TEST_ROLE) {
       revalidatePath("/admin/dashboard");
-    }
-    if (!process.env.CLI_TEST_ROLE) {
       revalidatePath("/driver/home");
+      revalidatePath("/staff/live/map");
+      revalidatePath("/admin/live/map");
     }
     return { success: true, dispatchId: dispatch.id };
   } catch (err: any) {
@@ -357,19 +355,19 @@ export async function updateDispatchStatus(formData: unknown) {
         if (!reason || !reason.trim() || reason.trim().length < 3) {
           throw new Error(`Mandatory Audit Lock: A clear reason (at least 3 characters) is required to mark job ${status}.`);
         }
+      }
 
-        // Record immutable audit trail in DispatchStatusHistory
-        if (changerEmp) {
-          await tx.dispatchStatusHistory.create({
-            data: {
-              dispatchId: dispatch.id,
-              oldStatus: oldStatus,
-              newStatus: status as DispatchStatus,
-              changedById: changerEmp.id,
-              reason: reason.trim(),
-            },
-          });
-        }
+      // Record immutable audit trail in DispatchStatusHistory for all status transitions
+      if (changerEmp && oldStatus !== status) {
+        await tx.dispatchStatusHistory.create({
+          data: {
+            dispatchId: dispatch.id,
+            oldStatus: oldStatus,
+            newStatus: status as DispatchStatus,
+            changedById: changerEmp.id,
+            reason: reason?.trim() || `Status updated from ${oldStatus} to ${status}`,
+          },
+        });
       }
 
       // Build update payload
@@ -413,6 +411,42 @@ export async function updateDispatchStatus(formData: unknown) {
             data: { status: "AVAILABLE" },
           });
         }
+
+        // Auto-end Driver Shift if this was their last active dispatch today
+        if (dispatch.driverId) {
+          const remainingActive = await tx.dailyDispatch.count({
+            where: {
+              driverId: dispatch.driverId,
+              id: { not: dispatchId },
+              status: { in: ["PENDING", "ACCEPTED", "EN_ROUTE", "IN_PROGRESS"] },
+              isPendingDelete: false,
+            },
+          });
+          if (remainingActive === 0) {
+            const openShift = await tx.shiftLog.findFirst({
+              where: { driverId: dispatch.driverId, endTime: null },
+            });
+            if (openShift) {
+              await tx.shiftLog.update({
+                where: { id: openShift.id },
+                data: { endTime: new Date() },
+              });
+              await tx.auditLog.create({
+                data: {
+                  actionType: "SHIFT_END",
+                  entity: "ShiftLog",
+                  actorId: changerEmp?.id ?? session.user.id,
+                  actorRole: session.user.role,
+                  newPayload: {
+                    shiftId: openShift.id,
+                    driverId: dispatch.driverId,
+                    detail: "Auto-ended driver shift upon final dispatch completion (Zero-Click Autopilot)",
+                  },
+                },
+              });
+            }
+          }
+        }
       } else if (["PENDING", "EN_ROUTE", "IN_PROGRESS"].includes(status)) {
         // Re-activating a job restores equipment to RENTED
         for (const dm of dispatch.dispatchMachines) {
@@ -433,6 +467,37 @@ export async function updateDispatchStatus(formData: unknown) {
             data: { status: "IN_USE" },
           });
         }
+
+        // Auto-start Driver Shift & Lock Vehicle if departing store (Zero-Click Autopilot Mode)
+        if (status === "EN_ROUTE" && dispatch.driverId && dispatch.vehicleId) {
+          const openShift = await tx.shiftLog.findFirst({
+            where: { driverId: dispatch.driverId, endTime: null },
+          });
+          if (!openShift) {
+            const newShift = await tx.shiftLog.create({
+              data: {
+                driverId: dispatch.driverId,
+                vehicleId: dispatch.vehicleId,
+                date: new Date(),
+                startTime: new Date(),
+              },
+            });
+            await tx.auditLog.create({
+              data: {
+                actionType: "SHIFT_START",
+                entity: "ShiftLog",
+                actorId: changerEmp?.id ?? session.user.id,
+                actorRole: session.user.role,
+                newPayload: {
+                  shiftId: newShift.id,
+                  driverId: dispatch.driverId,
+                  vehicleId: dispatch.vehicleId,
+                  detail: "Auto-started shift and locked vehicle upon dispatch departure by Staff (Zero-Click Autopilot)",
+                },
+              },
+            });
+          }
+        }
       }
     });
 
@@ -446,12 +511,10 @@ export async function updateDispatchStatus(formData: unknown) {
 
     if (!process.env.CLI_TEST_ROLE) {
       revalidatePath("/admin/dispatch");
-    }
-    if (!process.env.CLI_TEST_ROLE) {
       revalidatePath("/admin/dashboard");
-    }
-    if (!process.env.CLI_TEST_ROLE) {
       revalidatePath("/driver/home");
+      revalidatePath("/staff/live/map");
+      revalidatePath("/admin/live/map");
     }
     return { success: true };
   } catch (err: any) {
@@ -498,12 +561,10 @@ export async function reportDriverIncident(formData: unknown) {
 
     if (!process.env.CLI_TEST_ROLE) {
       revalidatePath("/admin/dispatch");
-    }
-    if (!process.env.CLI_TEST_ROLE) {
       revalidatePath("/admin/dashboard");
-    }
-    if (!process.env.CLI_TEST_ROLE) {
       revalidatePath("/driver/home");
+      revalidatePath("/staff/live/map");
+      revalidatePath("/admin/live/map");
     }
     return { success: true };
   } catch (err: any) {
@@ -604,12 +665,10 @@ export async function finalizeDispatchScope(formData: unknown) {
 
     if (!process.env.CLI_TEST_ROLE) {
       revalidatePath("/admin/dispatch");
-    }
-    if (!process.env.CLI_TEST_ROLE) {
       revalidatePath("/admin/dashboard");
-    }
-    if (!process.env.CLI_TEST_ROLE) {
       revalidatePath("/driver/home");
+      revalidatePath("/staff/live/map");
+      revalidatePath("/admin/live/map");
     }
     return { success: true };
   } catch (err: any) {

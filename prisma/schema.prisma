@@ -794,6 +794,10 @@ model ChatMessage {
 model SystemSettings {
   id              String   @id @default(cuid())
   maintenanceMode Boolean  @default(false)
+  storeName       String?  @default("Zero Group Main Yard & Store")
+  storeAddress    String?  @default("Pala, Kottayam, Kerala")
+  storeLatitude   Decimal? @default(9.5916) @db.Decimal(10, 7)
+  storeLongitude  Decimal? @default(76.5222) @db.Decimal(10, 7)
   updatedAt       DateTime @updatedAt
 
   @@map("system_settings")

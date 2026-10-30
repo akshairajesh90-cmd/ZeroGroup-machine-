@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay } from "date-fns";
 import { requireAuth } from "@/lib/serverAuth";
 import { Role } from "@prisma/client";
+import { getStoreLocation } from "@/actions/storeSettings";
 import UnifiedLiveOperationsClient, { UnifiedDispatch } from "./UnifiedLiveOperationsClient";
 import type { MapRouteWaypoint } from "./UnifiedMapInner";
 
@@ -25,7 +26,7 @@ export default async function StaffLiveMapPage() {
   }
 
   // Parallel server fetch for zero N+1 latency
-  const [rawDispatches, rawEmployees, rawPings] = await Promise.all([
+  const [rawDispatches, rawEmployees, rawPings, storeLocation] = await Promise.all([
     // 1. Dispatches with all site, equipment, and crew associations
     prisma.dailyDispatch.findMany({
       where: whereClause,
@@ -77,6 +78,9 @@ export default async function StaffLiveMapPage() {
         timestamp: true,
       },
     }),
+
+    // 4. Central Store / Base Yard location
+    getStoreLocation(),
   ]);
 
   // Serialize Dispatches
@@ -136,6 +140,7 @@ export default async function StaffLiveMapPage() {
         lastLocationUpdate: e.lastLocationUpdate?.toISOString() || null,
       }))}
       initialPings={initialPings}
+      initialStoreLocation={storeLocation}
     />
   );
 }

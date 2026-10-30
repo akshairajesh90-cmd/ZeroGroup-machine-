@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Sparkles,
   Shield,
+  ShieldCheck,
   Layers,
   ArrowLeft,
   Pencil,
@@ -28,9 +29,19 @@ import {
   RotateCcw,
   Navigation,
   Compass,
+  Building2,
+  Crosshair,
+  X,
+  Save,
+  Loader2,
 } from "lucide-react";
 import { updateDispatchStatus } from "@/actions/dispatch";
-import type { MapDriverPin, MapSitePin, MapRouteWaypoint } from "./UnifiedMapInner";
+import {
+  type StoreLocationData,
+  updateStoreLocation,
+  updateDispatchSiteLocation,
+} from "@/actions/storeSettings";
+import type { MapDriverPin, MapSitePin, MapRouteWaypoint, StoreLocationProps } from "./UnifiedMapInner";
 
 // Dynamic import for Leaflet (prevent SSR window errors)
 const UnifiedMapInner = dynamic(() => import("./UnifiedMapInner"), {
@@ -88,16 +99,40 @@ export interface UnifiedDispatch {
   dateOfService: string;
 }
 
+// Coordinate extractor from Google Maps URL or raw "lat, lng" string
+function parseCoordinates(input: string): { lat: number; lng: number } | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+  // Match @lat,lng e.g. @9.591600,76.522200
+  const atMatch = trimmed.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (atMatch) {
+    return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
+  }
+  // Match ?q=lat,lng or &q=lat,lng or ll=
+  const qMatch = trimmed.match(/[?&](?:q|query|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (qMatch) {
+    return { lat: parseFloat(qMatch[1]), lng: parseFloat(qMatch[2]) };
+  }
+  // Match comma-separated "9.5916, 76.5222"
+  const rawMatch = trimmed.match(/^(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)$/);
+  if (rawMatch) {
+    return { lat: parseFloat(rawMatch[1]), lng: parseFloat(rawMatch[2]) };
+  }
+  return null;
+}
+
 interface UnifiedLiveOperationsClientProps {
   initialDispatches: UnifiedDispatch[];
   initialFieldEmployees: any[];
   initialPings: Record<string, MapRouteWaypoint[]>;
+  initialStoreLocation?: StoreLocationProps | null;
 }
 
 export default function UnifiedLiveOperationsClient({
   initialDispatches,
   initialFieldEmployees,
   initialPings,
+  initialStoreLocation,
 }: UnifiedLiveOperationsClientProps) {
   const [dispatches, setDispatches] = useState<UnifiedDispatch[]>(initialDispatches);
   const [searchTerm, setSearchTerm] = useState("");
@@ -105,6 +140,37 @@ export default function UnifiedLiveOperationsClient({
   const [selectedDispatchId, setSelectedDispatchId] = useState<string | null>(null);
   const [flyToCenter, setFlyToCenter] = useState<[number, number] | null>(null);
   const [routeTrails, setRouteTrails] = useState<Record<string, MapRouteWaypoint[]>>(initialPings);
+
+  // Store Location State & Modal
+  const [storeLocation, setStoreLocation] = useState<StoreLocationProps | null>(
+    initialStoreLocation || {
+      storeName: "Zero Group Main Yard & Store",
+      storeAddress: "Pala, Kottayam, Kerala",
+      storeLatitude: 9.5916,
+      storeLongitude: 76.5222,
+    }
+  );
+  const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
+  const [storeForm, setStoreForm] = useState({
+    storeName: "",
+    storeAddress: "",
+    storeLatitude: "",
+    storeLongitude: "",
+    googleLink: "",
+  });
+  const [isSavingStore, setIsSavingStore] = useState(false);
+  const [storeError, setStoreError] = useState<string | null>(null);
+
+  // Dispatch Site Location Modal
+  const [editingDispatch, setEditingDispatch] = useState<UnifiedDispatch | null>(null);
+  const [siteForm, setSiteForm] = useState({
+    location: "",
+    latitude: "",
+    longitude: "",
+    googleLink: "",
+  });
+  const [isSavingSite, setIsSavingSite] = useState(false);
+  const [siteError, setSiteError] = useState<string | null>(null);
 
   const [isPending, startTransition] = useTransition();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -232,6 +298,29 @@ export default function UnifiedLiveOperationsClient({
     return [];
   }, [selectedDispatchId, dispatches, liveDrivers, routeTrails]);
 
+  // Detected trucks returned to Base Yard
+  const returnedTrucks = useMemo(() => {
+    if (!storeLocation || !liveDrivers.length) return [];
+    return liveDrivers
+      .filter((driver) => {
+        if (!driver.dispatchId) return false;
+        const job = dispatches.find((d) => d.id === driver.dispatchId);
+        if (!job || !["IN_PROGRESS", "DELIVERED"].includes(job.status)) return false;
+        const distKm = calculateDistanceKm(
+          driver.lat,
+          driver.lng,
+          storeLocation.storeLatitude,
+          storeLocation.storeLongitude
+        );
+        return distKm <= 0.35; // within 350m of Base Yard
+      })
+      .map((d) => ({
+        driverName: d.name,
+        plate: d.vehiclePlate || "Fleet Truck",
+        dispatchId: d.dispatchId!,
+      }));
+  }, [storeLocation, liveDrivers, dispatches]);
+
   // Trip Scrubber Timer Effect
   useEffect(() => {
     if (!isPlaying || activeTrail.length <= 1) return;
@@ -296,6 +385,192 @@ export default function UnifiedLiveOperationsClient({
       }
       setUpdatingId(null);
     });
+  };
+
+  // ── STORE LOCATION HANDLERS ────────────────────────────────────────────────
+  const handleOpenStoreModal = () => {
+    setStoreForm({
+      storeName: storeLocation?.storeName || "Zero Group Main Yard & Store",
+      storeAddress: storeLocation?.storeAddress || "Pala, Kottayam, Kerala",
+      storeLatitude: storeLocation?.storeLatitude ? String(storeLocation.storeLatitude) : "9.591600",
+      storeLongitude: storeLocation?.storeLongitude ? String(storeLocation.storeLongitude) : "76.522200",
+      googleLink: "",
+    });
+    setStoreError(null);
+    setIsStoreModalOpen(true);
+  };
+
+  const handleDetectStoreGps = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      setStoreError("Geolocation is not supported by your browser");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setStoreForm((prev) => ({
+          ...prev,
+          storeLatitude: pos.coords.latitude.toFixed(6),
+          storeLongitude: pos.coords.longitude.toFixed(6),
+        }));
+        setStoreError(null);
+      },
+      (err) => {
+        setStoreError(`Failed to detect GPS: ${err.message}`);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handleStoreGoogleUrlChange = (value: string) => {
+    setStoreForm((prev) => {
+      const next = { ...prev, googleLink: value };
+      const parsed = parseCoordinates(value);
+      if (parsed) {
+        next.storeLatitude = parsed.lat.toFixed(6);
+        next.storeLongitude = parsed.lng.toFixed(6);
+      }
+      return next;
+    });
+  };
+
+  const handleSaveStore = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const lat = parseFloat(storeForm.storeLatitude);
+    const lng = parseFloat(storeForm.storeLongitude);
+
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      setStoreError("Please enter valid decimal coordinates (e.g., 9.5916, 76.5222)");
+      return;
+    }
+
+    setIsSavingStore(true);
+    setStoreError(null);
+
+    const payload: StoreLocationData = {
+      storeName: storeForm.storeName.trim() || "Zero Group Main Yard & Store",
+      storeAddress: storeForm.storeAddress.trim() || "Pala, Kottayam, Kerala",
+      storeLatitude: lat,
+      storeLongitude: lng,
+    };
+
+    const res = await updateStoreLocation(payload);
+    setIsSavingStore(false);
+
+    if (res?.success) {
+      setStoreLocation(payload);
+      setFlyToCenter([payload.storeLatitude, payload.storeLongitude]);
+      setIsStoreModalOpen(false);
+    } else {
+      setStoreError(res?.error || "Failed to update store location");
+    }
+  };
+
+  // ── DISPATCH SITE LOCATION HANDLERS ───────────────────────────────────────
+  const handleOpenSiteModal = (job: UnifiedDispatch) => {
+    setEditingDispatch(job);
+    setSiteForm({
+      location: job.location || "",
+      latitude: job.latitude !== null ? String(job.latitude) : "",
+      longitude: job.longitude !== null ? String(job.longitude) : "",
+      googleLink: job.mapLink || "",
+    });
+    setSiteError(null);
+  };
+
+  const handleDetectSiteGps = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      setSiteError("Geolocation is not supported by your browser");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setSiteForm((prev) => ({
+          ...prev,
+          latitude: pos.coords.latitude.toFixed(6),
+          longitude: pos.coords.longitude.toFixed(6),
+        }));
+        setSiteError(null);
+      },
+      (err) => {
+        setSiteError(`Failed to detect GPS: ${err.message}`);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handleSiteGoogleUrlChange = (value: string) => {
+    setSiteForm((prev) => {
+      const next = { ...prev, googleLink: value };
+      const parsed = parseCoordinates(value);
+      if (parsed) {
+        next.latitude = parsed.lat.toFixed(6);
+        next.longitude = parsed.lng.toFixed(6);
+      }
+      return next;
+    });
+  };
+
+  const handleSaveSite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDispatch) return;
+
+    let lat: number | null = null;
+    let lng: number | null = null;
+
+    if (siteForm.latitude.trim() || siteForm.longitude.trim()) {
+      const parsedLat = parseFloat(siteForm.latitude);
+      const parsedLng = parseFloat(siteForm.longitude);
+      if (
+        isNaN(parsedLat) ||
+        isNaN(parsedLng) ||
+        parsedLat < -90 ||
+        parsedLat > 90 ||
+        parsedLng < -180 ||
+        parsedLng > 180
+      ) {
+        setSiteError("Please enter valid decimal coordinates (e.g., 9.5916, 76.5222)");
+        return;
+      }
+      lat = parsedLat;
+      lng = parsedLng;
+    }
+
+    setIsSavingSite(true);
+    setSiteError(null);
+
+    const res = await updateDispatchSiteLocation({
+      dispatchId: editingDispatch.id,
+      location: siteForm.location.trim() || editingDispatch.location,
+      latitude: lat,
+      longitude: lng,
+      mapLink: siteForm.googleLink.trim() || undefined,
+    });
+
+    setIsSavingSite(false);
+
+    if (res?.success) {
+      // Optimistically update dispatch list
+      setDispatches((prev) =>
+        prev.map((d) =>
+          d.id === editingDispatch.id
+            ? {
+                ...d,
+                location: res.dispatch.location,
+                latitude: res.dispatch.latitude,
+                longitude: res.dispatch.longitude,
+                mapLink: res.dispatch.mapLink,
+              }
+            : d
+        )
+      );
+
+      if (lat !== null && lng !== null) {
+        setFlyToCenter([lat, lng]);
+      }
+      setEditingDispatch(null);
+    } else {
+      setSiteError(res?.error || "Failed to update job site location");
+    }
   };
 
   // 4-Stage helper
@@ -399,6 +674,17 @@ export default function UnifiedLiveOperationsClient({
             <span>Live Stream (5s Sync)</span>
           </div>
 
+          {/* Edit Store Location Button */}
+          <button
+            type="button"
+            onClick={handleOpenStoreModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 text-xs font-bold transition-all shadow"
+            title="Edit Central Store / Base Yard Location & Coordinates"
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Store Yard GPS</span>
+          </button>
+
           <Link
             href="/staff/dispatch"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/30 text-xs font-bold transition-all shadow"
@@ -408,6 +694,24 @@ export default function UnifiedLiveOperationsClient({
           </Link>
         </div>
       </div>
+
+      {/* 🏬 TRUCK YARD RETURN ALERT BANNER */}
+      {returnedTrucks.length > 0 && (
+        <div className="p-3.5 bg-emerald-500/10 border-2 border-emerald-500/40 rounded-2xl flex items-center justify-between animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            <span className="text-xs font-bold text-white">
+              🏬 <strong>Truck {returnedTrucks.map((t) => t.plate).join(", ")}</strong> has arrived back at the Base Yard!
+            </span>
+          </div>
+          <span className="px-2.5 py-1 rounded-xl bg-emerald-500 text-slate-950 font-black text-[11px] shadow">
+            Ready to Complete & Return
+          </span>
+        </div>
+      )}
 
       {/* ── DUAL-PANE COMMAND CENTER ───────────────────────────────────────────── */}
       <div className="flex flex-col lg:grid lg:grid-cols-12 gap-6 items-start">
@@ -419,6 +723,12 @@ export default function UnifiedLiveOperationsClient({
           <UnifiedMapInner
             drivers={liveDrivers}
             sites={sitePins}
+            storeLocation={storeLocation}
+            onOpenEditStore={handleOpenStoreModal}
+            onOpenEditSite={(siteId) => {
+              const j = dispatches.find((d) => d.id === siteId);
+              if (j) handleOpenSiteModal(j);
+            }}
             selectedDispatchId={selectedDispatchId}
             onSelectDispatch={handleSelectDispatch}
             flyToCenter={flyToCenter}
@@ -656,9 +966,24 @@ export default function UnifiedLiveOperationsClient({
                         <h2 className="text-lg font-black text-white hover:text-emerald-400 transition-colors">
                           {job.customerName}
                         </h2>
-                        <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-400">
+                        <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-400 flex-wrap">
                           <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                          <span className="truncate max-w-[220px]">{job.location}</span>
+                          <span className="truncate max-w-[180px]">{job.location}</span>
+
+                          {/* Edit Site GPS Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenSiteModal(job);
+                            }}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold transition-all"
+                            title="Edit site address and GPS coordinates"
+                          >
+                            <Pencil className="w-2.5 h-2.5" />
+                            <span>Edit GPS</span>
+                          </button>
+
                           {job.mapLink && (
                             <a
                               href={job.mapLink}
@@ -679,16 +1004,32 @@ export default function UnifiedLiveOperationsClient({
                       </div>
                     </div>
 
-                    {/* LIVE ETA BADGE IF EN ROUTE */}
-                    {etaBadge && job.status === "EN_ROUTE" && (
-                      <div className="mb-3 px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-between text-xs font-bold">
-                        <span className="flex items-center gap-1.5">
-                          <Navigation className="w-3.5 h-3.5" />
-                          <span>Live Site ETA:</span>
+                    {/* LIVE WORK TIMER & ETA ROW */}
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <div className="px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 flex items-center justify-between text-xs font-bold">
+                        <span className="flex items-center gap-1.5 text-slate-400">
+                          <Clock className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Work Timer:</span>
                         </span>
-                        <span className="font-mono">{etaBadge}</span>
+                        <span className="font-mono text-amber-400">
+                          {job.status === "EN_ROUTE"
+                            ? "En Route"
+                            : job.status === "IN_PROGRESS"
+                            ? "On Site"
+                            : job.status === "COMPLETED" || job.status === "DELIVERED"
+                            ? "Completed"
+                            : "In Store"}
+                        </span>
                       </div>
-                    )}
+
+                      <div className="px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-cyan-400 flex items-center justify-between text-xs font-bold">
+                        <span className="flex items-center gap-1.5 text-slate-400">
+                          <Navigation className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Site ETA:</span>
+                        </span>
+                        <span className="font-mono truncate">{etaBadge || (job.status === "IN_PROGRESS" ? "Arrived" : "Standby")}</span>
+                      </div>
+                    </div>
 
                     {/* 4-STAGE PIPELINE */}
                     <div className="bg-slate-950/80 rounded-2xl p-3 border border-slate-800/80 mb-3.5">
@@ -747,15 +1088,23 @@ export default function UnifiedLiveOperationsClient({
                     {/* MACHINERY & LOADED TOOLS */}
                     <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                       <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800/80">
-                        <p className="text-[9px] font-bold uppercase text-slate-500 flex items-center gap-1 mb-1">
-                          <Truck className="w-3 h-3 text-amber-400" />
-                          Machinery
-                        </p>
-                        <p className="font-bold text-white truncate">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-[9px] font-bold uppercase text-slate-500 flex items-center gap-1">
+                            <Truck className="w-3 h-3 text-amber-400" />
+                            Machinery
+                          </p>
+                          {job.vehiclePlate && (
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[9px] font-bold border border-emerald-500/30">
+                              🔒 Locked
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-bold text-white truncate text-xs">
                           {job.machineId || "Standard Mixer"}
                         </p>
                         {job.vehiclePlate && (
-                          <p className="text-[10px] text-slate-400 font-mono truncate">
+                          <p className="text-[10px] text-emerald-400 font-mono truncate font-bold flex items-center gap-1 mt-0.5">
+                            <ShieldCheck className="w-3 h-3 text-emerald-400" />
                             {job.vehiclePlate}
                           </p>
                         )}
@@ -882,6 +1231,264 @@ export default function UnifiedLiveOperationsClient({
           </div>
         </div>
       </div>
+
+      {/* 🏬 EDIT STORE & BASE YARD MODAL */}
+      {isStoreModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
+          <div
+            className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setIsStoreModalOpen(false)}
+              className="absolute top-5 right-5 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                <Building2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">Edit Store & Base Yard Location</h3>
+                <p className="text-xs text-slate-400">
+                  Update home base coordinates where vehicles dispatch from.
+                </p>
+              </div>
+            </div>
+
+            {storeError && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{storeError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveStore} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Store / Main Yard Name</label>
+                <input
+                  type="text"
+                  value={storeForm.storeName}
+                  onChange={(e) => setStoreForm({ ...storeForm, storeName: e.target.value })}
+                  placeholder="e.g. Zero Group Main Yard & Store"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Store Address</label>
+                <input
+                  type="text"
+                  value={storeForm.storeAddress}
+                  onChange={(e) => setStoreForm({ ...storeForm, storeAddress: e.target.value })}
+                  placeholder="e.g. Pala, Kottayam, Kerala"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-slate-300 font-bold">Google Maps Link or "lat, lng"</label>
+                  <span className="text-[10px] text-emerald-400 font-semibold">Auto-fills Lat / Lng</span>
+                </div>
+                <input
+                  type="text"
+                  value={storeForm.googleLink}
+                  onChange={(e) => handleStoreGoogleUrlChange(e.target.value)}
+                  placeholder="Paste Google Maps URL or '9.5916, 76.5222'..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono text-[11px]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Latitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={storeForm.storeLatitude}
+                    onChange={(e) => setStoreForm({ ...storeForm, storeLatitude: e.target.value })}
+                    placeholder="e.g. 9.591600"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Longitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={storeForm.storeLongitude}
+                    onChange={(e) => setStoreForm({ ...storeForm, storeLongitude: e.target.value })}
+                    placeholder="e.g. 76.522200"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleDetectStoreGps}
+                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center gap-1.5 transition-colors text-xs"
+                >
+                  <Crosshair className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Use Device GPS</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsStoreModalOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingStore}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black flex items-center gap-1.5 transition-all shadow disabled:opacity-50"
+                  >
+                    {isSavingStore ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
+                    <span>Save Location</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 📍 EDIT DISPATCH JOB SITE MODAL */}
+      {editingDispatch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
+          <div
+            className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setEditingDispatch(null)}
+              className="absolute top-5 right-5 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                <MapPin className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">Edit Job Site Location</h3>
+                <p className="text-xs text-slate-400">
+                  Customer: <strong className="text-white">{editingDispatch.customerName}</strong> • Job #{editingDispatch.id.slice(-6)}
+                </p>
+              </div>
+            </div>
+
+            {siteError && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{siteError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveSite} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Site Address / Landmark</label>
+                <input
+                  type="text"
+                  value={siteForm.location}
+                  onChange={(e) => setSiteForm({ ...siteForm, location: e.target.value })}
+                  placeholder="e.g. Kottayam Bypass, Near Reliance Petrol Pump"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-slate-300 font-bold">Google Maps Link or "lat, lng"</label>
+                  <span className="text-[10px] text-amber-400 font-semibold">Auto-fills Lat / Lng</span>
+                </div>
+                <input
+                  type="text"
+                  value={siteForm.googleLink}
+                  onChange={(e) => handleSiteGoogleUrlChange(e.target.value)}
+                  placeholder="Paste Google Maps URL or '9.5916, 76.5222'..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 font-mono text-[11px]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Site Latitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={siteForm.latitude}
+                    onChange={(e) => setSiteForm({ ...siteForm, latitude: e.target.value })}
+                    placeholder="e.g. 9.582300"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Site Longitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={siteForm.longitude}
+                    onChange={(e) => setSiteForm({ ...siteForm, longitude: e.target.value })}
+                    placeholder="e.g. 76.518900"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleDetectSiteGps}
+                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center gap-1.5 transition-colors text-xs"
+                >
+                  <Crosshair className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Use Device GPS</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingDispatch(null)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingSite}
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black flex items-center gap-1.5 transition-all shadow disabled:opacity-50"
+                  >
+                    {isSavingSite ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
+                    <span>Save Site GPS</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
