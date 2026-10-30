@@ -107,6 +107,20 @@ const playbackMarkerIcon = new L.Icon({
   shadowSize: [41, 41],
 });
 
+function MapResizer() {
+  const map = useMap();
+  useEffect(() => {
+    map.invalidateSize();
+    const t1 = setTimeout(() => map.invalidateSize(), 250);
+    const t2 = setTimeout(() => map.invalidateSize(), 800);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [map]);
+  return null;
+}
+
 function MapCameraController({
   targetCenter,
   zoom,
@@ -116,7 +130,7 @@ function MapCameraController({
 }) {
   const map = useMap();
   useEffect(() => {
-    if (targetCenter) {
+    if (targetCenter && Math.abs(targetCenter[0]) > 1 && Math.abs(targetCenter[1]) > 1) {
       map.flyTo(targetCenter, zoom || 14, { duration: 1.2 });
     }
   }, [targetCenter, zoom, map]);
@@ -418,6 +432,7 @@ export default function UnifiedMapInner({
         scrollWheelZoom={true}
         className="w-full h-full min-h-[520px] z-0"
       >
+        <MapResizer />
         <MapCameraController targetCenter={flyToCenter} />
 
         {/* 🗺️ 100% FREE TILES (No API Keys, No Watermarks, Zero Costs) */}

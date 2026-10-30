@@ -25,6 +25,16 @@ export default async function StaffLiveMapPage() {
     whereClause = { isPendingDelete: false };
   }
 
+  // Check if today has pings. If not (e.g. fresh calendar day or after-hours), gracefully load historical pings from past 30 days!
+  const countTodayPings = await prisma.locationPing.count({
+    where: { timestamp: { gte: todayStart, lte: todayEnd } },
+  });
+
+  const pingsWhereClause =
+    countTodayPings > 0
+      ? { timestamp: { gte: todayStart, lte: todayEnd } }
+      : { timestamp: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } };
+
   // Parallel server fetch for zero N+1 latency
   const [rawDispatches, rawEmployees, rawPings, storeLocation] = await Promise.all([
     // 1. Dispatches with all site, equipment, and crew associations
@@ -64,12 +74,11 @@ export default async function StaffLiveMapPage() {
       },
     }),
 
-    // 3. Today's route telemetry breadcrumb waypoints
+    // 3. Historical route telemetry breadcrumb waypoints (today or recent 30 days)
     prisma.locationPing.findMany({
-      where: {
-        timestamp: { gte: todayStart, lte: todayEnd },
-      },
+      where: pingsWhereClause,
       orderBy: { timestamp: "asc" },
+      take: 1000,
       select: {
         employeeId: true,
         latitude: true,

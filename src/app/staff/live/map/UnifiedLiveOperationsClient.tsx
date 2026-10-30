@@ -284,26 +284,34 @@ export default function UnifiedLiveOperationsClient({
       }));
   }, [dispatches]);
 
-  // Active trail for the currently selected job or driver
+  // Active trail for the currently selected job or driver (with historical fallback)
   const activeTrail: MapRouteWaypoint[] = useMemo(() => {
-    if (!selectedDispatchId) {
-      // Return combined trail of first active driver
-      const firstDriver = liveDrivers[0];
-      return firstDriver && routeTrails[firstDriver.id] ? routeTrails[firstDriver.id] : [];
+    // 1. If a job is selected, try to find its assigned driver or operator's route
+    if (selectedDispatchId) {
+      const selectedJob = dispatches.find((d) => d.id === selectedDispatchId);
+      if (selectedJob) {
+        const driverId = selectedJob.driverId;
+        if (driverId && routeTrails[driverId] && routeTrails[driverId].length > 0) {
+          return routeTrails[driverId];
+        }
+        const operatorId = selectedJob.operatorId;
+        if (operatorId && routeTrails[operatorId] && routeTrails[operatorId].length > 0) {
+          return routeTrails[operatorId];
+        }
+      }
     }
 
-    const selectedJob = dispatches.find((d) => d.id === selectedDispatchId);
-    if (!selectedJob) return [];
+    // 2. If selected job has no pings yet, check if ANY driver has recorded historical pings
+    const availableTrails = Object.values(routeTrails).filter((t) => t && t.length > 0);
+    if (availableTrails.length > 0) {
+      // Pick the trail with the most historical waypoints
+      availableTrails.sort((a, b) => b.length - a.length);
+      return availableTrails[0];
+    }
 
-    const driverId = selectedJob.driverId;
-    if (driverId && routeTrails[driverId]) {
-      return routeTrails[driverId];
-    }
-    const operatorId = selectedJob.operatorId;
-    if (operatorId && routeTrails[operatorId]) {
-      return routeTrails[operatorId];
-    }
-    return [];
+    // 3. Fallback to first driver
+    const firstDriver = liveDrivers[0];
+    return firstDriver && routeTrails[firstDriver.id] ? routeTrails[firstDriver.id] : [];
   }, [selectedDispatchId, dispatches, liveDrivers, routeTrails]);
 
   // Detected trucks returned to Base Yard
@@ -752,8 +760,8 @@ export default function UnifiedLiveOperationsClient({
                 <span className="text-xs font-bold text-white uppercase tracking-wider">
                   Trip Playback & Route Scrubber
                 </span>
-                <span className="text-[10px] text-slate-500">
-                  ({activeTrail.length} waypoints recorded today)
+                <span className="text-[10px] text-amber-400 font-bold">
+                  ({activeTrail.length} historical waypoints{activeTrail[0] ? ` • Trip on ${new Date(activeTrail[0].time).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}` : ""})
                 </span>
               </div>
 
@@ -1091,6 +1099,25 @@ export default function UnifiedLiveOperationsClient({
                           </span>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Prominent One-Tap Street Route & GPS Access Button */}
+                    <div className="mb-3">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectDispatch(job.id);
+                        }}
+                        className={`w-full py-2 px-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md ${
+                          isSelected
+                            ? "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/30 ring-2 ring-blue-400/40"
+                            : "bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700"
+                        }`}
+                      >
+                        <Navigation className="w-3.5 h-3.5 text-sky-400" />
+                        <span>{isSelected ? "✓ Active Road Route & GPS Trail" : "🗺️ View Street Route & GPS Trail"}</span>
+                      </button>
                     </div>
 
                     {/* MACHINERY & LOADED TOOLS */}
