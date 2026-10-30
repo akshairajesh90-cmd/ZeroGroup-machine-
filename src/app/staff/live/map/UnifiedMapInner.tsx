@@ -453,12 +453,27 @@ export default function UnifiedMapInner({
           />
         )}
         {tileStyle === "satellite" && (
-          <TileLayer
-            key="tile-satellite"
-            attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS User Community'
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{x}/{y}"
-            maxZoom={18}
-          />
+          <>
+            {/* 🛰️ High-Resolution Aerial Satellite Imagery (100% Free, Zero Watermark, Zero API Key) */}
+            <TileLayer
+              key="tile-satellite-base"
+              attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS User Community'
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={19}
+            />
+            {/* Transparent Street & Place Labels overlaid on satellite */}
+            <TileLayer
+              key="tile-satellite-labels"
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={19}
+            />
+            {/* Transparent Highway & Road Network overlaid on satellite */}
+            <TileLayer
+              key="tile-satellite-roads"
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={19}
+            />
+          </>
         )}
 
         {/* 🏬 CENTRAL STORE / BASE YARD MARKER */}
