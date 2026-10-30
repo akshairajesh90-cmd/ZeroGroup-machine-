@@ -17,9 +17,12 @@ import {
   Wrench, 
   Loader2, 
   ChevronLeft,
-  Calendar
+  Calendar,
+  Phone
 } from "lucide-react";
 import Link from "next/link";
+import { SiteLocationButtons } from "@/components/dispatch/SiteLocationButtons";
+import { Compass } from "lucide-react";
 
 interface DriverOrderClientProps {
   dispatch: any;
@@ -262,9 +265,21 @@ export default function DriverOrderClient({ dispatch: initialDispatch, userRole,
 
         {/* Site Details */}
         <div className="space-y-2.5 text-xs text-slate-300 py-2">
-          <div className="flex items-center gap-2.5">
-            <User className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Customer: <strong className="text-white font-bold">{dispatch.customer?.name}</strong></span>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <User className="w-4 h-4 text-amber-400 shrink-0" />
+              <span className="truncate">Customer: <strong className="text-white font-bold">{dispatch.customer?.name}</strong></span>
+            </div>
+            {dispatch.customer?.phone && (
+              <a
+                href={`tel:${dispatch.customer.phone}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 font-bold text-xs shrink-0 active:scale-95 transition-all shadow-sm"
+                title="Call Customer"
+              >
+                <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Call ({dispatch.customer.phone})</span>
+              </a>
+            )}
           </div>
           {dispatch.vehicle && (
             <div className="flex items-center gap-2.5">
@@ -276,6 +291,38 @@ export default function DriverOrderClient({ dispatch: initialDispatch, userRole,
             <MapPin className="w-4 h-4 text-blue-400 shrink-0" />
             <span>Location: <strong className="text-white font-bold">{dispatch.location}</strong></span>
           </div>
+
+          {/* Turn-by-Turn GPS Navigation & Kerala Rural GIS Guidance */}
+          <div className="pt-1 pb-1">
+            <SiteLocationButtons
+              latitude={dispatch.latitude}
+              longitude={dispatch.longitude}
+              locationName={dispatch.location}
+              customerName={dispatch.customer?.name}
+              mapLink={dispatch.mapLink}
+              variant="driver"
+              isOffRoad={dispatch.isOffRoad}
+              accessLatitude={dispatch.accessLatitude}
+              accessLongitude={dispatch.accessLongitude}
+              offRoadBearingDeg={dispatch.offRoadBearingDeg}
+              offRoadDistanceM={dispatch.offRoadDistanceM}
+              isCentroidVerified={dispatch.isCentroidVerified}
+              dwellConfidence={dispatch.dwellConfidence}
+            />
+          </div>
+
+          {/* Off-Road Estate Dirt Track Guidance for Driver */}
+          {dispatch.isOffRoad && (
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs space-y-1">
+              <span className="font-bold text-amber-300 flex items-center gap-1.5">
+                <Compass className="w-4 h-4 text-amber-400" />
+                🌲 Off-Road Estate Notice for Driver
+              </span>
+              <p className="text-slate-300">
+                PWD paved highway ends at Highway Turn-off. Navigate to Highway Access Point, then proceed on private dirt track bearing <strong className="text-amber-300">{Math.round(dispatch.offRoadBearingDeg || 54)}°</strong> (~{Math.round(dispatch.offRoadDistanceM || 434)}m low-gear crawl).
+              </p>
+            </div>
+          )}
           <div className="flex items-center gap-2.5">
             <Calendar className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>Date: <strong className="text-white font-bold">{new Date(dispatch.dateOfService).toISOString().split("T")[0]}</strong></span>

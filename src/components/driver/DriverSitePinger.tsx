@@ -26,6 +26,7 @@ interface DriverSitePingerProps {
   lastKnownLng?: number | null;
   lastPingTime?: string | Date | null;
   showAutoToggle?: boolean;
+  hideDestinationHeader?: boolean;
 }
 
 function formatPingTime(d: Date | string | number | null | undefined): string | null {
@@ -46,6 +47,7 @@ export default function DriverSitePinger({
   lastKnownLng,
   lastPingTime: initialLastPing,
   showAutoToggle = true,
+  hideDestinationHeader = false,
 }: DriverSitePingerProps) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -132,53 +134,56 @@ export default function DriverSitePinger({
 
   return (
     <div className="rounded-2xl bg-slate-900/90 border border-cyan-500/30 p-4.5 shadow-xl shadow-cyan-950/20 backdrop-blur-md space-y-4">
-      {/* ── Destination Site Card ─────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 border-b border-white/10 pb-3.5">
-        <div className="space-y-1.5 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-              <MapPin className="w-3 h-3 text-cyan-400" /> Site Destination
-            </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-              <Clock className="w-2.5 h-2.5 text-amber-400" /> 15m Cadence
-            </span>
+      {/* ── Destination Site Card (Only if not hidden) ─────────── */}
+      {!hideDestinationHeader && (
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 border-b border-white/10 pb-3.5">
+          <div className="space-y-1.5 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                <MapPin className="w-3 h-3 text-cyan-400" /> Site Destination
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                <Clock className="w-2.5 h-2.5 text-amber-400" /> 15m Cadence
+              </span>
+            </div>
+
+            <h3 className="text-base font-black text-white leading-snug break-words">
+              {siteAddress}
+            </h3>
+
+            {customerName && (
+              <p className="text-xs text-slate-400 flex items-center gap-1.5 truncate">
+                <span>Client:</span>
+                <strong className="text-slate-200 font-semibold">{customerName}</strong>
+              </p>
+            )}
           </div>
 
-          <h3 className="text-base font-black text-white leading-snug break-words">
-            {siteAddress}
-          </h3>
-
-          {customerName && (
-            <p className="text-xs text-slate-400 flex items-center gap-1.5 truncate">
-              <span>Client:</span>
-              <strong className="text-slate-200 font-semibold">{customerName}</strong>
-            </p>
-          )}
-        </div>
-
-        {/* Action: Open in Google Maps */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {customerPhone && (
+          {/* Action: Open in Google Maps */}
+          <div className="flex items-center gap-2 shrink-0">
+            {customerPhone && (
+              <a
+                href={`tel:${customerPhone}`}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 font-bold text-xs transition-colors"
+                title="Call Customer"
+              >
+                <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Call</span>
+              </a>
+            )}
             <a
-              href={`tel:${customerPhone}`}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 transition-colors"
-              title="Call Customer"
+              href={gmapNavUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-bold text-xs transition-all active:scale-95 shadow-sm"
             >
-              <Phone className="w-4 h-4 text-emerald-400" />
+              <Navigation className="w-3.5 h-3.5" />
+              <span>Navigate</span>
+              <ExternalLink className="w-3 h-3 opacity-60" />
             </a>
-          )}
-          <a
-            href={gmapNavUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-bold text-xs transition-all active:scale-95 shadow-sm"
-          >
-            <Navigation className="w-3.5 h-3.5" />
-            <span>Navigate</span>
-            <ExternalLink className="w-3 h-3 opacity-60" />
-          </a>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── Telemetry & GPS Ping Console ──────────────────────────── */}
       <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 space-y-3">

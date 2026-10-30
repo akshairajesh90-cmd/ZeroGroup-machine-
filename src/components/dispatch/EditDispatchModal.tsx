@@ -17,6 +17,9 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { updateDailyDispatch } from "@/actions/dispatch";
+import { SiteLocationButtons } from "./SiteLocationButtons";
+import { parseKeralaLocation } from "@/lib/gis/keralaGeoParser";
+import { ShieldAlert, Compass } from "lucide-react";
 
 interface EditDispatchModalProps {
   dispatch: any;
@@ -46,6 +49,14 @@ export function EditDispatchModal({
   // Tab 1: Jobsite & Schedule
   const [customerId, setCustomerId] = useState(dispatch.customerId || "");
   const [location, setLocation] = useState(dispatch.location || "");
+  const [subLocality, setSubLocality] = useState(dispatch.subLocality || "");
+  const [structuralAnchor, setStructuralAnchor] = useState(dispatch.structuralAnchor || "");
+  const [isOffRoad, setIsOffRoad] = useState(Boolean(dispatch.isOffRoad));
+
+  const geoAnalysis = React.useMemo(() => {
+    const combined = [location, subLocality, structuralAnchor].filter(Boolean).join(", ");
+    return parseKeralaLocation(combined || location);
+  }, [location, subLocality, structuralAnchor]);
   const [mapLink, setMapLink] = useState(dispatch.mapLink || "");
   const [dateOfService, setDateOfService] = useState(() => {
     try {
@@ -213,6 +224,9 @@ export function EditDispatchModal({
         version: dispatch.version,
         customerId,
         location: location.trim(),
+        subLocality: subLocality.trim() || undefined,
+        structuralAnchor: structuralAnchor.trim() || undefined,
+        isOffRoad,
         mapLink: mapLink.trim() || null,
         dateOfService,
         status,
@@ -404,6 +418,30 @@ export function EditDispatchModal({
                   </select>
                 </div>
               </div>
+
+              {/* Site Location & Turn-by-Turn Navigation Preview */}
+              {(location.trim() || mapLink.trim()) && (
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase text-slate-400 tracking-wider">
+                    Site Location & Navigation Preview
+                  </span>
+                  <SiteLocationButtons
+                    latitude={dispatch.latitude}
+                    longitude={dispatch.longitude}
+                    locationName={location}
+                    customerName={customers.find((c) => c.id === customerId)?.name}
+                    mapLink={mapLink}
+                    variant="modal"
+                    isOffRoad={dispatch.isOffRoad}
+                    accessLatitude={dispatch.accessLatitude}
+                    accessLongitude={dispatch.accessLongitude}
+                    offRoadBearingDeg={dispatch.offRoadBearingDeg}
+                    offRoadDistanceM={dispatch.offRoadDistanceM}
+                    isCentroidVerified={dispatch.isCentroidVerified}
+                    dwellConfidence={dispatch.dwellConfidence}
+                  />
+                </div>
+              )}
 
               {(status === "CANCELLED" || status === "POSTPONED") && (
                 <div>

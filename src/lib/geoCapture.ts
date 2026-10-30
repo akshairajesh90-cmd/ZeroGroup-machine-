@@ -8,6 +8,8 @@ export interface GeoLocationResult {
   accuracy: number;
   source: "GPS_HIGH" | "NETWORK_LOW" | "CACHED" | "SIMULATED";
   timestamp: number;
+  speed?: number | null; // in km/h
+  heading?: number | null; // in degrees 0-360
 }
 
 export interface GeoCaptureOptions {
@@ -78,12 +80,23 @@ export async function captureCurrentPosition(
       });
     });
 
+    const rawSpeed = pos.coords.speed;
+    const speedKmH = (rawSpeed !== null && rawSpeed !== undefined && !isNaN(rawSpeed) && rawSpeed >= 0)
+      ? Math.round(rawSpeed * 3.6 * 10) / 10
+      : null;
+    const rawHeading = pos.coords.heading;
+    const headingDeg = (rawHeading !== null && rawHeading !== undefined && !isNaN(rawHeading) && rawHeading >= 0)
+      ? Math.round(rawHeading)
+      : null;
+
     return {
       latitude: pos.coords.latitude,
       longitude: pos.coords.longitude,
       accuracy: Math.round(pos.coords.accuracy || 10),
       source: "GPS_HIGH",
       timestamp: pos.timestamp || Date.now(),
+      speed: speedKmH,
+      heading: headingDeg,
     };
   } catch (err: any) {
     console.warn("[GeoCapture] High accuracy GPS fix failed or timed out:", err.message);

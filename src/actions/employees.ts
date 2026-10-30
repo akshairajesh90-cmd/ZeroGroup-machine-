@@ -427,3 +427,31 @@ export async function toggleEmployeeActiveStatus(targetEmployeeId: string, isAct
     return { success: false, error: error.message };
   }
 }
+
+export async function updateEmployeeOperatorType(
+  targetEmployeeId: string,
+  operatorType: "INTERNAL" | "SUBCONTRACTOR"
+) {
+  try {
+    await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN, Role.STAFF] });
+    const target = await prisma.employee.findUniqueOrThrow({
+      where: { id: targetEmployeeId },
+      select: { id: true, name: true, operatorType: true },
+    });
+
+    const updated = await prisma.employee.update({
+      where: { id: targetEmployeeId },
+      data: { operatorType },
+    });
+
+    safeRevalidate("/staff/crew");
+    safeRevalidate("/staff/workers");
+    safeRevalidate("/staff/operators");
+    safeRevalidate("/staff/dispatch");
+    safeRevalidate("/admin/live/map");
+
+    return { success: true, operatorType: updated.operatorType };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}

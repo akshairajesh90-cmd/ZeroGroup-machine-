@@ -286,6 +286,17 @@ model DailyDispatch {
   mapLink               String?
   latitude              Decimal?                @db.Decimal(10, 7)
   longitude             Decimal?                @db.Decimal(10, 7)
+  // Kerala Rural GIS & Logistics Engine (Additive)
+  subLocality           String?
+  structuralAnchor      String?
+  accessLatitude        Decimal?                @db.Decimal(10, 7)
+  accessLongitude       Decimal?                @db.Decimal(10, 7)
+  isOffRoad             Boolean?                @default(false)
+  offRoadBearingDeg     Float?
+  offRoadDistanceM      Float?
+  isCentroidVerified    Boolean?                @default(false)
+  dwellConfidence       Float?
+  dwellDurationMins     Float?
   dateOfService         DateTime                @db.Date
   workType              WorkType                @default(NORMAL)
   status                DispatchStatus          @default(PENDING)
@@ -1149,5 +1160,24 @@ model SalaryAdvance {
   updatedAt    DateTime   @updatedAt
 
   employee     Employee   @relation(fields: [employeeId], references: [id])
+}
+
+model SiteDwellCluster {
+  id              String   @id @default(cuid())
+  dispatchId      String?
+  employeeId      String?
+  latitude        Decimal  @db.Decimal(10, 7)
+  longitude       Decimal  @db.Decimal(10, 7)
+  clusterRadiusM  Float
+  durationMins    Float
+  pingCount       Int
+  confidence      Float
+  isVerified      Boolean  @default(false)
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+
+  @@index([dispatchId])
+  @@index([employeeId])
+  @@map("site_dwell_clusters")
 }
 

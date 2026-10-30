@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Truck, PlusCircle, CheckCircle2, UserCheck, Wrench, X, Users, Trash2, ShieldAlert } from "lucide-react";
+import { Truck, PlusCircle, CheckCircle2, UserCheck, Wrench, X, Users, Trash2, ShieldAlert, Compass, MapPin } from "lucide-react";
 import { createDailyDispatch, createQuickCustomer } from "@/actions/dispatch";
+import { parseKeralaLocation } from "@/lib/gis/keralaGeoParser";
 interface CreateDispatchModalV2Props {
   onClose: () => void;
   machines: any[];
@@ -14,10 +15,19 @@ export function CreateDispatchModalV2({ onClose, machines, employees, tools, veh
   // Global Job Ticket State
   const [customerId, setCustomerId] = useState("");
   const [location, setLocation] = useState("");
+  const [subLocality, setSubLocality] = useState("");
+  const [structuralAnchor, setStructuralAnchor] = useState("");
+  const [isOffRoad, setIsOffRoad] = useState(false);
   const [dateOfService, setDateOfService] = useState(new Date().toISOString().split("T")[0]);
   const [workType, setWorkType] = useState("NORMAL");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Live Kerala Rural GIS & Geocoding Analysis
+  const geoAnalysis = React.useMemo(() => {
+    const combined = [location, subLocality, structuralAnchor].filter(Boolean).join(", ");
+    return parseKeralaLocation(combined || location);
+  }, [location, subLocality, structuralAnchor]);
 
   // Quick Customer State
   const [showQuickCustomer, setShowQuickCustomer] = useState(false);
@@ -98,7 +108,10 @@ export function CreateDispatchModalV2({ onClose, machines, employees, tools, veh
         return createDailyDispatch({
           jobGroupId,
           customerId,
-          location,
+          location: geoAnalysis.normalizedAddress || location,
+          subLocality: subLocality.trim() || geoAnalysis.subLocality || undefined,
+          structuralAnchor: structuralAnchor.trim() || geoAnalysis.structuralAnchor || undefined,
+          isOffRoad,
           dateOfService,
           workType,
           machineId: a.machineId,
@@ -258,9 +271,66 @@ export function CreateDispatchModalV2({ onClose, machines, employees, tools, veh
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g. Kozhikode Center"
+                  placeholder="e.g. Poonjar, Panackapalam, near Kattachira Bridge"
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:border-blue-500 outline-none"
                 />
+
+                {/* Kerala Rural GIS Panchayat Ambiguity Alert */}
+                {location.trim() && geoAnalysis.isAmbiguous && (
+                  <div className="mt-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2 animate-in fade-in">
+                    <ShieldAlert className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <p className="font-bold">{geoAnalysis.warningMessage}</p>
+                      <p className="text-[11px] text-amber-200/80">
+                        Kerala high-range panchayats cover &gt;35 km². Please specify the Ward and Landmark Anchor below so drivers do not end up in the wrong valley.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sub-locality & Structural Anchor Inputs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">
+                      Sub-locality / Ward
+                    </label>
+                    <input
+                      type="text"
+                      value={subLocality}
+                      onChange={(e) => setSubLocality(e.target.value)}
+                      placeholder="e.g. Panackapalam, Erumapra"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">
+                      Landmark Anchor
+                    </label>
+                    <input
+                      type="text"
+                      value={structuralAnchor}
+                      onChange={(e) => setStructuralAnchor(e.target.value)}
+                      placeholder="e.g. near Kattachira Bridge, Ration Shop"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Off-Road Estate Navigation Checkbox */}
+                <div className="mt-2.5 flex items-center gap-2">
+                  <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={isOffRoad}
+                      onChange={(e) => setIsOffRoad(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0 focus:ring-offset-0"
+                    />
+                    <span className="font-medium flex items-center gap-1.5">
+                      <Compass className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Off-road estate track / unmapped rubber plantation gate</span>
+                    </span>
+                  </label>
+                </div>
               </div>
 
               <div>

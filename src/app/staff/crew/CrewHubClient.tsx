@@ -35,6 +35,7 @@ import { saveEmployeeRoleRates } from "@/actions/hr";
 import {
   toggleEmployeeActiveStatus,
   softDeleteEmployee,
+  updateEmployeeOperatorType,
 } from "@/actions/employees";
 import {
   COMPANY_WORKER_ROLE_WAGES,
@@ -243,7 +244,7 @@ export default function CrewHubClient({
 
   // Rates tab sub-filter
   const [ratesCrewFilter, setRatesCrewFilter] = useState<
-    "ALL" | "WITH_RATES" | "OPERATOR" | "WORKER" | "DRIVER"
+    "ALL" | "WITH_RATES" | "SUBCONTRACTOR" | "INTERNAL" | "OPERATOR" | "WORKER" | "DRIVER"
   >("WITH_RATES");
 
   // Company Master Role Wages State (Editable Standard Rate Card)
@@ -389,7 +390,13 @@ export default function CrewHubClient({
       (e.contractorCoName && e.contractorCoName.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesRole =
-      roleFilter === "ALL" ? true : e.role === roleFilter || e.defaultCrewRole === roleFilter;
+      roleFilter === "ALL"
+        ? true
+        : roleFilter === "SUBCONTRACTOR"
+        ? e.operatorType === "SUBCONTRACTOR"
+        : roleFilter === "INTERNAL"
+        ? e.operatorType === "INTERNAL"
+        : e.role === roleFilter || e.defaultCrewRole === roleFilter;
 
     const matchesStatus =
       statusFilter === "ALL"
@@ -426,11 +433,45 @@ export default function CrewHubClient({
     if (ratesCrewFilter === "WITH_RATES") {
       return e.roleRates && e.roleRates.length > 0;
     }
+    if (ratesCrewFilter === "SUBCONTRACTOR") return e.operatorType === "SUBCONTRACTOR";
+    if (ratesCrewFilter === "INTERNAL") return e.operatorType === "INTERNAL";
     if (ratesCrewFilter === "OPERATOR") return e.role === "OPERATOR";
     if (ratesCrewFilter === "WORKER") return e.role === "WORKER";
     if (ratesCrewFilter === "DRIVER") return e.role === "DRIVER";
     return true; // ALL
   });
+
+    const handleToggleWorkerType = async (emp: EmployeeItem) => {
+    const nextType = emp.operatorType === "SUBCONTRACTOR" ? "INTERNAL" : "SUBCONTRACTOR";
+    setActionLoadingId(emp.id);
+    try {
+      const res = await updateEmployeeOperatorType(emp.id, nextType);
+      if (res.success) {
+        setEmployees((prev) =>
+          prev.map((e) => (e.id === emp.id ? { ...e, operatorType: nextType } : e))
+        );
+        if (editingEmployee && editingEmployee.id === emp.id) {
+          setEditingEmployee((prev) => (prev ? { ...prev, operatorType: nextType } : null));
+        }
+        setToastMessage({
+          type: "success",
+          text: `${emp.name} switched to ${nextType === "SUBCONTRACTOR" ? "Outside Worker (Subcontractor)" : "Company Worker (Internal)"}!`,
+        });
+      } else {
+        setToastMessage({
+          type: "error",
+          text: res.error || "Failed to update worker type",
+        });
+      }
+    } catch (err: any) {
+      setToastMessage({
+        type: "error",
+        text: err.message || "Failed to update worker type",
+      });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
   // Open Edit Modal for an Employee
   const handleOpenEditRates = (emp: EmployeeItem) => {
@@ -657,6 +698,8 @@ export default function CrewHubClient({
               className="bg-slate-900/90 border border-slate-800 rounded-2xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50"
             >
               <option value="ALL">All Company Roles</option>
+              <option value="SUBCONTRACTOR">🏢 Outside Workers (Subcontractors)</option>
+              <option value="INTERNAL">👷 Company Workers (Internal)</option>
               <option value="OPERATOR">Operators</option>
               <option value="WORKER">Workers</option>
               <option value="DRIVER">Drivers</option>
@@ -674,6 +717,26 @@ export default function CrewHubClient({
               }`}
             >
               With Role Rates ({personnelWithRates.length})
+            </button>
+            <button
+              onClick={() => setRatesCrewFilter("SUBCONTRACTOR")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                ratesCrewFilter === "SUBCONTRACTOR"
+                  ? "bg-purple-600 text-white shadow"
+                  : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+              }`}
+            >
+              🏢 Outside Workers ({employees.filter((e) => e.operatorType === "SUBCONTRACTOR").length})
+            </button>
+            <button
+              onClick={() => setRatesCrewFilter("INTERNAL")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                ratesCrewFilter === "INTERNAL"
+                  ? "bg-blue-600 text-white shadow"
+                  : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+              }`}
+            >
+              👷 Company Workers ({employees.filter((e) => e.operatorType === "INTERNAL").length})
             </button>
             <button
               onClick={() => setRatesCrewFilter("ALL")}
@@ -1095,15 +1158,18 @@ export default function CrewHubClient({
                               {person.isActive ? "Active" : "Disabled"}
                             </span>
 
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            <button
+                              type="button"
+                              onClick={() => handleToggleWorkerType(person)}
+                              title="Click to toggle Company Worker vs Outside Subcontractor"
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-all cursor-pointer ${
                                 person.operatorType === "INTERNAL"
-                                  ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                                  : "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                                  ? "bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20"
+                                  : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20"
                               }`}
                             >
-                              {person.operatorType || "INTERNAL"}
-                            </span>
+                              {person.operatorType === "INTERNAL" ? "Company Worker" : "Outside Worker"}
+                            </button>
                           </div>
                         </div>
 
@@ -1603,6 +1669,29 @@ export default function CrewHubClient({
                 {saveErrorMsg}
               </div>
             )}
+
+            {/* Worker Employment Classification Toggle */}
+            <div className="px-6 py-3 bg-slate-950/70 border-b border-slate-800 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-white block">Worker Employment Classification</span>
+                <span className="text-[11px] text-slate-400">
+                  {editingEmployee.operatorType === "SUBCONTRACTOR"
+                    ? "Outside Subcontractor (defaults to ₹1,500 outside flat wage)"
+                    : "Internal Company Staff (tiered role wage default)"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleToggleWorkerType(editingEmployee)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  editingEmployee.operatorType === "SUBCONTRACTOR"
+                    ? "bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/30"
+                    : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30"
+                }`}
+              >
+                {editingEmployee.operatorType === "SUBCONTRACTOR" ? "🏢 Outside Worker" : "👷 Company Worker"}
+              </button>
+            </div>
 
             {/* Modal Quick Actions */}
             <div className="px-6 py-3 bg-slate-950/40 border-b border-slate-800/60 flex items-center justify-between">

@@ -97,7 +97,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-lg mx-auto">
+    <div className="p-4 md:p-6 max-w-lg mx-auto pb-44">
       <DriverOrderClient dispatch={dispatch} userRole={role} groupAggregate={groupAggregate} />
       <div className="mt-4">
         <DriverSitePinger
@@ -107,6 +107,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
           siteLongitude={dispatch.longitude ? Number(dispatch.longitude) : null}
           customerName={dispatch.customer?.name}
           customerPhone={dispatch.customer?.phone}
+          hideDestinationHeader={true}
         />
       </div>
     </div>

@@ -1,6 +1,9 @@
+"use client";
+
 import React from "react";
 import { MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { SiteLocationButtons } from "./SiteLocationButtons";
 
 interface DispatchGridCardsProps {
   dispatches: any[];
@@ -34,7 +37,7 @@ export function DispatchGridCards({ dispatches, onGenerateBill, isPending }: Dis
               </span>
             </div>
             <p className="text-xs text-slate-300 flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-blue-400" /> {d.location}
+              <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0" /> {d.location}
             </p>
             <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1 text-xs text-slate-300">
               <div><strong className="text-slate-400">Main Caller:</strong> {d.mainHelperName || d.mainHelper?.name || "Direct"}</div>
@@ -42,6 +45,23 @@ export function DispatchGridCards({ dispatches, onGenerateBill, isPending }: Dis
               <div><strong className="text-slate-400">Lift Storeys:</strong> {d.liftFloors || 1} Floored</div>
               <div><strong className="text-slate-400">Mixer:</strong> {d.mixerCategory || "STANDARD"}</div>
             </div>
+
+            {/* Dual Location & Turn-by-Turn Navigation Buttons */}
+            <SiteLocationButtons
+              latitude={d.latitude}
+              longitude={d.longitude}
+              locationName={d.location}
+              customerName={d.customer?.name}
+              mapLink={d.mapLink}
+              variant="cards"
+              isOffRoad={d.isOffRoad}
+              accessLatitude={d.accessLatitude}
+              accessLongitude={d.accessLongitude}
+              offRoadBearingDeg={d.offRoadBearingDeg}
+              offRoadDistanceM={d.offRoadDistanceM}
+              isCentroidVerified={d.isCentroidVerified}
+              dwellConfidence={d.dwellConfidence}
+            />
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-800">

@@ -18,77 +18,131 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Get the latest ping for each employee from the last 15 minutes
-    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60000);
-    
-    // Prisma doesn't have a simple DISTINCT ON for this without raw queries,
-    // so we'll fetch recent pings and group in memory
-    const recentPings = await prisma.locationPing.findMany({
+    // 1. Fetch active employees with live coordinates updated in the last 60 minutes
+    const sixtyMinutesAgo = new Date(Date.now() - 60 * 60000);
+
+    const activeEmployees = await prisma.employee.findMany({
       where: {
-        timestamp: { gte: fifteenMinutesAgo }
+        lastLatitude: { not: null },
+        lastLongitude: { not: null },
+        lastLocationUpdate: { gte: sixtyMinutesAgo },
+        isPendingDelete: false,
       },
-      orderBy: { timestamp: "desc" },
-      include: {
-        employee: {
-          select: { name: true, role: true, profilePhotoUrl: true }
-        },
-        dispatch: {
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        phone: true,
+        profilePhotoUrl: true,
+        lastLatitude: true,
+        lastLongitude: true,
+        lastLocationUpdate: true,
+        lastSyncStatus: true,
+        operatorDispatches: {
+          where: {
+            status: { in: ["PENDING", "ACCEPTED", "EN_ROUTE", "IN_PROGRESS", "DELIVERED"] },
+            isPendingDelete: false,
+          },
           include: {
-            customer: { select: { name: true } },
+            customer: { select: { name: true, phone: true } },
             machine: { select: { machineId: true, type: true } },
-            operator: { select: { name: true, profilePhotoUrl: true } },
-            crewAssignments: {
-              include: { employee: { select: { name: true, role: true, profilePhotoUrl: true } } }
-            },
-            dispatchTools: {
-              include: { tool: { select: { toolId: true, toolType: true } } }
-            }
-          }
-        }
-      }
+          },
+          orderBy: { dateOfService: "desc" },
+          take: 1,
+        },
+        driverDispatches: {
+          where: {
+            status: { in: ["PENDING", "ACCEPTED", "EN_ROUTE", "IN_PROGRESS", "DELIVERED"] },
+            isPendingDelete: false,
+          },
+          include: {
+            customer: { select: { name: true, phone: true } },
+            machine: { select: { machineId: true, type: true } },
+            vehicle: { select: { licensePlate: true, type: true } },
+          },
+          orderBy: { dateOfService: "desc" },
+          take: 1,
+        },
+        locationPings: {
+          orderBy: { timestamp: "desc" },
+          take: 2,
+          select: {
+            latitude: true,
+            longitude: true,
+            speed: true,
+            accuracy: true,
+            timestamp: true,
+          },
+        },
+      },
     });
 
-    const uniqueEmployeePings = new Map();
-    for (const ping of recentPings) {
-      if (!uniqueEmployeePings.has(ping.employeeId)) {
-        uniqueEmployeePings.set(ping.employeeId, ping);
-      }
-    }
+    // Helper: calculate bearing from prev ping to current ping
+    const calculateBearing = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+      const dLon = ((lon2 - lon1) * Math.PI) / 180;
+      const y = Math.sin(dLon) * Math.cos((lat2 * Math.PI) / 180);
+      const x =
+        Math.cos((lat1 * Math.PI) / 180) * Math.sin((lat2 * Math.PI) / 180) -
+        Math.sin((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.cos(dLon);
+      const brng = (Math.atan2(y, x) * 180) / Math.PI;
+      return (brng + 360) % 360;
+    };
 
-    const liveData = Array.from(uniqueEmployeePings.values()).map(ping => {
-      const activeEmployee = ping.employee;
-      const d = ping.dispatch;
-      
+    const liveData = activeEmployees.map((emp) => {
+      const activeDispatch = emp.driverDispatches[0] || emp.operatorDispatches[0] || null;
+      const pings = emp.locationPings || [];
+      const latestPing = pings[0];
+      const previousPing = pings[1];
+
+      let bearing = 0;
+      if (latestPing && previousPing) {
+        bearing = calculateBearing(
+          Number(previousPing.latitude),
+          Number(previousPing.longitude),
+          Number(latestPing.latitude),
+          Number(latestPing.longitude)
+        );
+      }
+
       return {
-        id: ping.id,
-        dispatchId: ping.dispatchId,
-        lat: Number(ping.latitude),
-        lng: Number(ping.longitude),
-        accuracy: ping.accuracy,
-        timestamp: ping.timestamp.toISOString(),
-        source: ping.source,
-        employee: {
-          name: activeEmployee.name,
-          role: activeEmployee.role,
-          profilePhotoUrl: activeEmployee.profilePhotoUrl,
-        },
-        dispatch: d ? {
-          location: d.location,
-          customerName: d.customer?.name || "Unknown Customer",
-          machine: d.machine ? `${d.machine.machineId} (${d.machine.type})` : null,
-          operator: d.operator ? d.operator.name : null,
-          crew: d.crewAssignments.map((c: any) => ({
-            name: c.employee.name,
-            role: c.assignedRole
-          })),
-          tools: d.dispatchTools.map((t: any) => `${t.tool.toolId} (${t.tool.toolType})`)
-        } : null
+        id: emp.id,
+        employeeId: emp.id,
+        name: emp.name,
+        role: emp.role,
+        phone: emp.phone,
+        profilePhotoUrl: emp.profilePhotoUrl,
+        lat: Number(emp.lastLatitude),
+        lng: Number(emp.lastLongitude),
+        speed: latestPing?.speed ? Number(latestPing.speed) : 0,
+        bearing: Math.round(bearing),
+        accuracy: latestPing?.accuracy ? Number(latestPing.accuracy) : 10,
+        lastUpdate: emp.lastLocationUpdate ? emp.lastLocationUpdate.toISOString() : new Date().toISOString(),
+        status: emp.lastSyncStatus || "ONLINE",
+        dispatch: activeDispatch
+          ? {
+              id: activeDispatch.id,
+              location: activeDispatch.location,
+              status: activeDispatch.status,
+              customerName: activeDispatch.customer?.name || "Customer",
+              customerPhone: activeDispatch.customer?.phone || null,
+              machineId: activeDispatch.machine?.machineId || null,
+              machineType: activeDispatch.machine?.type || null,
+              vehiclePlate: (activeDispatch as any).vehicle?.licensePlate || null,
+            }
+          : null,
       };
     });
 
-    return NextResponse.json({ success: true, data: liveData });
+    return NextResponse.json(
+      { success: true, count: liveData.length, data: liveData },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=3, stale-while-revalidate=5",
+        },
+      }
+    );
   } catch (error: any) {
-    console.error("Live map error:", error);
+    console.error("Live map API error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

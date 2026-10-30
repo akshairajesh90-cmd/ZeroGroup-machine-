@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveDualPointNavigation } from "@/lib/gis/dualPointRouter";
 
 export const dynamic = "force-dynamic";
 
@@ -64,11 +65,28 @@ export async function POST(req: NextRequest) {
 
     if (Array.isArray(body.waypoints) && body.waypoints.length >= 2) {
       waypoints = body.waypoints;
+    } else if (Array.isArray(body.coordinates) && body.coordinates.length >= 2) {
+      waypoints = body.coordinates.map((c: any) => {
+        const a = Number(c[0]);
+        const b = Number(c[1]);
+        if (a > 50 && b < 20) {
+          return [b, a] as [number, number];
+        }
+        return [a, b] as [number, number];
+      });
     } else if (body.origin && body.destination) {
       waypoints = [
         [Number(body.origin[0]), Number(body.origin[1])],
         [Number(body.destination[0]), Number(body.destination[1])],
       ];
+    }
+
+    let dualPoint = null;
+    if (body.accessWaypoint && body.gatePin) {
+      dualPoint = resolveDualPointNavigation(
+        [Number(body.accessWaypoint[0]), Number(body.accessWaypoint[1])],
+        [Number(body.gatePin[0]), Number(body.gatePin[1])]
+      );
     }
 
     if (waypoints.length < 2) {
@@ -158,15 +176,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         ...result,
+        durationMin: durationMins,
+        dualPoint: dualPoint || undefined,
       });
     }
 
     // Fallback: Return straight lines between given waypoints
     const fallbackDist = calculatePathDistance(waypoints);
+    const fallbackDuration = Math.max(1, Math.round(fallbackDist * 1.8));
     const fallbackResult: CachedRoute = {
       coordinates: waypoints,
       distanceKm: fallbackDist,
-      durationMins: Math.max(1, Math.round(fallbackDist * 1.8)), // ~35 km/h estimate
+      durationMins: fallbackDuration,
       isRoadSnapped: false,
       cachedAt: Date.now(),
     };
@@ -174,6 +195,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...fallbackResult,
+      durationMin: fallbackDuration,
+      dualPoint: dualPoint || undefined,
       fallback: true,
     });
   } catch (error: any) {

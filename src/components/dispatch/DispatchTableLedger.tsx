@@ -12,6 +12,7 @@ import {
   Loader2
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { SiteLocationButtons } from "./SiteLocationButtons";
 
 interface DispatchTableLedgerProps {
   dispatches: any[];
@@ -83,17 +84,21 @@ export function DispatchTableLedger({
                         <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
                         <span className="font-medium text-slate-200">{d.location}</span>
                       </div>
-                      {(d.mapLink || (d.latitude && d.longitude)) && (
-                        <a
-                          href={d.latitude && d.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${d.latitude},${d.longitude}` : d.mapLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[11px] text-blue-400 hover:text-blue-300 underline flex items-center gap-1 pt-1 font-mono"
-                        >
-                          <Navigation className="w-3 h-3" />
-                          {d.latitude && d.longitude ? "GPS Confirmed Delivery Site ↗" : "Driver GPS Map Pin Link ↗"}
-                        </a>
-                      )}
+                      <SiteLocationButtons
+                        latitude={d.latitude}
+                        longitude={d.longitude}
+                        locationName={d.location}
+                        customerName={d.customer?.name}
+                        mapLink={d.mapLink}
+                        variant="compact"
+                        isOffRoad={d.isOffRoad}
+                        accessLatitude={d.accessLatitude}
+                        accessLongitude={d.accessLongitude}
+                        offRoadBearingDeg={d.offRoadBearingDeg}
+                        offRoadDistanceM={d.offRoadDistanceM}
+                        isCentroidVerified={d.isCentroidVerified}
+                        dwellConfidence={d.dwellConfidence}
+                      />
                       <div className="text-[10px] text-slate-500 pt-1 flex items-center justify-between">
                         <span>Date: {new Date(d.dateOfService).toISOString().split("T")[0]}</span>
                         {d.siteBundleId && <span className="font-mono text-amber-400 uppercase">[{d.siteBundleId}]</span>}

@@ -11,6 +11,7 @@ import {
 import { CreateDispatchModalV2 } from "@/components/dispatch/CreateDispatchModalV2";
 import { EditDispatchModal } from "@/components/dispatch/EditDispatchModal";
 import { StatusChangeModal } from "@/components/dispatch/StatusChangeModal";
+import { SiteLocationButtons } from "@/components/dispatch/SiteLocationButtons";
 import DispatchBillingModal from "@/components/admin/DispatchBillingModal";
 import { SiteLaborDisbursementReview } from "./SiteLaborDisbursementReview";
 import ToolReturnModal from "@/components/ToolReturnModal";
@@ -956,17 +957,14 @@ export default function DispatchBoardClient({
                             <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
                             <span className="font-medium text-slate-200">{group.location}</span>
                           </div>
-                          {group.mapLink && (
-                            <a
-                              href={group.mapLink}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[11px] text-blue-400 hover:text-blue-300 underline flex items-center gap-1 pt-1 font-mono"
-                            >
-                              <Navigation className="w-3 h-3" />
-                              Driver GPS Map Pin Link â†—
-                            </a>
-                          )}
+                          <SiteLocationButtons
+                            latitude={group.latitude}
+                            longitude={group.longitude}
+                            locationName={group.location}
+                            customerName={group.customer?.name}
+                            mapLink={group.mapLink}
+                            variant="compact"
+                          />
                           <div className="text-[10px] text-slate-500 pt-1 flex items-center justify-between">
                             <span>Date: {new Date(group.dateOfService).toISOString().split("T")[0]}</span>
                             {group.jobGroupId && <span className="font-mono text-amber-400 uppercase">[{group.jobGroupId.substring(0, 12)}]</span>}
@@ -1230,6 +1228,14 @@ export default function DispatchBoardClient({
                 <p className="text-xs text-slate-300 flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5 text-blue-400" /> {group.location}
                 </p>
+                <SiteLocationButtons
+                  latitude={group.latitude}
+                  longitude={group.longitude}
+                  locationName={group.location}
+                  customerName={group.customer?.name}
+                  mapLink={group.mapLink}
+                  variant="cards"
+                />
                 <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1 text-xs">
                   <div className="text-amber-400 font-bold mb-2">Job Assets:</div>
                   {group.childDispatches.map((d: any) => (

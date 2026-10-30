@@ -21,7 +21,7 @@ export default function AdminReturnBanner({ userRole }: AdminReturnBannerProps) 
   if (!isGodMode) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[9999] flex items-center justify-between gap-3 bg-amber-500 px-4 py-2 shadow-lg">
+    <div className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between gap-3 bg-amber-500 px-4 py-2 shadow-lg">
       <div className="flex items-center gap-2">
         <ShieldAlert className="w-4 h-4 text-black shrink-0" />
         <span className="text-xs font-black text-black uppercase tracking-widest">
