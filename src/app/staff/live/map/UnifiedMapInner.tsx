@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -21,6 +21,8 @@ import {
   Clock,
   Sparkles,
   Layers,
+  Route,
+  X,
 } from "lucide-react";
 
 // Fix Leaflet's default icon path issues in Next.js
@@ -191,6 +193,21 @@ export default function UnifiedMapInner({
   activeTrail,
   playbackPoint,
 }: UnifiedMapInnerProps) {
+  // Free Map Layer Style: "voyager" (Google Maps Street Aesthetic) | "satellite" (Esri) | "osm" (Standard OSM)
+  const [tileStyle, setTileStyle] = useState<"voyager" | "satellite" | "osm">("voyager");
+
+  // Road-snapped GPS trail coordinates (hugs real street curves)
+  const [snappedTrail, setSnappedTrail] = useState<[number, number][]>([]);
+
+  // Road-snapped Turn-by-Turn Driving Route between origin (truck/store) and customer site
+  const [navRoute, setNavRoute] = useState<{
+    coordinates: [number, number][];
+    distanceKm: number;
+    durationMins: number;
+    destName: string;
+    originName: string;
+  } | null>(null);
+
   // Default map center (Central Kerala: Alappuzha/Kottayam corridor)
   const defaultCenter: [number, number] = useMemo(() => {
     if (drivers.length > 0) return [drivers[0].lat, drivers[0].lng];
@@ -198,8 +215,196 @@ export default function UnifiedMapInner({
     return [9.5916, 76.5222];
   }, [drivers, sites]);
 
+  // Fetch Road-Snapped Driving Navigation Route whenever selected dispatch changes
+  useEffect(() => {
+    if (!selectedDispatchId) {
+      setNavRoute(null);
+      return;
+    }
+
+    const site = sites.find((s) => s.id === selectedDispatchId);
+    if (!site || !site.lat || !site.lng) {
+      setNavRoute(null);
+      return;
+    }
+
+    // Determine Origin: assigned driver if active with coordinates, otherwise Store Base Yard
+    const assignedDriver = drivers.find((d) => d.dispatchId === selectedDispatchId);
+    let originLat: number | null = null;
+    let originLng: number | null = null;
+    let originName = "Base Yard";
+
+    if (assignedDriver && assignedDriver.lat && assignedDriver.lng) {
+      originLat = assignedDriver.lat;
+      originLng = assignedDriver.lng;
+      originName = assignedDriver.name || "Fleet Truck";
+    } else if (storeLocation && storeLocation.storeLatitude && storeLocation.storeLongitude) {
+      originLat = storeLocation.storeLatitude;
+      originLng = storeLocation.storeLongitude;
+      originName = storeLocation.storeName || "Main Yard";
+    }
+
+    if (originLat === null || originLng === null) {
+      setNavRoute(null);
+      return;
+    }
+
+    let isSubscribed = true;
+
+    fetch("/api/routing/directions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        origin: [originLat, originLng],
+        destination: [site.lat, site.lng],
+      }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!isSubscribed) return;
+        if (data && data.success && Array.isArray(data.coordinates) && data.coordinates.length > 0) {
+          setNavRoute({
+            coordinates: data.coordinates,
+            distanceKm: data.distanceKm || 0,
+            durationMins: data.durationMins || data.durationMin || 0,
+            destName: site.customerName || site.location || "Customer Site",
+            originName,
+          });
+        } else {
+          // Fallback to direct coordinates if offline or outside boundary
+          setNavRoute({
+            coordinates: [
+              [originLat!, originLng!],
+              [site.lat, site.lng],
+            ],
+            distanceKm: 0,
+            durationMins: 0,
+            destName: site.customerName || site.location || "Customer Site",
+            originName,
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn("[UnifiedMap] Directions fetch failed:", err);
+      });
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [selectedDispatchId, sites, drivers, storeLocation]);
+
+  // Fetch Road-Snapped coordinates for driver's GPS trail (OSRM street matching)
+  useEffect(() => {
+    if (!activeTrail || activeTrail.length < 2) {
+      setSnappedTrail([]);
+      return;
+    }
+
+    let isSubscribed = true;
+
+    fetch("/api/routing/directions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        waypoints: activeTrail.map((p) => [p.lat, p.lng]),
+      }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!isSubscribed) return;
+        if (data && data.success && Array.isArray(data.coordinates) && data.coordinates.length > 0) {
+          setSnappedTrail(data.coordinates);
+        } else {
+          setSnappedTrail(activeTrail.map((p) => [p.lat, p.lng]));
+        }
+      })
+      .catch((err) => {
+        console.warn("[UnifiedMap] Trail snapping failed:", err);
+        if (isSubscribed) {
+          setSnappedTrail(activeTrail.map((p) => [p.lat, p.lng]));
+        }
+      });
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [activeTrail]);
+
   return (
     <div className="w-full h-full min-h-[520px] rounded-3xl overflow-hidden relative border border-slate-800 shadow-2xl">
+      {/* 🗺️ FLOATING TILE LAYER SWITCHER (Google Style Street / Satellite / OSM) */}
+      <div className="absolute top-3 right-3 z-[400] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-1 shadow-2xl flex items-center gap-1 text-[11px] font-bold">
+        <button
+          type="button"
+          onClick={() => setTileStyle("voyager")}
+          className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+            tileStyle === "voyager"
+              ? "bg-blue-600 text-white shadow-md shadow-blue-600/40 font-black"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/70"
+          }`}
+          title="Google Maps-style clean street tiles (roads, highways, landmarks)"
+        >
+          <span>🗺️ Street</span>
+          <span className="text-[9px] px-1 py-0.2 bg-white/20 rounded font-normal">Free</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setTileStyle("satellite")}
+          className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+            tileStyle === "satellite"
+              ? "bg-blue-600 text-white shadow-md shadow-blue-600/40 font-black"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/70"
+          }`}
+          title="Esri Satellite aerial photography"
+        >
+          <span>🛰️ Satellite</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setTileStyle("osm")}
+          className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+            tileStyle === "osm"
+              ? "bg-blue-600 text-white shadow-md shadow-blue-600/40 font-black"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/70"
+          }`}
+          title="OpenStreetMap Standard cartography"
+        >
+          <span>🌐 OSM</span>
+        </button>
+      </div>
+
+      {/* 🚗 FLOATING ROAD NAVIGATION ROUTE HUD (Turn-by-turn road geometry details) */}
+      {navRoute && (
+        <div className="absolute top-3 left-14 z-[400] bg-slate-900/95 backdrop-blur-md border border-blue-500/50 rounded-2xl px-3.5 py-2 shadow-2xl flex items-center gap-3 text-xs text-white max-w-[80%] animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/40 flex items-center justify-center shrink-0">
+            <Navigation className="w-4 h-4 animate-pulse" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-black text-slate-100 truncate">{navRoute.destName}</span>
+              <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded font-bold text-[10px] shrink-0">
+                ✓ Road Snapped
+              </span>
+            </div>
+            <p className="text-slate-300 text-[11px] flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-sky-400">🛣️ {navRoute.distanceKm} km</span>
+              <span className="text-slate-500">•</span>
+              <span className="font-bold text-emerald-400">⏱️ ~{navRoute.durationMins} mins drive</span>
+              <span className="text-slate-500">•</span>
+              <span className="text-slate-400 text-[10px] hidden sm:inline">From {navRoute.originName}</span>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNavRoute(null)}
+            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 shrink-0 ml-1 transition-colors"
+            title="Dismiss navigation route"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       <MapContainer
         center={defaultCenter}
         zoom={11}
@@ -208,11 +413,32 @@ export default function UnifiedMapInner({
       >
         <MapCameraController targetCenter={flyToCenter} />
 
-        {/* Free OpenStreetMap Tiles */}
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        {/* 🗺️ FREE CARTO TILE LAYERS (Clean Google Maps Street Aesthetic / Satellite / Standard) */}
+        {tileStyle === "voyager" && (
+          <TileLayer
+            key="tile-voyager"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            subdomains="abcd"
+            maxZoom={20}
+          />
+        )}
+        {tileStyle === "satellite" && (
+          <TileLayer
+            key="tile-satellite"
+            attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS User Community'
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{x}/{y}"
+            maxZoom={19}
+          />
+        )}
+        {tileStyle === "osm" && (
+          <TileLayer
+            key="tile-osm"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={19}
+          />
+        )}
 
         {/* 🏬 CENTRAL STORE / BASE YARD MARKER */}
         {storeLocation && (
@@ -253,15 +479,63 @@ export default function UnifiedMapInner({
           </Marker>
         )}
 
-        {/* 1. TODAY'S ROUTE TRAIL (Glowing blue polyline) */}
+        {/* 🚗 ROAD-SNAPPED DRIVING NAVIGATION ROUTE (Turn-by-turn road geometry hugging curves) */}
+        {navRoute && navRoute.coordinates.length > 1 && (
+          <>
+            {/* Outer high-contrast roadway glow */}
+            <Polyline
+              positions={navRoute.coordinates}
+              pathOptions={{
+                color: "#0369a1",
+                weight: 7,
+                opacity: 0.6,
+                lineCap: "round",
+                lineJoin: "round",
+              }}
+            />
+            {/* Inner electric-blue road line */}
+            <Polyline
+              positions={navRoute.coordinates}
+              pathOptions={{
+                color: "#38bdf8",
+                weight: 4,
+                opacity: 1,
+                lineCap: "round",
+                lineJoin: "round",
+              }}
+            />
+          </>
+        )}
+
+        {/* 1. TODAY'S ROUTE TRAIL (Road-snapped emerald/cyan trail hugging real streets) */}
         {activeTrail.length > 1 && (
           <>
             <Polyline
-              positions={activeTrail.map((p) => [p.lat, p.lng] as [number, number])}
+              positions={
+                snappedTrail.length > 1
+                  ? snappedTrail
+                  : (activeTrail.map((p) => [p.lat, p.lng]) as [number, number][])
+              }
               pathOptions={{
-                color: "#38bdf8",
-                weight: 5,
-                opacity: 0.9,
+                color: "#059669",
+                weight: 6,
+                opacity: 0.5,
+                lineCap: "round",
+                lineJoin: "round",
+              }}
+            />
+            <Polyline
+              positions={
+                snappedTrail.length > 1
+                  ? snappedTrail
+                  : (activeTrail.map((p) => [p.lat, p.lng]) as [number, number][])
+              }
+              pathOptions={{
+                color: "#10b981",
+                weight: 3.5,
+                opacity: 0.95,
+                lineCap: "round",
+                lineJoin: "round",
               }}
             />
             {/* Numbered checkpoint dots along the trail */}

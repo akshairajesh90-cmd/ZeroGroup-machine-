@@ -33,9 +33,18 @@ export type SubLeaderRow = {
   subLeaderName: string;
   workerCount: string;
   ratePerWorker: string;
+  busTicketAmount: string;
+  foodAmount: string;
+  extraAmount: string;
   paymentMode: "CASH" | "UPI" | "COMBINED";
   cashAmount: string;
   bankAmount: string;
+};
+
+export type SiteSplitRow = {
+  id: string;
+  dispatchId: string;
+  amount: string;
 };
 
 type Props = {
@@ -96,12 +105,22 @@ export default function NewExpenseForm({
       subLeaderName: "",
       workerCount: "1",
       ratePerWorker: "700",
+      busTicketAmount: "",
+      foodAmount: "",
+      extraAmount: "",
       paymentMode: "CASH",
       cashAmount: "",
       bankAmount: "",
     },
   ]);
   const [gangWorkType, setGangWorkType] = useState<string>("Site Slab Pouring & Trolley Work");
+
+  // Site Allocation Mode: SINGLE (100% to 1 dispatch) | MULTI_SPLIT (Split across 2+ sites) | NONE (General / Yard Work)
+  const [siteAllocationMode, setSiteAllocationMode] = useState<"SINGLE" | "MULTI_SPLIT" | "NONE">("SINGLE");
+  const [siteSplits, setSiteSplits] = useState<SiteSplitRow[]>([
+    { id: "split-1", dispatchId: "", amount: "" },
+    { id: "split-2", dispatchId: "", amount: "" },
+  ]);
 
   // Standard Payment Mode (For non-gang single expenses: Cash, GPay, Combined Split)
   const [paymentMode, setPaymentMode] = useState<"CASH" | "UPI" | "COMBINED">("CASH");
@@ -122,12 +141,19 @@ export default function NewExpenseForm({
   const activeSubOption = activeHead.subOptions.find((s) => s.id === selectedSubOptionId) || activeHead.subOptions[0];
   const isGangCalculatorMode = activeSubOption.requiredEntity === "multi_workers";
 
-  // Gang Calculations
+  // Gang Calculations (Base Wage + Bus Ticket + Food Rupees + Extra Additions)
   const totalSessionWorkers = subLeaders.reduce((sum, s) => sum + (Number(s.workerCount) || 0), 0);
-  const totalSessionGangPayout = subLeaders.reduce(
-    (sum, s) => sum + ((Number(s.workerCount) || 0) * (Number(s.ratePerWorker) || 0)),
-    0
-  );
+  const totalSessionGangPayout = subLeaders.reduce((sum, s) => {
+    const base = (Number(s.workerCount) || 0) * (Number(s.ratePerWorker) || 0);
+    const bus = Number(s.busTicketAmount) || 0;
+    const food = Number(s.foodAmount) || 0;
+    const extra = Number(s.extraAmount) || 0;
+    return sum + base + bus + food + extra;
+  }, 0);
+
+  // Multi-Site Split calculations
+  const totalAllocatedToSites = siteSplits.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+  const splitDifference = totalSessionGangPayout - totalAllocatedToSites;
 
   // Effective Total for this form
   const effectiveTotalAmount = isGangCalculatorMode ? totalSessionGangPayout : (Number(amount) || 0);
@@ -141,6 +167,9 @@ export default function NewExpenseForm({
         subLeaderName: "",
         workerCount: "1",
         ratePerWorker: "700",
+        busTicketAmount: "",
+        foodAmount: "",
+        extraAmount: "",
         paymentMode: "CASH",
         cashAmount: "",
         bankAmount: "",
@@ -160,7 +189,11 @@ export default function NewExpenseForm({
         const updated = { ...s, [field]: value };
         // Auto-split if paymentMode is COMBINED and amounts are empty
         if (field === "paymentMode" && value === "COMBINED") {
-          const total = (Number(updated.workerCount) || 0) * (Number(updated.ratePerWorker) || 0);
+          const base = (Number(updated.workerCount) || 0) * (Number(updated.ratePerWorker) || 0);
+          const bus = Number(updated.busTicketAmount) || 0;
+          const food = Number(updated.foodAmount) || 0;
+          const extra = Number(updated.extraAmount) || 0;
+          const total = base + bus + food + extra;
           if (!updated.cashAmount && !updated.bankAmount && total > 0) {
             const half = Math.floor(total / 2);
             updated.cashAmount = half.toString();
@@ -170,6 +203,63 @@ export default function NewExpenseForm({
         return updated;
       })
     );
+  };
+
+  // Site Split Allocation Helpers
+  const handleAddSiteSplit = () => {
+    setSiteSplits((prev) => [
+      ...prev,
+      { id: `split-${Date.now()}`, dispatchId: "", amount: "" },
+    ]);
+  };
+
+  const handleRemoveSiteSplit = (id: string) => {
+    if (siteSplits.length <= 1) return;
+    setSiteSplits((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const handleUpdateSiteSplit = (id: string, field: keyof SiteSplitRow, value: string) => {
+    setSiteSplits((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, [field]: value } : s))
+    );
+  };
+
+  // ⚡ Auto-Close & Balance Multi-Site Splits
+  const handleAutoBalanceSplits = () => {
+    if (siteSplits.length === 0 || totalSessionGangPayout <= 0) return;
+
+    // Check how many have a dispatch selected
+    const validSites = siteSplits.filter((s) => s.dispatchId);
+    if (validSites.length === 0) {
+      if (dispatches.length >= 2) {
+        const half = Math.floor(totalSessionGangPayout / 2);
+        setSiteSplits([
+          { id: siteSplits[0]?.id || "split-1", dispatchId: dispatches[0].id, amount: half.toString() },
+          { id: siteSplits[1]?.id || "split-2", dispatchId: dispatches[1].id, amount: (totalSessionGangPayout - half).toString() },
+        ]);
+      } else if (dispatches.length === 1) {
+        setSiteSplits([
+          { id: siteSplits[0]?.id || "split-1", dispatchId: dispatches[0].id, amount: totalSessionGangPayout.toString() },
+        ]);
+      }
+      return;
+    }
+
+    // Allocate remainder to the last row
+    let allocatedSoFar = 0;
+    for (let i = 0; i < siteSplits.length - 1; i++) {
+      allocatedSoFar += Number(siteSplits[i].amount) || 0;
+    }
+    const remainder = Math.max(0, totalSessionGangPayout - allocatedSoFar);
+    setSiteSplits((prev) => {
+      const updated = [...prev];
+      const lastIdx = updated.length - 1;
+      updated[lastIdx] = {
+        ...updated[lastIdx],
+        amount: remainder.toFixed(2).replace(/\.00$/, ""),
+      };
+      return updated;
+    });
   };
 
   // Handle Head change
@@ -260,7 +350,11 @@ export default function NewExpenseForm({
           if (sl.paymentMode === "COMBINED") {
             const cVal = Number(sl.cashAmount) || 0;
             const bVal = Number(sl.bankAmount) || 0;
-            const slTotal = wCount * wRate;
+            const base = wCount * wRate;
+            const bus = Number(sl.busTicketAmount) || 0;
+            const food = Number(sl.foodAmount) || 0;
+            const extra = Number(sl.extraAmount) || 0;
+            const slTotal = base + bus + food + extra;
             if (Math.abs((cVal + bVal) - slTotal) > 1) {
               setError(`Split mismatch for ${sl.subLeaderName}: Cash (₹${cVal}) + GPay (₹${bVal}) must equal total ₹${slTotal}.`);
               setLoading(false);
@@ -269,16 +363,87 @@ export default function NewExpenseForm({
           }
         }
 
-        // Create separate expense entry for EACH sub-leader so payments and methods remain distinct
+        // Case A: Multi-Site Split Mode
+        if (siteAllocationMode === "MULTI_SPLIT") {
+          const activeSplits = siteSplits.filter((s) => s.dispatchId && Number(s.amount) > 0);
+          if (activeSplits.length === 0) {
+            setError("Please select at least one Job Site and enter allocated split amounts, or click 'Auto-Close & Balance'.");
+            setLoading(false);
+            return;
+          }
+          const splitSum = activeSplits.reduce((sum, s) => sum + Number(s.amount), 0);
+          if (Math.abs(splitSum - totalSessionGangPayout) > 1) {
+            setError(`Split allocation mismatch: Allocated ₹${splitSum} does not match total worker payout ₹${totalSessionGangPayout}. Click 'Auto-Close & Balance' to balance automatically.`);
+            setLoading(false);
+            return;
+          }
+
+          // Create separate expense entry for each split site
+          for (const split of activeSplits) {
+            const splitAmt = Number(split.amount);
+            const matchedDispatch = dispatches.find((d) => d.id === split.dispatchId);
+            const siteLabel = matchedDispatch
+              ? `${matchedDispatch.customerName} @ ${matchedDispatch.location}`
+              : "Job Site";
+
+            const gangSummary = subLeaders
+              .map((sl) => {
+                const b = Number(sl.busTicketAmount) || 0;
+                const f = Number(sl.foodAmount) || 0;
+                const x = Number(sl.extraAmount) || 0;
+                const incidentals = [
+                  b > 0 ? `Bus: ₹${b}` : "",
+                  f > 0 ? `Food: ₹${f}` : "",
+                  x > 0 ? `Extra: ₹${x}` : "",
+                ].filter(Boolean).join(", ");
+                return `${sl.subLeaderName} (${sl.workerCount} workers @ ₹${sl.ratePerWorker}${incidentals ? ` + ${incidentals}` : ""})`;
+              })
+              .join(" | ");
+
+            const gangDescription = `Outside Helper Split for ${siteLabel} — ${gangSummary} - ${gangWorkType}`;
+            const splitNotes = `[MULTI-SITE COMBINED WAGE SPLIT] Allocated ₹${splitAmt} of total ₹${totalSessionGangPayout} to dispatch #${split.dispatchId}.${notes ? ` | ${notes}` : ""}`;
+
+            const formData = new FormData();
+            formData.append("amount", splitAmt.toString());
+            formData.append("category", "OUTSIDE_HELPER_WAGE");
+            formData.append("description", gangDescription);
+            formData.append("date", date);
+            formData.append("notes", splitNotes);
+            formData.append("dispatchId", split.dispatchId);
+            formData.append("paymentMode", subLeaders[0]?.paymentMode || "CASH");
+            if (receiptUrl) formData.append("receiptUrl", receiptUrl);
+
+            const res = await createAdminExpense(formData);
+            if (!res.success) {
+              throw new Error(res.error || `Failed to log expense split for ${siteLabel}`);
+            }
+          }
+
+          setSuccess(true);
+          setTimeout(() => router.push("/staff/expenses"), 1000);
+          return;
+        }
+
+        // Case B & C: Single Site or General Yard (NONE)
         for (const sl of subLeaders) {
           const wCount = Number(sl.workerCount) || 0;
           const wRate = Number(sl.ratePerWorker) || 0;
-          const slAmount = wCount * wRate;
+          const bus = Number(sl.busTicketAmount) || 0;
+          const food = Number(sl.foodAmount) || 0;
+          const extra = Number(sl.extraAmount) || 0;
+          const slTotal = (wCount * wRate) + bus + food + extra;
+
           const leaderTitle = `Sub-Leader: ${sl.subLeaderName.trim()}`;
-          const gangDescription = `${leaderTitle} (${sl.workerCount} Helpers @ ₹${sl.ratePerWorker}/head) - ${gangWorkType}`;
+          const incidentals = [
+            bus > 0 ? `Bus: ₹${bus}` : "",
+            food > 0 ? `Food: ₹${food}` : "",
+            extra > 0 ? `Extra: ₹${extra}` : "",
+          ].filter(Boolean).join(", ");
+
+          const gangDescription = `${leaderTitle} (${sl.workerCount} Helpers @ ₹${sl.ratePerWorker}/head)${incidentals ? ` [${incidentals}]` : ""} - ${gangWorkType}`;
 
           const formData = new FormData();
-          formData.append("amount", slAmount.toString());
+          formData.append("amount", slTotal.toString());
           formData.append("category", "OUTSIDE_HELPER_WAGE");
           formData.append("description", gangDescription);
           formData.append("date", date);
@@ -288,7 +453,9 @@ export default function NewExpenseForm({
             formData.append("cashAmount", sl.cashAmount);
             formData.append("bankAmount", sl.bankAmount);
           }
-          if (dispatchId) formData.append("dispatchId", dispatchId);
+          if (siteAllocationMode === "SINGLE" && dispatchId) {
+            formData.append("dispatchId", dispatchId);
+          }
           if (receiptUrl) formData.append("receiptUrl", receiptUrl);
 
           const res = await createAdminExpense(formData);
@@ -604,84 +771,270 @@ export default function NewExpenseForm({
                 </div>
               </div>
 
-              {/* Dispatch Link & Headcount Cumulative Tally */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <label className="text-[11px] font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-                    Link & Cumulative Tally With Dispatch (Job Site)
-                  </label>
+              {/* 💡 EXPLANATORY BANNER: WHY JOB SITE / DISPATCH IS OPTIONAL FOR OUTSIDE WORKERS */}
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-xs text-amber-200/90 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span className="font-bold text-amber-300 uppercase tracking-wider text-[11px]">
+                    Why is Job Site / Dispatch Optional for Outside Workers?
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-zinc-300">
+                  Outside laborers and helper gangs often receive a <strong>single combined wage payment</strong> covering <strong>multiple job sites</strong> (e.g. half-day at Site A + half-day at Site B), general depot yard loading, or travel transit. You can:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+                  <div className="bg-zinc-900/80 border border-zinc-800 p-2.5 rounded-xl">
+                    <span className="font-bold text-white block mb-0.5">🏢 Single Site (100%)</span>
+                    <span className="text-zinc-400 text-[10px]">Worker stayed at one job site for the entire shift.</span>
+                  </div>
+                  <div className="bg-zinc-900/80 border border-zinc-800 p-2.5 rounded-xl">
+                    <span className="font-bold text-amber-300 block mb-0.5">🔀 Multi-Site Split</span>
+                    <span className="text-zinc-400 text-[10px]">Combined wage split partially or 50/50 across 2+ dispatches.</span>
+                  </div>
+                  <div className="bg-zinc-900/80 border border-zinc-800 p-2.5 rounded-xl">
+                    <span className="font-bold text-blue-300 block mb-0.5">🏬 Yard / General (None)</span>
+                    <span className="text-zinc-400 text-[10px]">Company warehouse shifting, unloading, or transit without specific site.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* SITE ALLOCATION MODE SELECTOR */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider flex items-center justify-between">
+                  <span>Site Allocation Mode</span>
+                  <span className="text-zinc-500 font-normal lowercase">(how is this worker payout charged to jobs?)</span>
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSiteAllocationMode("SINGLE")}
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-left ${
+                      siteAllocationMode === "SINGLE"
+                        ? "bg-amber-500/20 border-amber-500/60 text-amber-300 shadow-md ring-1 ring-amber-500/30"
+                        : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    <span className="block font-black text-white text-[12px]">🏢 Single Site</span>
+                    <span className="text-[10px] text-zinc-400 font-normal">100% of payout charged to 1 job</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSiteAllocationMode("MULTI_SPLIT")}
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-left ${
+                      siteAllocationMode === "MULTI_SPLIT"
+                        ? "bg-amber-500/20 border-amber-500/60 text-amber-300 shadow-md ring-1 ring-amber-500/30"
+                        : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    <span className="block font-black text-amber-300 text-[12px]">🔀 Multi-Site Split</span>
+                    <span className="text-[10px] text-zinc-400 font-normal">Combined money split across 2+ sites</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSiteAllocationMode("NONE");
+                      setDispatchId("");
+                    }}
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-left ${
+                      siteAllocationMode === "NONE"
+                        ? "bg-blue-500/20 border-blue-500/60 text-blue-300 shadow-md ring-1 ring-blue-500/30"
+                        : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    <span className="block font-black text-blue-300 text-[12px]">🏬 General / Yard</span>
+                    <span className="text-[10px] text-zinc-400 font-normal">No site dispatch (Depot/Company)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* SINGLE SITE DISPATCH SELECTOR */}
+              {siteAllocationMode === "SINGLE" && (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <label className="text-[11px] font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                      Link & Cumulative Tally With Dispatch (Job Site)
+                    </label>
+                    {dispatchId && (() => {
+                      const matched = dispatches.find((d) => d.id === dispatchId);
+                      if (!matched) return null;
+                      const planned = matched.helperCount || 0;
+                      const previouslyLogged = matched.alreadyLoggedHelpers || 0;
+                      const cumulative = previouslyLogged + totalSessionWorkers;
+                      const diff = cumulative - planned;
+
+                      return (
+                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border ${
+                          diff === 0 
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                            : diff > 0 
+                            ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                            : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                        }`}>
+                          {diff === 0 
+                            ? `✓ Perfectly Tallies (${planned} Total Planned: ${previouslyLogged > 0 ? `${previouslyLogged} already recorded + ${totalSessionWorkers} this entry` : `${totalSessionWorkers} helpers`})` 
+                            : diff > 0 
+                            ? `⚠️ +${diff} Extra Helpers above Plan (${cumulative} Total: ${previouslyLogged} prev + ${totalSessionWorkers} now vs ${planned} planned)`
+                            : `ℹ️ ${totalSessionWorkers} helpers this entry (${previouslyLogged > 0 ? `${previouslyLogged} previously recorded, ` : ""}need ${planned - cumulative} more for ${planned} planned)`}
+                        </span>
+                      );
+                    })()}
+                  </div>
+
+                  <select
+                    value={dispatchId}
+                    onChange={(e) => {
+                      const selId = e.target.value;
+                      setDispatchId(selId);
+                      const matched = dispatches.find((d) => d.id === selId);
+                      if (matched) {
+                        const remainingToFill = Math.max(1, (matched.helperCount || 0) - (matched.alreadyLoggedHelpers || 0));
+                        if (subLeaders.length === 1 && (!subLeaders[0].workerCount || subLeaders[0].workerCount === "1")) {
+                          setSubLeaders([{ ...subLeaders[0], workerCount: remainingToFill.toString() }]);
+                        }
+                        setGangWorkType(`Job at ${matched.location} for ${matched.customerName}`);
+                      }
+                    }}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="">Select Dispatch to Tally (Job Site)...</option>
+                    {dispatches.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.dateOfService} — {d.customerName} @ {d.location} ({d.machineId ? `Machine: ${d.machineId}` : 'No Machine'} | {d.helperCount} Helpers Planned | {d.alreadyLoggedHelpers || 0} already logged)
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Previously Logged Sub-Leaders breakdown for this Dispatch */}
                   {dispatchId && (() => {
                     const matched = dispatches.find((d) => d.id === dispatchId);
-                    if (!matched) return null;
-                    const planned = matched.helperCount || 0;
-                    const previouslyLogged = matched.alreadyLoggedHelpers || 0;
-                    const cumulative = previouslyLogged + totalSessionWorkers;
-                    const diff = cumulative - planned;
-
+                    if (!matched || !matched.previousHelperEntries || matched.previousHelperEntries.length === 0) return null;
                     return (
-                      <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border ${
-                        diff === 0 
-                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                          : diff > 0
-                          ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                          : "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                      }`}>
-                        {diff === 0 
-                          ? `✓ Perfectly Tallies (${planned} Total Planned: ${previouslyLogged > 0 ? `${previouslyLogged} already recorded + ${totalSessionWorkers} this entry` : `${totalSessionWorkers} helpers`})` 
-                          : diff > 0 
-                          ? `⚠️ +${diff} Extra Helpers above Plan (${cumulative} Total: ${previouslyLogged} prev + ${totalSessionWorkers} now vs ${planned} planned)`
-                          : `ℹ️ ${totalSessionWorkers} helpers this entry (${previouslyLogged > 0 ? `${previouslyLogged} previously recorded, ` : ""}need ${planned - cumulative} more for ${planned} planned)`}
-                      </span>
+                      <div className="bg-zinc-950/80 border border-zinc-800/80 rounded-lg p-3 space-y-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 block">
+                          📋 Previously Recorded Sub-Leaders on this Job:
+                        </span>
+                        <div className="space-y-1.5">
+                          {matched.previousHelperEntries.map((prev, idx) => (
+                            <div key={prev.id || idx} className="flex items-center justify-between text-xs text-zinc-300 bg-zinc-900/70 px-3 py-1.5 rounded-lg border border-zinc-800/60">
+                              <span className="font-medium text-amber-200/90">{prev.description}</span>
+                              <span className="font-black text-emerald-400">₹{prev.amount.toLocaleString("en-IN")}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     );
                   })()}
                 </div>
+              )}
 
-                <select
-                  value={dispatchId}
-                  onChange={(e) => {
-                    const selId = e.target.value;
-                    setDispatchId(selId);
-                    const matched = dispatches.find((d) => d.id === selId);
-                    if (matched) {
-                      const remainingToFill = Math.max(1, (matched.helperCount || 0) - (matched.alreadyLoggedHelpers || 0));
-                      if (subLeaders.length === 1 && (!subLeaders[0].workerCount || subLeaders[0].workerCount === "1")) {
-                        setSubLeaders([{ ...subLeaders[0], workerCount: remainingToFill.toString() }]);
-                      }
-                      setGangWorkType(`Job at ${matched.location} for ${matched.customerName}`);
-                    }
-                  }}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
-                >
-                  <option value="">Select Dispatch to Tally (Job Site)...</option>
-                  {dispatches.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.dateOfService} — {d.customerName} @ {d.location} ({d.machineId ? `Machine: ${d.machineId}` : 'No Machine'} | {d.helperCount} Helpers Planned | {d.alreadyLoggedHelpers || 0} already logged)
-                    </option>
-                  ))}
-                </select>
-
-                {/* Previously Logged Sub-Leaders breakdown for this Dispatch */}
-                {dispatchId && (() => {
-                  const matched = dispatches.find((d) => d.id === dispatchId);
-                  if (!matched || !matched.previousHelperEntries || matched.previousHelperEntries.length === 0) return null;
-                  return (
-                    <div className="bg-zinc-950/80 border border-zinc-800/80 rounded-lg p-3 space-y-2">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 block">
-                        📋 Previously Recorded Sub-Leaders on this Job:
+              {/* MULTI-SITE SPLIT ALLOCATION MATRIX & ⚡ AUTO-CLOSE */}
+              {siteAllocationMode === "MULTI_SPLIT" && (
+                <div className="bg-zinc-900/90 border border-amber-500/40 rounded-xl p-4 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-2">
+                    <div>
+                      <span className="text-xs font-black uppercase tracking-wider text-amber-300 block">
+                        Multi-Site Split Allocation Matrix
                       </span>
-                      <div className="space-y-1.5">
-                        {matched.previousHelperEntries.map((prev, idx) => (
-                          <div key={prev.id || idx} className="flex items-center justify-between text-xs text-zinc-300 bg-zinc-900/70 px-3 py-1.5 rounded-lg border border-zinc-800/60">
-                            <span className="font-medium text-amber-200/90">{prev.description}</span>
-                            <span className="font-black text-emerald-400">₹{prev.amount.toLocaleString("en-IN")}</span>
-                          </div>
-                        ))}
-                      </div>
+                      <span className="text-[11px] text-zinc-400">
+                        Allocate combined worker earnings & additions across the job sites they worked at.
+                      </span>
                     </div>
-                  );
-                })()}
-              </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleAutoBalanceSplits}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/30 transition-all"
+                        title="Automatically close and balance remaining difference across sites"
+                      >
+                        <Calculator className="w-3.5 h-3.5" />
+                        <span>⚡ Auto-Close & Balance</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAddSiteSplit}
+                        className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs flex items-center gap-1 border border-zinc-700"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Site</span>
+                      </button>
+                    </div>
+                  </div>
 
+                  {/* Real-time Balance Monitor */}
+                  <div className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl border border-zinc-800 text-xs flex-wrap gap-2">
+                    <div>
+                      <span className="text-[10px] text-zinc-500 uppercase font-bold block">Total Worker Payout</span>
+                      <span className="font-black text-white text-sm">₹{totalSessionGangPayout.toLocaleString("en-IN")}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-zinc-500 uppercase font-bold block">Allocated to Sites</span>
+                      <span className="font-black text-sky-400 text-sm">₹{totalAllocatedToSites.toLocaleString("en-IN")}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-zinc-500 uppercase font-bold block">Balance Difference</span>
+                      <span className={`font-black text-sm px-2 py-0.5 rounded ${
+                        Math.abs(splitDifference) <= 0.01
+                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                          : "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                      }`}>
+                        {Math.abs(splitDifference) <= 0.01 ? "✓ Perfectly Closed (₹0)" : `⚠️ ₹${Math.abs(splitDifference).toLocaleString("en-IN")} ${splitDifference > 0 ? "Under-allocated" : "Over-allocated"}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Split Rows */}
+                  <div className="space-y-2">
+                    {siteSplits.map((split, sIdx) => (
+                      <div key={split.id} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-zinc-950/70 p-2.5 rounded-xl border border-zinc-800">
+                        <div className="sm:col-span-6">
+                          <label className="text-[10px] text-zinc-400 font-bold block mb-1">
+                            Site #{sIdx + 1} Dispatch (Job Site)
+                          </label>
+                          <select
+                            value={split.dispatchId}
+                            onChange={(e) => handleUpdateSiteSplit(split.id, "dispatchId", e.target.value)}
+                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                          >
+                            <option value="">Select Job Site...</option>
+                            {dispatches.map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.dateOfService} — {d.customerName} @ {d.location}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="sm:col-span-4">
+                          <label className="text-[10px] text-zinc-400 font-bold block mb-1">
+                            Allocated Amount (₹)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={split.amount}
+                            onChange={(e) => handleUpdateSiteSplit(split.id, "amount", e.target.value)}
+                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-bold focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2 text-right pt-2 sm:pt-0">
+                          {siteSplits.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSiteSplit(split.id)}
+                              className="text-zinc-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
+                              title="Remove Site"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 inline" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-[11px] font-bold text-zinc-400 mb-1">
                   Site Work Nature / Location Notes
@@ -712,7 +1065,11 @@ export default function NewExpenseForm({
                 </div>
 
                 {subLeaders.map((sl, index) => {
-                  const slTotal = (Number(sl.workerCount) || 0) * (Number(sl.ratePerWorker) || 0);
+                  const baseWage = (Number(sl.workerCount) || 0) * (Number(sl.ratePerWorker) || 0);
+                  const busTicket = Number(sl.busTicketAmount) || 0;
+                  const food = Number(sl.foodAmount) || 0;
+                  const extra = Number(sl.extraAmount) || 0;
+                  const slTotal = baseWage + busTicket + food + extra;
                   return (
                     <div key={sl.id} className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 space-y-4 relative">
                       <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2.5">
@@ -786,6 +1143,72 @@ export default function NewExpenseForm({
                               className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-7 pr-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-bold"
                             />
                           </div>
+                        </div>
+                      </div>
+
+                      {/* 🚌 ADDITIONS / INCIDENTALS: BUS TICKET, FOOD RUPEES, EXTRA ADDITIONS */}
+                      <div className="bg-zinc-950/70 border border-zinc-800/80 rounded-xl p-3 space-y-2">
+                        <div className="flex items-center justify-between border-b border-zinc-800/60 pb-1">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                            <span>Additions & Incidentals</span>
+                            <span className="text-[10px] text-zinc-500 font-normal lowercase">(bus ticket, food rupees, extra additions)</span>
+                          </span>
+                          <span className="text-[10px] font-mono text-zinc-400">
+                            Base Wage: ₹{baseWage.toLocaleString("en-IN")}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div>
+                            <label className="block text-[10px] font-bold text-zinc-400 mb-1">
+                              🚌 Bus / Travel Ticket (₹)
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              value={sl.busTicketAmount}
+                              onChange={(e) => handleUpdateSubLeader(sl.id, "busTicketAmount", e.target.value)}
+                              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-zinc-400 mb-1">
+                              🍲 Food Rupees / Meals (₹)
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              value={sl.foodAmount}
+                              onChange={(e) => handleUpdateSubLeader(sl.id, "foodAmount", e.target.value)}
+                              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-zinc-400 mb-1">
+                              ⚡ Extra / Site Overtime (₹)
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              value={sl.extraAmount}
+                              onChange={(e) => handleUpdateSubLeader(sl.id, "extraAmount", e.target.value)}
+                              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1 text-[11px] text-zinc-400 border-t border-zinc-900">
+                          <span>
+                            Formula: Base Wage (₹{baseWage.toLocaleString("en-IN")}) + Additions (₹{(busTicket + food + extra).toLocaleString("en-IN")})
+                          </span>
+                          <span className="font-black text-emerald-400">
+                            Net Sub-Leader Payout: ₹{slTotal.toLocaleString("en-IN")}
+                          </span>
                         </div>
                       </div>
 
