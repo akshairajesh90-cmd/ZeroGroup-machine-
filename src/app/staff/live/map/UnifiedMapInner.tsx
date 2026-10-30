@@ -193,8 +193,8 @@ export default function UnifiedMapInner({
   activeTrail,
   playbackPoint,
 }: UnifiedMapInnerProps) {
-  // Free Map Layer Style: "voyager" (Google Maps Street Aesthetic) | "satellite" (Esri) | "osm" (Standard OSM)
-  const [tileStyle, setTileStyle] = useState<"voyager" | "satellite" | "osm">("voyager");
+  // 100% FREE Map Tile Style: "osm" (Standard OpenStreetMap - Zero API Key, Zero Watermark) | "hot" (OSM High-Contrast Roads) | "satellite" (Esri Satellite)
+  const [tileStyle, setTileStyle] = useState<"osm" | "hot" | "satellite">("osm");
 
   // Road-snapped GPS trail coordinates (hugs real street curves)
   const [snappedTrail, setSnappedTrail] = useState<[number, number][]>([]);
@@ -208,25 +208,32 @@ export default function UnifiedMapInner({
     originName: string;
   } | null>(null);
 
-  // Default map center (Central Kerala: Alappuzha/Kottayam corridor)
+  // Default map center (Pala / Kottayam, Central Kerala) - strictly validated against Null Island [0, 0]
   const defaultCenter: [number, number] = useMemo(() => {
-    if (drivers.length > 0) return [drivers[0].lat, drivers[0].lng];
-    if (sites.length > 0) return [sites[0].lat, sites[0].lng];
+    if (storeLocation && typeof storeLocation.storeLatitude === "number" && typeof storeLocation.storeLongitude === "number" && Math.abs(storeLocation.storeLatitude) > 1) {
+      return [storeLocation.storeLatitude, storeLocation.storeLongitude];
+    }
+    const validSite = sites.find((s) => s.lat && s.lng && Math.abs(s.lat) > 1);
+    if (validSite) return [validSite.lat, validSite.lng];
+
+    const validDriver = drivers.find((d) => d.lat && d.lng && Math.abs(d.lat) > 1);
+    if (validDriver) return [validDriver.lat, validDriver.lng];
+
     return [9.5916, 76.5222];
-  }, [drivers, sites]);
+  }, [storeLocation, sites, drivers]);
 
-  // Fetch Road-Snapped Driving Navigation Route whenever selected dispatch changes
+  // Fetch Road-Snapped Driving Navigation Route for active dispatch or first site
   useEffect(() => {
-    if (!selectedDispatchId) {
-      setNavRoute(null);
-      return;
-    }
+    // If a dispatch is selected, use it; otherwise use the first site with coordinates
+    const targetSite = selectedDispatchId
+      ? sites.find((s) => s.id === selectedDispatchId)
+      : sites.find((s) => s.lat && s.lng && Math.abs(s.lat) > 1);
 
-    const site = sites.find((s) => s.id === selectedDispatchId);
-    if (!site || !site.lat || !site.lng) {
+    if (!targetSite || !targetSite.lat || !targetSite.lng) {
       setNavRoute(null);
       return;
     }
+    const site = targetSite;
 
     // Determine Origin: assigned driver if active with coordinates, otherwise Store Base Yard
     const assignedDriver = drivers.find((d) => d.dispatchId === selectedDispatchId);
@@ -332,20 +339,32 @@ export default function UnifiedMapInner({
 
   return (
     <div className="w-full h-full min-h-[520px] rounded-3xl overflow-hidden relative border border-slate-800 shadow-2xl">
-      {/* 🗺️ FLOATING TILE LAYER SWITCHER (Google Style Street / Satellite / OSM) */}
+      {/* 🗺️ 100% FREE TILE LAYER SWITCHER (Zero API Key, Zero Watermark, 100% Free Forever) */}
       <div className="absolute top-3 right-3 z-[400] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-1 shadow-2xl flex items-center gap-1 text-[11px] font-bold">
         <button
           type="button"
-          onClick={() => setTileStyle("voyager")}
+          onClick={() => setTileStyle("osm")}
           className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
-            tileStyle === "voyager"
+            tileStyle === "osm"
               ? "bg-blue-600 text-white shadow-md shadow-blue-600/40 font-black"
               : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/70"
           }`}
-          title="Google Maps-style clean street tiles (roads, highways, landmarks)"
+          title="OpenStreetMap Standard (100% Free, No Watermarks, No API Key)"
         >
           <span>🗺️ Street</span>
-          <span className="text-[9px] px-1 py-0.2 bg-white/20 rounded font-normal">Free</span>
+          <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded font-bold">100% Free</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setTileStyle("hot")}
+          className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+            tileStyle === "hot"
+              ? "bg-blue-600 text-white shadow-md shadow-blue-600/40 font-black"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/70"
+          }`}
+          title="OSM High-Contrast Roads & Streets (100% Free, No API Key)"
+        >
+          <span>🛣️ Roads</span>
         </button>
         <button
           type="button"
@@ -358,18 +377,6 @@ export default function UnifiedMapInner({
           title="Esri Satellite aerial photography"
         >
           <span>🛰️ Satellite</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setTileStyle("osm")}
-          className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
-            tileStyle === "osm"
-              ? "bg-blue-600 text-white shadow-md shadow-blue-600/40 font-black"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/70"
-          }`}
-          title="OpenStreetMap Standard cartography"
-        >
-          <span>🌐 OSM</span>
         </button>
       </div>
 
@@ -413,14 +420,21 @@ export default function UnifiedMapInner({
       >
         <MapCameraController targetCenter={flyToCenter} />
 
-        {/* 🗺️ FREE CARTO TILE LAYERS (Clean Google Maps Street Aesthetic / Satellite / Standard) */}
-        {tileStyle === "voyager" && (
+        {/* 🗺️ 100% FREE TILES (No API Keys, No Watermarks, Zero Costs) */}
+        {tileStyle === "osm" && (
           <TileLayer
-            key="tile-voyager"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-            subdomains="abcd"
-            maxZoom={20}
+            key="tile-osm"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={19}
+          />
+        )}
+        {tileStyle === "hot" && (
+          <TileLayer
+            key="tile-hot"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by Humanitarian OpenStreetMap Team'
+            url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
+            maxZoom={19}
           />
         )}
         {tileStyle === "satellite" && (
@@ -428,15 +442,7 @@ export default function UnifiedMapInner({
             key="tile-satellite"
             attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS User Community'
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{x}/{y}"
-            maxZoom={19}
-          />
-        )}
-        {tileStyle === "osm" && (
-          <TileLayer
-            key="tile-osm"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            maxZoom={19}
+            maxZoom={18}
           />
         )}
 

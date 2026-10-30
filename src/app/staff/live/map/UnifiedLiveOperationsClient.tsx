@@ -137,7 +137,15 @@ export default function UnifiedLiveOperationsClient({
   const [dispatches, setDispatches] = useState<UnifiedDispatch[]>(initialDispatches);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [selectedDispatchId, setSelectedDispatchId] = useState<string | null>(null);
+  const [selectedDispatchId, setSelectedDispatchId] = useState<string | null>(() => {
+    // Auto-select first active dispatch on load so road-snapped navigation route is immediately drawn!
+    const active = initialDispatches.find(
+      (d) => ["IN_PROGRESS", "EN_ROUTE", "ASSIGNED"].includes(d.status) && d.latitude !== null && d.longitude !== null
+    );
+    if (active) return active.id;
+    const withCoords = initialDispatches.find((d) => d.latitude !== null && d.longitude !== null);
+    return withCoords ? withCoords.id : initialDispatches[0]?.id || null;
+  });
   const [flyToCenter, setFlyToCenter] = useState<[number, number] | null>(null);
   const [routeTrails, setRouteTrails] = useState<Record<string, MapRouteWaypoint[]>>(initialPings);
 
