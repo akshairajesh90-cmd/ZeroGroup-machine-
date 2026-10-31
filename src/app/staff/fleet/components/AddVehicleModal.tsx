@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -85,13 +86,55 @@ export default function AddVehicleModal({ open, onClose }: Props) {
     onClose();
   };
 
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (!isSubmitting) {
+          reset();
+          onClose();
+        }
+      }
+      if (e.key === "Tab") {
+        const modal = document.querySelector('[role="dialog"]');
+        if (!modal) return;
+        const focusable = Array.from(
+          modal.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((el) => el.offsetParent !== null);
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            last.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === last) {
+            first.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open, isSubmitting, reset, onClose]);
+
   if (!open) return null;
 
   return (
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-overlay bg-black/60 backdrop-blur-sm"
         onClick={handleClose}
         aria-hidden="true"
       />
@@ -101,7 +144,7 @@ export default function AddVehicleModal({ open, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label="Add Vehicle"
-        className="fixed z-50 inset-x-0 bottom-0 md:inset-0 md:flex md:items-center md:justify-center"
+        className="fixed z-modal inset-x-0 bottom-0 md:inset-0 md:flex md:items-center md:justify-center"
       >
         <div className="w-full md:max-w-lg bg-slate-900 border border-white/10 rounded-t-3xl md:rounded-2xl shadow-2xl overflow-hidden">
           {/* Drag Handle (mobile only) */}
@@ -123,7 +166,8 @@ export default function AddVehicleModal({ open, onClose }: Props) {
             <button
               onClick={handleClose}
               disabled={isSubmitting}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/10 transition-colors"
+              aria-label="Close dialog"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -141,7 +185,7 @@ export default function AddVehicleModal({ open, onClose }: Props) {
                 {...register("licensePlate")}
                 placeholder="e.g. KL-01-AB-1234"
                 autoCapitalize="characters"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all uppercase"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all uppercase"
                 onChange={(e) => {
                   e.target.value = e.target.value.toUpperCase();
                   register("licensePlate").onChange(e);
@@ -176,7 +220,7 @@ export default function AddVehicleModal({ open, onClose }: Props) {
               <input
                 {...register("type")}
                 placeholder="Or type a custom vehicle type…"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
               />
               {errors.type && (
                 <p className="text-xs text-red-400 mt-1">{errors.type.message}</p>

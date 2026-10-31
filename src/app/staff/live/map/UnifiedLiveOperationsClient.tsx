@@ -183,6 +183,23 @@ export default function UnifiedLiveOperationsClient({
   const [isPending, startTransition] = useTransition();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!isStoreModalOpen && !editingDispatch) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isStoreModalOpen) setIsStoreModalOpen(false);
+        if (editingDispatch) setEditingDispatch(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prev;
+    };
+  }, [isStoreModalOpen, editingDispatch]);
+
   // Playback Scrubber State
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<1 | 2 | 5>(1);
@@ -666,6 +683,7 @@ export default function UnifiedLiveOperationsClient({
           <div className="flex items-center gap-2 mb-1">
             <Link
               href="/staff/dashboard"
+              aria-label="Back to Staff Dashboard"
               className="p-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -820,6 +838,7 @@ export default function UnifiedLiveOperationsClient({
                     setIsPlaying(false);
                     setScrubberIndex(Number(e.target.value));
                   }}
+                  aria-label="Route history scrubber"
                   className="w-full accent-amber-500 h-2 bg-slate-800 rounded-lg cursor-pointer"
                 />
                 <div className="flex justify-between text-[10px] text-slate-500 font-mono">
@@ -1270,7 +1289,12 @@ export default function UnifiedLiveOperationsClient({
 
       {/* 🏬 EDIT STORE & BASE YARD MODAL */}
       {isStoreModalOpen && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Edit Store and Base Yard Location"
+          className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in"
+        >
           <div
             className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
@@ -1388,7 +1412,7 @@ export default function UnifiedLiveOperationsClient({
                   <button
                     type="submit"
                     disabled={isSavingStore}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black flex items-center gap-1.5 transition-all shadow disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-black flex items-center gap-1.5 transition-all shadow disabled:opacity-50"
                   >
                     {isSavingStore ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1406,13 +1430,19 @@ export default function UnifiedLiveOperationsClient({
 
       {/* 📍 EDIT DISPATCH JOB SITE MODAL */}
       {editingDispatch && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Edit Dispatch Job Site Location"
+          className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in"
+        >
           <div
             className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setEditingDispatch(null)}
+              aria-label="Close dialog"
               className="absolute top-5 right-5 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors"
             >
               <X className="w-4 h-4" />
