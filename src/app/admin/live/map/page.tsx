@@ -4,6 +4,7 @@ import DateRangeFilterBar from "@/components/live/DateRangeFilterBar";
 import { requireAuth } from "@/lib/serverAuth";
 import { Role } from "@prisma/client";
 import nextDynamic from "next/dynamic";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -316,8 +317,16 @@ export default async function LiveMapPage({
           </p>
         </div>
 
-        <div className="text-xs text-slate-400 font-medium">
-          Showing real-time field personnel and active dispatches
+        <div className="flex items-center gap-3">
+          <Link
+            href="/staff/live/map"
+            className="flex items-center gap-2 px-3.5 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold transition-all shadow-sm"
+          >
+            <span>🔄 Switch to Unified Operations Map</span>
+          </Link>
+          <div className="text-xs text-slate-400 font-medium hidden sm:block">
+            Showing real-time field personnel and active dispatches
+          </div>
         </div>
       </div>
 

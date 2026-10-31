@@ -165,6 +165,18 @@ function MapController({
   return null;
 }
 
+// Automatically invalidate map size on mount to ensure smooth tile rendering
+function MapResizer() {
+  const map = useMap();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [map]);
+  return null;
+}
+
 // Helper to determine GPS cadence freshness (15m Driver / 45m Operator)
 function computeCadenceStatus(lastUpdate: string | null, cadenceMinutes: number = 15) {
   if (!lastUpdate) {
@@ -232,6 +244,7 @@ export default function LiveMapClient({
   const [mounted, setMounted] = useState(false);
   const [localTrails, setLocalTrails] = useState<Record<string, RouteWaypoint[]>>(routeTrails);
   const [isPingingGPS, setIsPingingGPS] = useState(false);
+  const [tileStyle, setTileStyle] = useState<"osm" | "hot" | "satellite">("osm");
 
   // Road Routing States
   const [roadSiteRoute, setRoadSiteRoute] = useState<{
@@ -811,6 +824,47 @@ export default function LiveMapClient({
         className="rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative isolate"
         style={{ height: "620px" }}
       >
+        {/* 🗺️ 100% FREE TILE LAYER SWITCHER (Zero API Key, Zero Watermark, 100% Free Forever) */}
+        <div className="absolute top-4 right-4 z-[500] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-1 shadow-2xl flex items-center gap-1 text-[11px] font-bold">
+          <button
+            type="button"
+            onClick={() => setTileStyle("osm")}
+            className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+              tileStyle === "osm"
+                ? "bg-blue-600 text-white shadow-md shadow-blue-600/40 font-black"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/70"
+            }`}
+            title="OpenStreetMap Standard (100% Free, No Watermarks, No API Key)"
+          >
+            <span>🗺️ Street</span>
+            <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded font-bold">100% Free</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTileStyle("hot")}
+            className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+              tileStyle === "hot"
+                ? "bg-blue-600 text-white shadow-md shadow-blue-600/40 font-black"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/70"
+            }`}
+            title="OSM High-Contrast Roads & Streets (100% Free, No API Key)"
+          >
+            <span>🛣️ Roads</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTileStyle("satellite")}
+            className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+              tileStyle === "satellite"
+                ? "bg-blue-600 text-white shadow-md shadow-blue-600/40 font-black"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/70"
+            }`}
+            title="Esri Satellite aerial photography with hybrid place names and road network"
+          >
+            <span>🛰️ Satellite</span>
+          </button>
+        </div>
+
         <MapContainer
           center={defaultCenter}
           zoom={11}
@@ -818,12 +872,49 @@ export default function LiveMapClient({
           className="w-full h-full z-0"
           style={{ height: "100%", width: "100%" }}
         >
+          <MapResizer />
           <MapController targetCenter={mapCenter} bounds={mapBounds} />
 
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          {/* 🗺️ 100% FREE TILES (No API Keys, No Watermarks, Zero Costs) */}
+          {tileStyle === "osm" && (
+            <TileLayer
+              key="admin-tile-osm"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              maxZoom={19}
+            />
+          )}
+          {tileStyle === "hot" && (
+            <TileLayer
+              key="admin-tile-hot"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by Humanitarian OpenStreetMap Team'
+              url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
+              maxZoom={19}
+            />
+          )}
+          {tileStyle === "satellite" && (
+            <>
+              {/* 🛰️ High-Resolution Aerial Satellite Imagery (100% Free, Zero Watermark, Zero API Key) */}
+              <TileLayer
+                key="admin-tile-satellite-base"
+                attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS User Community'
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                maxZoom={19}
+              />
+              {/* Transparent Street & Place Labels overlaid on satellite */}
+              <TileLayer
+                key="admin-tile-satellite-labels"
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+                maxZoom={19}
+              />
+              {/* Transparent Highway & Road Network overlaid on satellite */}
+              <TileLayer
+                key="admin-tile-satellite-roads"
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
+                maxZoom={19}
+              />
+            </>
+          )}
 
           {/* ── DRAW ACTIVE ROUTE POLYLINE & WAYPOINT DOTS ──────────────────────── */}
           {activeRoute && (
@@ -1128,7 +1219,7 @@ export default function LiveMapClient({
 
         {/* ── FLOATING DETAIL CARD OVERLAY (ON SELECTION) ───────────────────── */}
         {selectedPin && (
-          <div className="absolute top-4 right-4 z-[1000] w-80 max-w-[calc(100%-2rem)] bg-slate-950/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-4 shadow-2xl text-white space-y-3 animate-in fade-in slide-in-from-right-4 duration-200">
+          <div className="absolute top-16 right-4 z-[1000] w-80 max-w-[calc(100%-2rem)] bg-slate-950/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-4 shadow-2xl text-white space-y-3 animate-in fade-in slide-in-from-right-4 duration-200">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2.5">
                 <div
