@@ -96,6 +96,15 @@
   }
 }
 
+/* Leaflet Map Stacking Context Isolation
+   Ensures Leaflet controls & layers form an isolated local stacking context
+   at z-index 0 without escaping or overlapping modals/dialogs */
+.map-stacking-context {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+
 /* React Big Calendar Dark Theme Enhancements */
 .rbc-calendar {
   color: #0f172a !important;

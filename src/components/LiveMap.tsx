@@ -279,7 +279,7 @@ export default function LiveMap({
       : null;
 
   return (
-    <div className="w-full h-[500px] rounded-3xl overflow-hidden border-2 border-slate-700/60 shadow-2xl relative z-10">
+    <div className="map-stacking-context w-full h-[500px] rounded-3xl overflow-hidden border-2 border-slate-700/60 shadow-2xl">
       <MapContainer
         center={defaultCenter}
         zoom={siteMarkers.length > 0 || workerMarkers.length > 0 ? 12 : 8}

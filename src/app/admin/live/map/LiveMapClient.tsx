@@ -821,7 +821,7 @@ export default function LiveMapClient({
           3. INTERACTIVE MAP CANVAS + DETAIL PANEL OVERLAYS
       ───────────────────────────────────────────────────────────────────────────── */}
       <div
-        className="rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative isolate"
+        className="map-stacking-context rounded-2xl overflow-hidden border border-slate-800 shadow-2xl"
         style={{ height: "620px" }}
       >
         {/* 🗺️ 100% FREE TILE LAYER SWITCHER (Zero API Key, Zero Watermark, 100% Free Forever) */}

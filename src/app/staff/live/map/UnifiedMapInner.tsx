@@ -352,7 +352,7 @@ export default function UnifiedMapInner({
   }, [activeTrail]);
 
   return (
-    <div className="w-full h-full min-h-[520px] rounded-3xl overflow-hidden relative border border-slate-800 shadow-2xl">
+    <div className="map-stacking-context w-full h-full min-h-[520px] rounded-3xl overflow-hidden border border-slate-800 shadow-2xl">
       {/* 🗺️ 100% FREE TILE LAYER SWITCHER (Zero API Key, Zero Watermark, 100% Free Forever) */}
       <div className="absolute top-3 right-3 z-[400] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-1 shadow-2xl flex items-center gap-1 text-[11px] font-bold">
         <button
