@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push && npx tsx scripts/seed-essentials.ts && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
+    "db:push": "prisma db push",
     "db:seed": "npx tsx prisma/seed-28day-tight-schedule.ts",
+    "db:seed:essentials": "npx tsx scripts/seed-essentials.ts",
     "db:seed:notebook": "npx tsx prisma/seed-notebook-data.ts",
     "test": "jest --testPathPatterns=testing/ --forceExit",
     "test:unit": "jest --testPathPatterns=testing/1_unit --forceExit --verbose",
