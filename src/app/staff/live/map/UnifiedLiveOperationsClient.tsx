@@ -34,7 +34,9 @@ import {
   X,
   Save,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
+import { parseGoogleMapsUrl } from "@/lib/geo";
 import { updateDispatchStatus } from "@/actions/dispatch";
 import {
   type StoreLocationData,
@@ -99,27 +101,7 @@ export interface UnifiedDispatch {
   dateOfService: string;
 }
 
-// Coordinate extractor from Google Maps URL or raw "lat, lng" string
-function parseCoordinates(input: string): { lat: number; lng: number } | null {
-  if (!input) return null;
-  const trimmed = input.trim();
-  // Match @lat,lng e.g. @9.591600,76.522200
-  const atMatch = trimmed.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-  if (atMatch) {
-    return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
-  }
-  // Match ?q=lat,lng or &q=lat,lng or ll=
-  const qMatch = trimmed.match(/[?&](?:q|query|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/);
-  if (qMatch) {
-    return { lat: parseFloat(qMatch[1]), lng: parseFloat(qMatch[2]) };
-  }
-  // Match comma-separated "9.5916, 76.5222"
-  const rawMatch = trimmed.match(/^(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)$/);
-  if (rawMatch) {
-    return { lat: parseFloat(rawMatch[1]), lng: parseFloat(rawMatch[2]) };
-  }
-  return null;
-}
+// Using canonical parseGoogleMapsUrl from @/lib/geo
 
 interface UnifiedLiveOperationsClientProps {
   initialDispatches: UnifiedDispatch[];
@@ -149,15 +131,8 @@ export default function UnifiedLiveOperationsClient({
   const [flyToCenter, setFlyToCenter] = useState<[number, number] | null>(null);
   const [routeTrails, setRouteTrails] = useState<Record<string, MapRouteWaypoint[]>>(initialPings);
 
-  // Store Location State & Modal
-  const [storeLocation, setStoreLocation] = useState<StoreLocationProps | null>(
-    initialStoreLocation || {
-      storeName: "Zero Group Main Yard & Store",
-      storeAddress: "Pala, Kottayam, Kerala",
-      storeLatitude: 9.5916,
-      storeLongitude: 76.5222,
-    }
-  );
+  // Store Location State & Modal (strictly no Kerala fallback waypoint)
+  const [storeLocation, setStoreLocation] = useState<StoreLocationProps | null>(initialStoreLocation || null);
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
   const [storeForm, setStoreForm] = useState({
     storeName: "",
@@ -179,6 +154,23 @@ export default function UnifiedLiveOperationsClient({
   });
   const [isSavingSite, setIsSavingSite] = useState(false);
   const [siteError, setSiteError] = useState<string | null>(null);
+
+  // GPS Accuracy & Low-Accuracy Confirmation States
+  const [pendingStoreGps, setPendingStoreGps] = useState<{
+    lat: number;
+    lng: number;
+    accuracy: number;
+  } | null>(null);
+  const [storeGpsAccuracy, setStoreGpsAccuracy] = useState<number | null>(null);
+  const [isResolvingStoreUrl, setIsResolvingStoreUrl] = useState(false);
+
+  const [pendingSiteGps, setPendingSiteGps] = useState<{
+    lat: number;
+    lng: number;
+    accuracy: number;
+  } | null>(null);
+  const [siteGpsAccuracy, setSiteGpsAccuracy] = useState<number | null>(null);
+  const [isResolvingSiteUrl, setIsResolvingSiteUrl] = useState(false);
 
   const [isPending, startTransition] = useTransition();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -424,12 +416,14 @@ export default function UnifiedLiveOperationsClient({
   const handleOpenStoreModal = () => {
     setStoreForm({
       storeName: storeLocation?.storeName || "Zero Group Main Yard & Store",
-      storeAddress: storeLocation?.storeAddress || "Pala, Kottayam, Kerala",
-      storeLatitude: storeLocation?.storeLatitude ? String(storeLocation.storeLatitude) : "9.591600",
-      storeLongitude: storeLocation?.storeLongitude ? String(storeLocation.storeLongitude) : "76.522200",
+      storeAddress: storeLocation?.storeAddress || "",
+      storeLatitude: storeLocation?.storeLatitude != null ? String(storeLocation.storeLatitude) : "",
+      storeLongitude: storeLocation?.storeLongitude != null ? String(storeLocation.storeLongitude) : "",
       googleLink: "",
     });
     setStoreError(null);
+    setPendingStoreGps(null);
+    setStoreGpsAccuracy(null);
     setIsStoreModalOpen(true);
   };
 
@@ -438,32 +432,95 @@ export default function UnifiedLiveOperationsClient({
       setStoreError("Geolocation is not supported by your browser");
       return;
     }
+    setStoreError(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setStoreForm((prev) => ({
-          ...prev,
-          storeLatitude: pos.coords.latitude.toFixed(6),
-          storeLongitude: pos.coords.longitude.toFixed(6),
-        }));
+        const accuracy = pos.coords.accuracy;
+        if (accuracy > 50) {
+          // Low-accuracy GPS (>50m): show accuracy radius and require explicit user confirmation
+          setPendingStoreGps({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy,
+          });
+        } else {
+          // High-accuracy GPS (<=50m): auto-fill directly
+          setPendingStoreGps(null);
+          setStoreGpsAccuracy(accuracy);
+          setStoreForm((prev) => ({
+            ...prev,
+            storeLatitude: pos.coords.latitude.toFixed(6),
+            storeLongitude: pos.coords.longitude.toFixed(6),
+          }));
+        }
         setStoreError(null);
       },
       (err) => {
-        setStoreError(`Failed to detect GPS: ${err.message}`);
+        let userFriendlyMsg = "Failed to detect GPS";
+        if (err.code === 1) {
+          userFriendlyMsg = "Location access denied. Please enable location permissions or enter coordinates manually.";
+        } else if (err.code === 2) {
+          userFriendlyMsg = "Location unavailable. Please check your GPS signal or enter coordinates manually.";
+        } else if (err.code === 3) {
+          userFriendlyMsg = "GPS request timed out. Please retry or enter coordinates manually.";
+        } else {
+          userFriendlyMsg = `GPS error: ${err.message}`;
+        }
+        setStoreError(userFriendlyMsg);
+        // CRITICAL REQUIREMENT: Do NOT clear existing coordinates on GPS error!
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
-  const handleStoreGoogleUrlChange = (value: string) => {
-    setStoreForm((prev) => {
-      const next = { ...prev, googleLink: value };
-      const parsed = parseCoordinates(value);
-      if (parsed) {
-        next.storeLatitude = parsed.lat.toFixed(6);
-        next.storeLongitude = parsed.lng.toFixed(6);
+  const handleStoreGoogleUrlChange = async (value: string) => {
+    setStoreForm((prev) => ({ ...prev, googleLink: value }));
+    const trimmed = value.trim();
+    if (!trimmed) return;
+
+    // Fast path: direct coordinates in string
+    const parsed = parseGoogleMapsUrl(trimmed);
+    if (parsed) {
+      setStoreForm((prev) => ({
+        ...prev,
+        storeLatitude: parsed.lat.toFixed(6),
+        storeLongitude: parsed.lng.toFixed(6),
+      }));
+      setStoreError(null);
+      return;
+    }
+
+    // Server-side resolver for short URLs (restricted to Google domains, returns only {lat, lng})
+    if (
+      trimmed.includes("goo.gl") ||
+      trimmed.includes("maps.google") ||
+      trimmed.includes("google.com/maps")
+    ) {
+      setIsResolvingStoreUrl(true);
+      setStoreError(null);
+      try {
+        const res = await fetch("/api/geo/resolve-link", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: trimmed }),
+        });
+        const data = await res.json();
+        if (res.ok && typeof data.lat === "number" && typeof data.lng === "number") {
+          setStoreForm((prev) => ({
+            ...prev,
+            storeLatitude: data.lat.toFixed(6),
+            storeLongitude: data.lng.toFixed(6),
+          }));
+          setStoreError(null);
+        } else {
+          setStoreError(data.error || "Could not resolve coordinates from link");
+        }
+      } catch (err) {
+        setStoreError(err instanceof Error ? err.message : "Failed to resolve link");
+      } finally {
+        setIsResolvingStoreUrl(false);
       }
-      return next;
-    });
+    }
   };
 
   const handleSaveStore = async (e: React.FormEvent) => {
@@ -481,7 +538,7 @@ export default function UnifiedLiveOperationsClient({
 
     const payload: StoreLocationData = {
       storeName: storeForm.storeName.trim() || "Zero Group Main Yard & Store",
-      storeAddress: storeForm.storeAddress.trim() || "Pala, Kottayam, Kerala",
+      storeAddress: storeForm.storeAddress.trim() || "Main Yard & Central Store",
       storeLatitude: lat,
       storeLongitude: lng,
     };
@@ -508,6 +565,8 @@ export default function UnifiedLiveOperationsClient({
       googleLink: job.mapLink || "",
     });
     setSiteError(null);
+    setPendingSiteGps(null);
+    setSiteGpsAccuracy(null);
   };
 
   const handleDetectSiteGps = () => {
@@ -515,32 +574,95 @@ export default function UnifiedLiveOperationsClient({
       setSiteError("Geolocation is not supported by your browser");
       return;
     }
+    setSiteError(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setSiteForm((prev) => ({
-          ...prev,
-          latitude: pos.coords.latitude.toFixed(6),
-          longitude: pos.coords.longitude.toFixed(6),
-        }));
+        const accuracy = pos.coords.accuracy;
+        if (accuracy > 50) {
+          // Low-accuracy GPS (>50m): show accuracy radius and require explicit user confirmation
+          setPendingSiteGps({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy,
+          });
+        } else {
+          // High-accuracy GPS (<=50m): auto-fill directly
+          setPendingSiteGps(null);
+          setSiteGpsAccuracy(accuracy);
+          setSiteForm((prev) => ({
+            ...prev,
+            latitude: pos.coords.latitude.toFixed(6),
+            longitude: pos.coords.longitude.toFixed(6),
+          }));
+        }
         setSiteError(null);
       },
       (err) => {
-        setSiteError(`Failed to detect GPS: ${err.message}`);
+        let userFriendlyMsg = "Failed to detect GPS";
+        if (err.code === 1) {
+          userFriendlyMsg = "Location access denied. Please enable location permissions or enter coordinates manually.";
+        } else if (err.code === 2) {
+          userFriendlyMsg = "Location unavailable. Please check your GPS signal or enter coordinates manually.";
+        } else if (err.code === 3) {
+          userFriendlyMsg = "GPS request timed out. Please retry or enter coordinates manually.";
+        } else {
+          userFriendlyMsg = `GPS error: ${err.message}`;
+        }
+        setSiteError(userFriendlyMsg);
+        // CRITICAL REQUIREMENT: Do NOT clear existing coordinates on GPS error!
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
-  const handleSiteGoogleUrlChange = (value: string) => {
-    setSiteForm((prev) => {
-      const next = { ...prev, googleLink: value };
-      const parsed = parseCoordinates(value);
-      if (parsed) {
-        next.latitude = parsed.lat.toFixed(6);
-        next.longitude = parsed.lng.toFixed(6);
+  const handleSiteGoogleUrlChange = async (value: string) => {
+    setSiteForm((prev) => ({ ...prev, googleLink: value }));
+    const trimmed = value.trim();
+    if (!trimmed) return;
+
+    // Fast path: direct coordinates in string
+    const parsed = parseGoogleMapsUrl(trimmed);
+    if (parsed) {
+      setSiteForm((prev) => ({
+        ...prev,
+        latitude: parsed.lat.toFixed(6),
+        longitude: parsed.lng.toFixed(6),
+      }));
+      setSiteError(null);
+      return;
+    }
+
+    // Server-side resolver for short URLs (restricted to Google domains, returns only {lat, lng})
+    if (
+      trimmed.includes("goo.gl") ||
+      trimmed.includes("maps.google") ||
+      trimmed.includes("google.com/maps")
+    ) {
+      setIsResolvingSiteUrl(true);
+      setSiteError(null);
+      try {
+        const res = await fetch("/api/geo/resolve-link", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: trimmed }),
+        });
+        const data = await res.json();
+        if (res.ok && typeof data.lat === "number" && typeof data.lng === "number") {
+          setSiteForm((prev) => ({
+            ...prev,
+            latitude: data.lat.toFixed(6),
+            longitude: data.lng.toFixed(6),
+          }));
+          setSiteError(null);
+        } else {
+          setSiteError(data.error || "Could not resolve coordinates from link");
+        }
+      } catch (err) {
+        setSiteError(err instanceof Error ? err.message : "Failed to resolve link");
+      } finally {
+        setIsResolvingSiteUrl(false);
       }
-      return next;
-    });
+    }
   };
 
   const handleSaveSite = async (e: React.FormEvent) => {
@@ -1352,17 +1474,66 @@ export default function UnifiedLiveOperationsClient({
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-slate-300 font-bold">Google Maps Link or "lat, lng"</label>
+                  <label className="text-slate-300 font-bold">Google Maps Link or &quot;lat, lng&quot;</label>
                   <span className="text-[10px] text-emerald-400 font-semibold">Auto-fills Lat / Lng</span>
                 </div>
-                <input
-                  type="text"
-                  value={storeForm.googleLink}
-                  onChange={(e) => handleStoreGoogleUrlChange(e.target.value)}
-                  placeholder="Paste Google Maps URL or '9.5916, 76.5222'..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-zinc-400 focus:outline-none focus:border-emerald-500 font-mono text-[11px]"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={storeForm.googleLink}
+                    onChange={(e) => handleStoreGoogleUrlChange(e.target.value)}
+                    placeholder="Paste Google Maps URL or '9.5916, 76.5222'..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-zinc-400 focus:outline-none focus:border-emerald-500 font-mono text-[11px]"
+                  />
+                  {isResolvingStoreUrl && (
+                    <div className="absolute right-3 top-2.5 flex items-center gap-1.5 text-xs text-emerald-400">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span className="text-[10px]">Resolving...</span>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* Pending Low-Accuracy GPS Confirmation Card */}
+              {pendingStoreGps && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                      Low Accuracy GPS (±{Math.round(pendingStoreGps.accuracy)}m)
+                    </span>
+                    <span className="text-[10px] bg-amber-500/20 px-2 py-0.5 rounded-full text-amber-200">
+                      Confirmation Required
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-amber-200/80">
+                    GPS accuracy radius is wider than 50m. Click below to verify and fill coordinates:
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStoreForm((prev) => ({
+                        ...prev,
+                        storeLatitude: pendingStoreGps.lat.toFixed(6),
+                        storeLongitude: pendingStoreGps.lng.toFixed(6),
+                      }));
+                      setStoreGpsAccuracy(pendingStoreGps.accuracy);
+                      setPendingStoreGps(null);
+                    }}
+                    className="self-start px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-black text-xs hover:bg-amber-400 transition-colors shadow"
+                  >
+                    Confirm Coordinates ({pendingStoreGps.lat.toFixed(4)}, {pendingStoreGps.lng.toFixed(4)})
+                  </button>
+                </div>
+              )}
+
+              {/* GPS Accuracy Indicator */}
+              {storeGpsAccuracy != null && !pendingStoreGps && (
+                <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span>GPS Accuracy: ±{Math.round(storeGpsAccuracy)}m {storeGpsAccuracy <= 50 ? "(High Accuracy)" : "(Confirmed)"}</span>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1482,17 +1653,66 @@ export default function UnifiedLiveOperationsClient({
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-slate-300 font-bold">Google Maps Link or "lat, lng"</label>
+                  <label className="text-slate-300 font-bold">Google Maps Link or &quot;lat, lng&quot;</label>
                   <span className="text-[10px] text-amber-400 font-semibold">Auto-fills Lat / Lng</span>
                 </div>
-                <input
-                  type="text"
-                  value={siteForm.googleLink}
-                  onChange={(e) => handleSiteGoogleUrlChange(e.target.value)}
-                  placeholder="Paste Google Maps URL or '9.5916, 76.5222'..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 font-mono text-[11px]"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={siteForm.googleLink}
+                    onChange={(e) => handleSiteGoogleUrlChange(e.target.value)}
+                    placeholder="Paste Google Maps URL or '9.5916, 76.5222'..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-zinc-400 focus:outline-none focus:border-amber-500 font-mono text-[11px]"
+                  />
+                  {isResolvingSiteUrl && (
+                    <div className="absolute right-3 top-2.5 flex items-center gap-1.5 text-xs text-amber-400">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span className="text-[10px]">Resolving...</span>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* Pending Low-Accuracy GPS Confirmation Card */}
+              {pendingSiteGps && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                      Low Accuracy GPS (±{Math.round(pendingSiteGps.accuracy)}m)
+                    </span>
+                    <span className="text-[10px] bg-amber-500/20 px-2 py-0.5 rounded-full text-amber-200">
+                      Confirmation Required
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-amber-200/80">
+                    GPS accuracy radius is wider than 50m. Click below to verify and fill coordinates:
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSiteForm((prev) => ({
+                        ...prev,
+                        latitude: pendingSiteGps.lat.toFixed(6),
+                        longitude: pendingSiteGps.lng.toFixed(6),
+                      }));
+                      setSiteGpsAccuracy(pendingSiteGps.accuracy);
+                      setPendingSiteGps(null);
+                    }}
+                    className="self-start px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-black text-xs hover:bg-amber-400 transition-colors shadow"
+                  >
+                    Confirm Coordinates ({pendingSiteGps.lat.toFixed(4)}, {pendingSiteGps.lng.toFixed(4)})
+                  </button>
+                </div>
+              )}
+
+              {/* GPS Accuracy Indicator */}
+              {siteGpsAccuracy != null && !pendingSiteGps && (
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-400">
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  <span>GPS Accuracy: ±{Math.round(siteGpsAccuracy)}m {siteGpsAccuracy <= 50 ? "(High Accuracy)" : "(Confirmed)"}</span>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>

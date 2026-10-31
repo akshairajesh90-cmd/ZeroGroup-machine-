@@ -11,7 +11,7 @@
     "db:seed": "npx tsx prisma/seed-28day-tight-schedule.ts",
     "db:seed:essentials": "npx tsx scripts/seed-essentials.ts",
     "db:seed:notebook": "npx tsx prisma/seed-notebook-data.ts",
-    "test": "jest --testPathPatterns=testing/ --forceExit",
+    "test": "jest --forceExit",
     "test:unit": "jest --testPathPatterns=testing/1_unit --forceExit --verbose",
     "test:integration": "jest --testPathPatterns=testing/2_integration --forceExit --verbose",
     "test:regression": "jest --testPathPatterns=testing/5_regression --forceExit --verbose",

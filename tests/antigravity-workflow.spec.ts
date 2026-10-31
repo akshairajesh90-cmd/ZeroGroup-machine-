@@ -1,8 +1,6 @@
 import { test, expect, BrowserContext, Page } from '@playwright/test';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
 
 // Force explicitly using Google Chrome engine
 test.use({ channel: 'chrome' });
