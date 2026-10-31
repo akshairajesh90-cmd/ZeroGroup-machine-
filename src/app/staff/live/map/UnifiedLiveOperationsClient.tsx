@@ -564,17 +564,18 @@ export default function UnifiedLiveOperationsClient({
 
     setIsSavingSite(false);
 
-    if (res?.success) {
+    if (res?.success && res.dispatch) {
+      const updatedDispatch = res.dispatch;
       // Optimistically update dispatch list
       setDispatches((prev) =>
         prev.map((d) =>
           d.id === editingDispatch.id
             ? {
                 ...d,
-                location: res.dispatch.location,
-                latitude: res.dispatch.latitude,
-                longitude: res.dispatch.longitude,
-                mapLink: res.dispatch.mapLink,
+                location: updatedDispatch.location,
+                latitude: updatedDispatch.latitude,
+                longitude: updatedDispatch.longitude,
+                mapLink: updatedDispatch.mapLink,
               }
             : d
         )

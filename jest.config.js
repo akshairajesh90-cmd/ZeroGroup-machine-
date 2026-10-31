@@ -13,8 +13,9 @@ module.exports = {
     }],
   },
   testMatch: [
-    "**/testing/**/*.test.ts",
-    "**/testing/**/*.test.js",
+    "**/testing/**/*.test.[jt]s?(x)",
+    "**/tests/**/*.test.[jt]s?(x)",
+    "**/src/**/__tests__/**/*.test.[jt]s?(x)",
   ],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
