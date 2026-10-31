@@ -1270,24 +1270,24 @@ export default function UnifiedLiveOperationsClient({
 
       {/* 🏬 EDIT STORE & BASE YARD MODAL */}
       {isStoreModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
           <div
             className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setIsStoreModalOpen(false)}
-              className="absolute top-5 right-5 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              className="absolute top-5 right-5 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors" aria-label="Close dialog"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+            <div className="flex items-start gap-3 mb-4 pr-10">
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 shrink-0">
                 <Building2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-white">Edit Store & Base Yard Location</h3>
+                <h3 className="text-base sm:text-lg font-black text-white leading-tight">Edit Store & Base Yard Location</h3>
                 <p className="text-xs text-slate-400">
                   Update home base coordinates where vehicles dispatch from.
                 </p>
@@ -1309,7 +1309,7 @@ export default function UnifiedLiveOperationsClient({
                   value={storeForm.storeName}
                   onChange={(e) => setStoreForm({ ...storeForm, storeName: e.target.value })}
                   placeholder="e.g. Zero Group Main Yard & Store"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-zinc-400 focus:outline-none focus:border-emerald-500"
                   required
                 />
               </div>
@@ -1321,7 +1321,7 @@ export default function UnifiedLiveOperationsClient({
                   value={storeForm.storeAddress}
                   onChange={(e) => setStoreForm({ ...storeForm, storeAddress: e.target.value })}
                   placeholder="e.g. Pala, Kottayam, Kerala"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-zinc-400 focus:outline-none focus:border-emerald-500"
                   required
                 />
               </div>
@@ -1336,7 +1336,7 @@ export default function UnifiedLiveOperationsClient({
                   value={storeForm.googleLink}
                   onChange={(e) => handleStoreGoogleUrlChange(e.target.value)}
                   placeholder="Paste Google Maps URL or '9.5916, 76.5222'..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono text-[11px]"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-zinc-400 focus:outline-none focus:border-emerald-500 font-mono text-[11px]"
                 />
               </div>
 
@@ -1349,7 +1349,7 @@ export default function UnifiedLiveOperationsClient({
                     value={storeForm.storeLatitude}
                     onChange={(e) => setStoreForm({ ...storeForm, storeLatitude: e.target.value })}
                     placeholder="e.g. 9.591600"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-zinc-400 focus:outline-none focus:border-emerald-500 font-mono"
                     required
                   />
                 </div>
@@ -1361,7 +1361,7 @@ export default function UnifiedLiveOperationsClient({
                     value={storeForm.storeLongitude}
                     onChange={(e) => setStoreForm({ ...storeForm, storeLongitude: e.target.value })}
                     placeholder="e.g. 76.522200"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-zinc-400 focus:outline-none focus:border-emerald-500 font-mono"
                     required
                   />
                 </div>
@@ -1381,7 +1381,7 @@ export default function UnifiedLiveOperationsClient({
                   <button
                     type="button"
                     onClick={() => setIsStoreModalOpen(false)}
-                    className="px-4 py-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                    className="px-4 py-2 rounded-xl bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white transition-colors font-medium"
                   >
                     Cancel
                   </button>
