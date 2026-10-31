@@ -1,6 +1,7 @@
-﻿import dotenv from "dotenv";
+import dotenv from "dotenv";
 import path from "path";
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
+import { assertSafeDatabaseContext } from "../src/lib/db-guard";
 
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -15,7 +16,8 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter, log: ["error", "warn"] });
 
 async function main() {
-  console.log("ðŸŒ± Seeding Exact Zero Group Physical Notebook Data (05/07/2026 to 11/07/2026) [V16.0 Idempotent Engine]...");
+  assertSafeDatabaseContext("seed-notebook-data");
+  console.log("🌱 Seeding Exact Zero Group Physical Notebook Data (05/07/2026 to 11/07/2026) [V16.0 Idempotent Engine]...");
 
   // 1. Ensure Master Operators & Employees exist
   const operatorNames = [

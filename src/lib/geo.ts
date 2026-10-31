@@ -30,17 +30,11 @@ export function calculateHaversineDistance(
   return R * c; // Distance in meters
 }
 
-export function isValidCoordinate(lat: number, lng: number): boolean {
-  return (
-    typeof lat === "number" &&
-    typeof lng === "number" &&
-    !isNaN(lat) &&
-    !isNaN(lng) &&
-    lat >= -90 &&
-    lat <= 90 &&
-    lng >= -180 &&
-    lng <= 180
-  );
+export function isValidCoordinate(lat: unknown, lng: unknown): boolean {
+  if (typeof lat !== "number" || typeof lng !== "number") return false;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return false;
+  return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 }
 
 /**

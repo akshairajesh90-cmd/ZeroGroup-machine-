@@ -15,30 +15,44 @@ export type HttpRedirectFollower = (
 export function isPrivateOrReservedIp(ip: string): boolean {
   if (!ip) return true;
 
-  // IPv6 loopback
-  if (ip === "::1" || ip === "0:0:0:0:0:0:0:1") return true;
+  const trimmed = ip.trim().toLowerCase();
 
-  // IPv6 mapped IPv4 (e.g. ::ffff:127.0.0.1)
-  const mappedIpv4 = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  // IPv6 unspecified / loopback
+  if (trimmed === "::" || trimmed === "::1" || trimmed === "0:0:0:0:0:0:0:0" || trimmed === "0:0:0:0:0:0:0:1") {
+    return true;
+  }
+
+  // IPv6 mapped IPv4 (e.g. ::ffff:127.0.0.1 or ::ffff:192.168.1.1)
+  const mappedIpv4 = trimmed.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
   if (mappedIpv4) {
     return isPrivateOrReservedIp(mappedIpv4[1]);
   }
 
-  // IPv6 Unique Local (fc00::/7) and Link-Local (fe80::/10)
-  if (/^f[cd][0-9a-f]{2}:/i.test(ip) || /^fe[89ab][0-9a-f]:/i.test(ip)) {
+  // IPv6 Unique Local Address (fc00::/7, i.e., fc00:: through fdff:ffff:...)
+  if (/^f[cd][0-9a-f]{0,2}:/i.test(trimmed) || trimmed.startsWith("fc00:") || trimmed.startsWith("fd00:")) {
+    return true;
+  }
+
+  // IPv6 Link-Local Address (fe80::/10, i.e., fe80:: through febf:ffff:...)
+  if (/^fe[89ab][0-9a-f]{0,1}:/i.test(trimmed) || trimmed.startsWith("fe80:")) {
+    return true;
+  }
+
+  // IPv6 Documentation prefix (2001:db8::/32)
+  if (trimmed.startsWith("2001:db8:") || trimmed.startsWith("2001:0db8:")) {
     return true;
   }
 
   // Check IPv4 format
-  const parts = ip.split(".").map(Number);
+  const parts = trimmed.split(".").map(Number);
   if (parts.length !== 4 || parts.some((p) => isNaN(p) || p < 0 || p > 255)) {
-    // If not standard IPv4, and not already accepted standard IPv6, reject
+    // If not standard IPv4, and not already accepted standard public IPv6, reject for safety
     return true;
   }
 
   const [a, b] = parts;
 
-  // 0.0.0.0/8 (Current network)
+  // 0.0.0.0/8 (Current network / default route)
   if (a === 0) return true;
 
   // 127.0.0.0/8 (Loopback)
@@ -46,6 +60,9 @@ export function isPrivateOrReservedIp(ip: string): boolean {
 
   // 10.0.0.0/8 (Private)
   if (a === 10) return true;
+
+  // 100.64.0.0/10 (Carrier-Grade NAT / RFC 6598: 100.64.0.0 - 100.127.255.255)
+  if (a === 100 && b >= 64 && b <= 127) return true;
 
   // 172.16.0.0/12 (Private: 172.16.0.0 - 172.31.255.255)
   if (a === 172 && b >= 16 && b <= 31) return true;

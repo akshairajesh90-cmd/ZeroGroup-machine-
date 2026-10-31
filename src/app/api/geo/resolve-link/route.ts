@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { resolveGoogleMapsLink } from "@/lib/geo-server";
 import { parseGoogleMapsUrl } from "@/lib/geo";
 
+export const runtime = "nodejs";
+
 // In-memory sliding window rate limiter: 15 requests per 60 seconds per user
 const rateLimitMap = new Map<string, number[]>();
 

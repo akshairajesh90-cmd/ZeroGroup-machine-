@@ -21,6 +21,7 @@
 import dotenv from "dotenv";
 import path from "path";
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
+import { assertSafeDatabaseContext } from "../src/lib/db-guard";
 
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -113,6 +114,7 @@ function formatDateCode(d: Date): string {
 }
 
 async function main() {
+  assertSafeDatabaseContext("seed-28day-tight-schedule");
   console.log("🚀 IronRent 100% Full-Coverage Database Seeder — Starting...\n");
   console.log(`📅 Timeline: ${SEED_START.toDateString()} to ${SEED_END.toDateString()} (Today: ${TODAY.toDateString()})`);
 

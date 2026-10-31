@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import { Role, CrewRole } from "@prisma/client";
+import { assertSafeDatabaseContext } from "./db-guard";
 
 export const DEFAULT_ACCOUNTS = [
   {
@@ -78,6 +79,7 @@ export const DEFAULT_ACCOUNTS = [
 ];
 
 export async function seedEssentialUsers() {
+  assertSafeDatabaseContext("seedEssentialUsers");
   console.log("🌱 [SEED] Provisioning essential users into database...");
   const results = [];
 

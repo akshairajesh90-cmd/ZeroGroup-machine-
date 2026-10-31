@@ -102,6 +102,23 @@ describe("Geo Utility & URL Parsing Tests", () => {
       expect(isPrivateOrReservedIp("::1")).toBe(true);
       expect(isPrivateOrReservedIp("::ffff:127.0.0.1")).toBe(true);
 
+      // Current network / 0.0.0.0
+      expect(isPrivateOrReservedIp("0.0.0.0")).toBe(true);
+      expect(isPrivateOrReservedIp("0.0.0.1")).toBe(true);
+
+      // Carrier-Grade NAT (100.64.0.0/10)
+      expect(isPrivateOrReservedIp("100.64.0.1")).toBe(true);
+      expect(isPrivateOrReservedIp("100.100.50.25")).toBe(true);
+      expect(isPrivateOrReservedIp("100.127.255.254")).toBe(true);
+
+      // IPv6 Unique Local (fc00::/7)
+      expect(isPrivateOrReservedIp("fc00::1")).toBe(true);
+      expect(isPrivateOrReservedIp("fd12:3456:789a::1")).toBe(true);
+
+      // IPv6 Link-Local (fe80::/10)
+      expect(isPrivateOrReservedIp("fe80::1")).toBe(true);
+      expect(isPrivateOrReservedIp("fe80::200:5aee:feaa:20a2")).toBe(true);
+
       // AWS / GCP / Azure Cloud Metadata service
       expect(isPrivateOrReservedIp("169.254.169.254")).toBe(true);
       expect(isPrivateOrReservedIp("169.254.1.1")).toBe(true);
@@ -115,7 +132,6 @@ describe("Geo Utility & URL Parsing Tests", () => {
       expect(isPrivateOrReservedIp("192.168.0.254")).toBe(true);
 
       // Broadcast and Current Network
-      expect(isPrivateOrReservedIp("0.0.0.0")).toBe(true);
       expect(isPrivateOrReservedIp("255.255.255.255")).toBe(true);
 
       // Public Valid IPs
@@ -189,6 +205,50 @@ describe("Geo Utility & URL Parsing Tests", () => {
       await expect(
         resolveGoogleMapsLink("https://maps.app.goo.gl/cloudMetadataAttack")
       ).rejects.toThrow("Security violation: Resolved IP 169.254.169.254 is in a private or reserved range");
+
+      jest.restoreAllMocks();
+    });
+
+    test("Successfully un-nests google.com/url?q= on a redirect hop", async () => {
+      // Mock dns.promises.lookup to return a public IP for maps.app.goo.gl
+      // @ts-expect-error Mocking overload for { all: true }
+      jest.spyOn(dns.promises, "lookup").mockImplementation(async (hostname) => {
+        return [{ address: "142.250.190.46", family: 4 }] as dns.LookupAddress[];
+      });
+
+      // Hop 1 returns a redirect to a google.com/url?q= wrapper
+      const mockRequester = jest.fn().mockResolvedValue(
+        "https://www.google.com/url?q=https%3A%2F%2Fmaps.google.com%2F%3Fq%3D9.58234%2C76.51892&sa=D&sntz=1"
+      );
+
+      const result = await resolveGoogleMapsLink("https://maps.app.goo.gl/shareUrl", 3, mockRequester);
+      expect(result).toEqual({ lat: 9.58234, lng: 76.51892 });
+      expect(mockRequester).toHaveBeenCalledTimes(1);
+
+      jest.restoreAllMocks();
+    });
+
+    test("Verifies that the pinned IP from DNS is strictly passed to the HTTP connection agent", async () => {
+      const mockDnsIp = "142.250.190.46";
+      let capturedPinnedIp: string | null = null;
+      let capturedFamily: number | null = null;
+
+      // @ts-expect-error Mocking overload for { all: true }
+      jest.spyOn(dns.promises, "lookup").mockResolvedValue([
+        { address: mockDnsIp, family: 4 },
+      ] as dns.LookupAddress[]);
+
+      const mockRequester = jest.fn().mockImplementation(async (_url, pinnedIp, family) => {
+        capturedPinnedIp = pinnedIp;
+        capturedFamily = family;
+        return "https://maps.google.com/?q=9.5916,76.5222";
+      });
+
+      await resolveGoogleMapsLink("https://maps.app.goo.gl/pinTest", 3, mockRequester);
+
+      // Verify that the exact pinned IP resolved by DNS was delivered to the connector
+      expect(capturedPinnedIp).toBe(mockDnsIp);
+      expect(capturedFamily).toBe(4);
 
       jest.restoreAllMocks();
     });

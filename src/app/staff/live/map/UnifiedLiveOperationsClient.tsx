@@ -37,6 +37,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { parseGoogleMapsUrl } from "@/lib/geo";
+import { useGeolocationCapture } from "@/hooks/useGeolocationCapture";
 import { updateDispatchStatus } from "@/actions/dispatch";
 import {
   type StoreLocationData,
@@ -427,50 +428,37 @@ export default function UnifiedLiveOperationsClient({
     setIsStoreModalOpen(true);
   };
 
-  const handleDetectStoreGps = () => {
-    if (typeof window === "undefined" || !navigator.geolocation) {
-      setStoreError("Geolocation is not supported by your browser");
-      return;
+  const storeGpsCapture = useGeolocationCapture({
+    accuracyThreshold: 50,
+    onHighAccuracyCapture: (coords) => {
+      setStoreGpsAccuracy(coords.accuracy);
+      setPendingStoreGps(null);
+      setStoreForm((prev) => ({
+        ...prev,
+        storeLatitude: coords.latitude.toFixed(6),
+        storeLongitude: coords.longitude.toFixed(6),
+      }));
+      setStoreError(null);
+    },
+    onLowAccuracyPending: (coords) => {
+      setPendingStoreGps({
+        lat: coords.latitude,
+        lng: coords.longitude,
+        accuracy: coords.accuracy,
+      });
+      setStoreError(null);
+    },
+  });
+
+  useEffect(() => {
+    if (storeGpsCapture.error) {
+      setStoreError(storeGpsCapture.error);
     }
+  }, [storeGpsCapture.error]);
+
+  const handleDetectStoreGps = () => {
     setStoreError(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const accuracy = pos.coords.accuracy;
-        if (accuracy > 50) {
-          // Low-accuracy GPS (>50m): show accuracy radius and require explicit user confirmation
-          setPendingStoreGps({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            accuracy,
-          });
-        } else {
-          // High-accuracy GPS (<=50m): auto-fill directly
-          setPendingStoreGps(null);
-          setStoreGpsAccuracy(accuracy);
-          setStoreForm((prev) => ({
-            ...prev,
-            storeLatitude: pos.coords.latitude.toFixed(6),
-            storeLongitude: pos.coords.longitude.toFixed(6),
-          }));
-        }
-        setStoreError(null);
-      },
-      (err) => {
-        let userFriendlyMsg = "Failed to detect GPS";
-        if (err.code === 1) {
-          userFriendlyMsg = "Location access denied. Please enable location permissions or enter coordinates manually.";
-        } else if (err.code === 2) {
-          userFriendlyMsg = "Location unavailable. Please check your GPS signal or enter coordinates manually.";
-        } else if (err.code === 3) {
-          userFriendlyMsg = "GPS request timed out. Please retry or enter coordinates manually.";
-        } else {
-          userFriendlyMsg = `GPS error: ${err.message}`;
-        }
-        setStoreError(userFriendlyMsg);
-        // CRITICAL REQUIREMENT: Do NOT clear existing coordinates on GPS error!
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+    storeGpsCapture.capture();
   };
 
   const handleStoreGoogleUrlChange = async (value: string) => {
@@ -569,50 +557,37 @@ export default function UnifiedLiveOperationsClient({
     setSiteGpsAccuracy(null);
   };
 
-  const handleDetectSiteGps = () => {
-    if (typeof window === "undefined" || !navigator.geolocation) {
-      setSiteError("Geolocation is not supported by your browser");
-      return;
+  const siteGpsCapture = useGeolocationCapture({
+    accuracyThreshold: 50,
+    onHighAccuracyCapture: (coords) => {
+      setSiteGpsAccuracy(coords.accuracy);
+      setPendingSiteGps(null);
+      setSiteForm((prev) => ({
+        ...prev,
+        latitude: coords.latitude.toFixed(6),
+        longitude: coords.longitude.toFixed(6),
+      }));
+      setSiteError(null);
+    },
+    onLowAccuracyPending: (coords) => {
+      setPendingSiteGps({
+        lat: coords.latitude,
+        lng: coords.longitude,
+        accuracy: coords.accuracy,
+      });
+      setSiteError(null);
+    },
+  });
+
+  useEffect(() => {
+    if (siteGpsCapture.error) {
+      setSiteError(siteGpsCapture.error);
     }
+  }, [siteGpsCapture.error]);
+
+  const handleDetectSiteGps = () => {
     setSiteError(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const accuracy = pos.coords.accuracy;
-        if (accuracy > 50) {
-          // Low-accuracy GPS (>50m): show accuracy radius and require explicit user confirmation
-          setPendingSiteGps({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            accuracy,
-          });
-        } else {
-          // High-accuracy GPS (<=50m): auto-fill directly
-          setPendingSiteGps(null);
-          setSiteGpsAccuracy(accuracy);
-          setSiteForm((prev) => ({
-            ...prev,
-            latitude: pos.coords.latitude.toFixed(6),
-            longitude: pos.coords.longitude.toFixed(6),
-          }));
-        }
-        setSiteError(null);
-      },
-      (err) => {
-        let userFriendlyMsg = "Failed to detect GPS";
-        if (err.code === 1) {
-          userFriendlyMsg = "Location access denied. Please enable location permissions or enter coordinates manually.";
-        } else if (err.code === 2) {
-          userFriendlyMsg = "Location unavailable. Please check your GPS signal or enter coordinates manually.";
-        } else if (err.code === 3) {
-          userFriendlyMsg = "GPS request timed out. Please retry or enter coordinates manually.";
-        } else {
-          userFriendlyMsg = `GPS error: ${err.message}`;
-        }
-        setSiteError(userFriendlyMsg);
-        // CRITICAL REQUIREMENT: Do NOT clear existing coordinates on GPS error!
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+    siteGpsCapture.capture();
   };
 
   const handleSiteGoogleUrlChange = async (value: string) => {

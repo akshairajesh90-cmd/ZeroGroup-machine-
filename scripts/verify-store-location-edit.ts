@@ -1,7 +1,9 @@
 import { prisma } from "../src/lib/prisma";
 import { getStoreLocation, updateStoreLocation, updateDispatchSiteLocation } from "../src/actions/storeSettings";
+import { assertSafeDatabaseContext } from "../src/lib/db-guard";
 
 async function main() {
+  assertSafeDatabaseContext("verify-store-location-edit");
   console.log("=== VERIFYING STORE LOCATION & JOB SITE LOCATION UPDATES ===");
 
   // 1. Fetch current Store Location
