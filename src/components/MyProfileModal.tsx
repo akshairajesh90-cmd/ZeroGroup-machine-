@@ -72,11 +72,20 @@ export default function MyProfileModal({ isOpen, onClose }: MyProfileModalProps)
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="My Profile and Settings"
+      className="fixed inset-0 z-modal flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+    >
       <div className="w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900/50">
           <h2 className="text-xl font-black text-white">My Profile & Settings</h2>
-          <button onClick={onClose} className="p-2 text-zinc-400 hover:text-white rounded-full hover:bg-zinc-800 transition-colors">
+          <button
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="p-2 text-zinc-400 hover:text-white rounded-full hover:bg-zinc-800 transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>

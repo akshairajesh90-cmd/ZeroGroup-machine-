@@ -124,7 +124,7 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
       {/* Mobile Hamburger Button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed bottom-6 left-6 z-50 p-3 rounded-full bg-indigo-600 border border-indigo-500 text-white hover:bg-indigo-500 active:scale-90 transition-transform shadow-2xl flex items-center justify-center touch-manipulation select-none"
+        className="lg:hidden fixed bottom-6 left-6 z-40 p-3 rounded-full bg-indigo-600 border border-indigo-500 text-white hover:bg-indigo-500 active:scale-90 transition-transform shadow-2xl flex items-center justify-center touch-manipulation select-none"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}></path></svg>
       </button>
@@ -138,7 +138,7 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
       )}
 
       {/* Sidebar Content */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-40 w-64 flex flex-col border-r border-slate-800/80 bg-slate-900/90 font-sans shadow-2xl transition-transform duration-300 ease-in-out backdrop-blur-xl ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
+      <aside className={`fixed lg:static inset-y-0 left-0 z-[45] w-64 flex flex-col border-r border-slate-800/80 bg-slate-900/90 font-sans shadow-2xl transition-transform duration-300 ease-in-out backdrop-blur-xl ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
         {/* Logo */}
         <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-800/80 px-6 pt-4 lg:pt-0 pl-16 lg:pl-6">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 shadow-lg shadow-indigo-500/20">

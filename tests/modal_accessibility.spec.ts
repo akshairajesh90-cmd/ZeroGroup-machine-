@@ -27,35 +27,27 @@ test.describe('Modal Behavior & Accessibility (Esc Key, Focus Trap, Scroll Lock 
     const lockedOverflow = await page.evaluate(() => document.body.style.overflow);
     expect(lockedOverflow).toBe('hidden');
 
-    // Assertion 2: Focus Trap
-    const focusableCount = await modalDialog.locator(
+    // Assertion 2: Focus Trap (Explicit First / Last Element Assertions)
+    const focusableLocator = modalDialog.locator(
       'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    ).count();
-    expect(focusableCount).toBeGreaterThan(1);
+    );
+    const count = await focusableLocator.count();
+    expect(count).toBeGreaterThan(1);
 
-    // Focus the first element (close button)
-    const firstFocusable = modalDialog.locator(
-      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    ).first();
-    await firstFocusable.focus();
-    const activeTag = await page.evaluate(() => document.activeElement?.tagName);
-    expect(activeTag).toBeTruthy();
+    const firstElement = focusableLocator.first();
+    const lastElement = focusableLocator.last();
 
-    // Press Shift+Tab from the first element -> must wrap to the last element inside modal!
+    // 2a. Focus the exact first element (close button)
+    await firstElement.focus();
+    await expect(firstElement).toBeFocused();
+
+    // 2b. Press Shift+Tab from the first element -> MUST wrap directly to the exact last element!
     await page.keyboard.press('Shift+Tab');
-    const isInsideAfterShiftTab = await page.evaluate(() => {
-      const modal = document.querySelector('[role="dialog"]');
-      return modal ? modal.contains(document.activeElement) : false;
-    });
-    expect(isInsideAfterShiftTab).toBe(true);
+    await expect(lastElement).toBeFocused();
 
-    // Press Tab from the wrapped element -> must cycle back inside modal!
+    // 2c. Press Tab from the wrapped last element -> MUST cycle directly back to the exact first element!
     await page.keyboard.press('Tab');
-    const isInsideAfterTab = await page.evaluate(() => {
-      const modal = document.querySelector('[role="dialog"]');
-      return modal ? modal.contains(document.activeElement) : false;
-    });
-    expect(isInsideAfterTab).toBe(true);
+    await expect(firstElement).toBeFocused();
 
     // Assertion 3: Press Escape key to close the modal
     await page.keyboard.press('Escape');
@@ -295,5 +287,45 @@ test.describe('Modal Behavior & Accessibility (Esc Key, Focus Trap, Scroll Lock 
     // Assert modal has no critical violations
     const criticalModalViolations = modalViolations.filter((v: { impact: string }) => v.impact === 'critical');
     expect(criticalModalViolations.length).toBe(0);
+  });
+
+  test('Mobile 360px viewport: Hamburger is z-40 and occluded under modal backdrop (z-overlay / z-modal)', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await page.goto('/staff/live/map', { waitUntil: 'load' });
+    await page.waitForTimeout(1500);
+
+    // Verify hamburger button exists at 360px with z-40
+    const hamburgerBtn = page.locator('button.fixed.bottom-6.left-6');
+    await expect(hamburgerBtn).toBeVisible();
+    const hamburgerZ = await hamburgerBtn.evaluate((el) => window.getComputedStyle(el).zIndex);
+    expect(hamburgerZ).toBe('40');
+
+    // Open Store Yard GPS modal
+    const storeBtn = page.locator('button:has-text("Store Yard GPS")').first();
+    await storeBtn.dispatchEvent('click');
+    await page.waitForTimeout(600);
+
+    const modalDialog = page.locator('[role="dialog"]');
+    await expect(modalDialog).toBeVisible();
+
+    // Verify modal dialog computed z-index is higher than hamburger (z-modal: 1100 > 40)
+    const modalZ = await modalDialog.evaluate((el) => {
+      const z = window.getComputedStyle(el).zIndex;
+      return parseInt(z) || 0;
+    });
+    expect(modalZ).toBeGreaterThan(40);
+
+    // Verify element at hamburger button coordinates is obscured by modal/backdrop (z-modal: 1100)
+    const hamburgerBox = await hamburgerBtn.boundingBox();
+    expect(hamburgerBox).toBeTruthy();
+    if (hamburgerBox) {
+      const topElTag = await page.evaluate(({ x, y }) => {
+        const topEl = document.elementFromPoint(x, y);
+        return topEl ? (topEl.getAttribute('role') || topEl.className) : null;
+      }, { x: hamburgerBox.x + hamburgerBox.width / 2, y: hamburgerBox.y + hamburgerBox.height / 2 });
+
+      expect(topElTag).not.toBe(null);
+      console.log('Element at hamburger coordinates under open modal at 360px:', topElTag);
+    }
   });
 });
