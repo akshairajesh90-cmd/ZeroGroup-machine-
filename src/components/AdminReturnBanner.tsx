@@ -21,7 +21,7 @@ export default function AdminReturnBanner({ userRole }: AdminReturnBannerProps) 
   if (!isGodMode) return null;
 
   return (
-    <div className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between gap-3 bg-amber-500 px-4 py-2 shadow-lg">
+    <div id="admin-return-banner" className="sticky top-0 left-0 right-0 z-30 flex items-center justify-between gap-3 bg-amber-500 px-4 py-1.5 shadow-md border-b border-amber-600/30">
       <div className="flex items-center gap-2">
         <ShieldAlert className="w-4 h-4 text-black shrink-0" />
         <span className="text-xs font-black text-black uppercase tracking-widest">
@@ -30,7 +30,7 @@ export default function AdminReturnBanner({ userRole }: AdminReturnBannerProps) 
       </div>
       <button
         onClick={() => router.push("/admin/dashboard")}
-        className="flex items-center gap-1.5 bg-black text-amber-400 text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg hover:bg-zinc-900 active:scale-95 transition-all"
+        className="flex items-center gap-1.5 bg-black text-amber-400 text-xs font-black uppercase tracking-widest px-3 py-1 rounded-lg hover:bg-zinc-900 active:scale-95 transition-all min-h-[32px]"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         ← Admin Hub

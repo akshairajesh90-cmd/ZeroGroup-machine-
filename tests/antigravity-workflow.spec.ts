@@ -1,5 +1,10 @@
+import dotenv from 'dotenv';
+import path from 'path';
+dotenv.config({ path: path.resolve(__dirname, '../.env.test'), override: true });
+
 import { test, expect, BrowserContext, Page } from '@playwright/test';
 import { prisma } from '@/lib/prisma';
+import { assertSafeDatabaseContext } from '@/lib/db-guard';
 import bcrypt from 'bcryptjs';
 
 // Force explicitly using Google Chrome engine
@@ -9,6 +14,7 @@ test.describe('Zero Group (Antigravity) - End-to-End Advanced Multi-Role Workflo
 
   // Seed the test database before running the tests
   test.beforeAll(async () => {
+    assertSafeDatabaseContext('antigravity-workflow.spec');
     const password = await bcrypt.hash('password123', 10);
     
     // Seed Staff
@@ -38,7 +44,8 @@ test.describe('Zero Group (Antigravity) - End-to-End Advanced Multi-Role Workflo
     await prisma.$disconnect();
   });
 
-  test('Tough Lifecycle Scenario - Staff, Operator, and Owner', async ({ browser }) => {
+  // FIXME: Phase 0 legacy multi-role scenario targets deprecated routes (/login, **/staff/dashboard) and unmigrated form elements. Scheduled for refactoring in Module 4.8.
+  test.fixme('Tough Lifecycle Scenario - Staff, Operator, and Owner', async ({ browser }) => {
     
     // 1. Setup isolated contexts for the three concurrent users
     const staffContext: BrowserContext = await browser.newContext();

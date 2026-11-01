@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -21,10 +21,8 @@ import {
   Trash2,
   HardHat,
   ClipboardList,
-  CreditCard,
   UserCog,
   KeyRound,
-  ShieldCheck,
   User,
 } from "lucide-react";
 import { handleSignOut } from "@/actions/auth";
@@ -40,6 +38,7 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [pendingResetCount, setPendingResetCount] = useState<number>(0);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -68,6 +67,49 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
       window.removeEventListener("reset-requests-updated", handleUpdate);
     };
   }, [pathname]);
+
+  // Handle mobile drawer keyboard trap, Esc key, and scroll lock
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setIsMobileMenuOpen(false);
+        triggerRef.current?.focus();
+        return;
+      }
+
+      if (e.key === "Tab") {
+        const drawerEl = document.getElementById("admin-mobile-drawer");
+        if (!drawerEl) return;
+        const focusables = drawerEl.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMobileMenuOpen]);
 
   const navGroups = [
     {
@@ -123,8 +165,12 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
     <>
       {/* Mobile Hamburger Button */}
       <button
+        ref={triggerRef}
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed bottom-6 left-6 z-40 p-3 rounded-full bg-indigo-600 border border-indigo-500 text-white hover:bg-indigo-500 active:scale-90 transition-transform shadow-2xl flex items-center justify-center touch-manipulation select-none"
+        aria-label="Toggle navigation menu"
+        aria-expanded={isMobileMenuOpen}
+        aria-controls="admin-mobile-drawer"
+        className="lg:hidden fixed bottom-6 left-6 z-40 p-3 rounded-full bg-indigo-600 border border-indigo-500 text-white hover:bg-indigo-500 active:scale-90 transition-transform shadow-2xl flex items-center justify-center touch-manipulation select-none min-w-[48px] min-h-[48px]"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}></path></svg>
       </button>
@@ -134,11 +180,18 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
         <div 
           className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
           onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden="true"
         />
       )}
 
       {/* Sidebar Content */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-[45] w-64 flex flex-col border-r border-slate-800/80 bg-slate-900/90 font-sans shadow-2xl transition-transform duration-300 ease-in-out backdrop-blur-xl ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
+      <aside
+        id="admin-mobile-drawer"
+        aria-label="Admin navigation drawer"
+        role={isMobileMenuOpen ? "dialog" : undefined}
+        aria-modal={isMobileMenuOpen ? "true" : undefined}
+        className={`fixed lg:static inset-y-0 left-0 z-[45] w-64 flex flex-col border-r border-slate-800/80 bg-slate-900/90 font-sans shadow-2xl transition-transform duration-300 ease-in-out backdrop-blur-xl ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+      >
         {/* Logo */}
         <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-800/80 px-6 pt-4 lg:pt-0 pl-16 lg:pl-6">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 shadow-lg shadow-indigo-500/20">

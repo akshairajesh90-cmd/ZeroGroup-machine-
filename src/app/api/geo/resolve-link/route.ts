@@ -2,26 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { resolveGoogleMapsLink } from "@/lib/geo-server";
 import { parseGoogleMapsUrl } from "@/lib/geo";
+import { checkRateLimit } from "@/lib/rate-limiter";
 
 export const runtime = "nodejs";
-
-// In-memory sliding window rate limiter: 15 requests per 60 seconds per user
-const rateLimitMap = new Map<string, number[]>();
-
-function checkRateLimit(key: string, limit = 15, windowMs = 60000): boolean {
-  const now = Date.now();
-  const timestamps = rateLimitMap.get(key) || [];
-  const validTimestamps = timestamps.filter((t) => now - t < windowMs);
-
-  if (validTimestamps.length >= limit) {
-    rateLimitMap.set(key, validTimestamps);
-    return false;
-  }
-
-  validTimestamps.push(now);
-  rateLimitMap.set(key, validTimestamps);
-  return true;
-}
 
 export async function POST(req: NextRequest) {
   // 1. Authentication check

@@ -78,9 +78,10 @@ export async function updateStoreLocation(data: StoreLocationData) {
     revalidatePath("/admin/live/map");
 
     return { success: true, store: data };
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
     console.error("Error updating store location:", err);
-    return { success: false, error: err.message };
+    return { success: false, error: errorMsg };
   }
 }
 
@@ -142,8 +143,9 @@ export async function updateDispatchSiteLocation({
         mapLink: updated.mapLink,
       },
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
     console.error("Error updating dispatch site location:", err);
-    return { success: false, error: err.message };
+    return { success: false, error: errorMsg };
   }
 }

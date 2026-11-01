@@ -28,6 +28,18 @@ export function isPrivateOrReservedIp(ip: string): boolean {
     return isPrivateOrReservedIp(mappedIpv4[1]);
   }
 
+  // IPv6 mapped IPv4 in hexadecimal format (e.g. ::ffff:7f00:1 or ::ffff:7f00:0001 for 127.0.0.1)
+  const mappedIpv4Hex = trimmed.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (mappedIpv4Hex) {
+    const high = parseInt(mappedIpv4Hex[1], 16);
+    const low = parseInt(mappedIpv4Hex[2], 16);
+    const a = (high >> 8) & 0xff;
+    const b = high & 0xff;
+    const c = (low >> 8) & 0xff;
+    const d = low & 0xff;
+    return isPrivateOrReservedIp(`${a}.${b}.${c}.${d}`);
+  }
+
   // IPv6 Unique Local Address (fc00::/7, i.e., fc00:: through fdff:ffff:...)
   if (/^f[cd][0-9a-f]{0,2}:/i.test(trimmed) || trimmed.startsWith("fc00:") || trimmed.startsWith("fd00:")) {
     return true;
@@ -200,6 +212,8 @@ export async function resolveGoogleMapsLink(
               method: "HEAD",
               agent,
               timeout: 5000,
+              servername: parsedUrl.hostname, // Explicitly set TLS SNI and cert check to the allowed hostname
+              rejectUnauthorized: true, // Strictly enforce SSL/TLS certificate validity against system CAs
               headers: {
                 "User-Agent":
                   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",

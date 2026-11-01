@@ -81,9 +81,38 @@ describe("Store Settings & Coordinate Validation (Server Actions)", () => {
       expect(res.success).toBe(false);
       expect(res.error).toMatch(/Invalid coordinates/i);
     });
+
+    it("enforces session authentication and role checking", async () => {
+      const { requireAuth } = require("@/lib/serverAuth");
+      (requireAuth as jest.Mock).mockRejectedValueOnce(new Error("Unauthorized: Role DRIVER not allowed"));
+
+      const res = await updateStoreLocation({
+        storeName: "Test Yard",
+        storeAddress: "Pala",
+        storeLatitude: 9.5916,
+        storeLongitude: 76.5222,
+      });
+
+      expect(res.success).toBe(false);
+      expect(res.error).toMatch(/Unauthorized/i);
+    });
   });
 
   describe("updateDispatchSiteLocation server action", () => {
+    it("enforces session authentication and role checking", async () => {
+      const { requireAuth } = require("@/lib/serverAuth");
+      (requireAuth as jest.Mock).mockRejectedValueOnce(new Error("Unauthorized: Role OPERATOR not allowed"));
+
+      const res = await updateDispatchSiteLocation({
+        dispatchId: "disp-123",
+        location: "Kottayam Site",
+        latitude: 9.5,
+        longitude: 76.5,
+      });
+
+      expect(res.success).toBe(false);
+      expect(res.error).toMatch(/Unauthorized/i);
+    });
     it("rejects invalid out-of-range site coordinates on the server", async () => {
       const res = await updateDispatchSiteLocation({
         dispatchId: "disp-123",

@@ -78,77 +78,91 @@ export default function DashboardClient({ metrics }: { metrics: DashboardMetrics
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto">
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto pb-12">
       
-      {/* HEADER SECTION */}
+      {/* HEADER SECTION - Left-aligned icon with title, subtitle, and full-width side-by-side action buttons on mobile */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">
-            <TrendingUp className="w-8 h-8 text-emerald-400" />
-            Executive Analytics & Command Center
-          </h1>
-          <p className="text-slate-400 mt-2 text-sm font-medium">
-            Real-time operations, fleet utilization, and God-Mode staff activity oversight.
-          </p>
+        <div className="flex items-start gap-3">
+          <div className="p-2 sm:p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+            <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white leading-tight">
+              Executive Analytics & Command Center
+            </h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium mt-1">
+              Real-time operations, fleet utilization, and God-Mode staff activity oversight.
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2.5">
+
+        {/* Action Buttons: Side-by-side across available width on mobile */}
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2.5 w-full md:w-auto">
           <Link
             href="/admin/credentials"
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/20 border border-indigo-400/30 transition-all active:scale-95"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/20 border border-indigo-400/30 transition-all active:scale-95 min-h-[40px] text-center"
           >
-            <KeyRound className="w-3.5 h-3.5 text-indigo-200" />
-            <span>Official IDs & Logins</span>
+            <KeyRound className="w-3.5 h-3.5 text-indigo-200 shrink-0" />
+            <span className="truncate"><span className="hidden sm:inline">Official </span>IDs & Logins</span>
           </Link>
           <Link
             href="/admin/profile"
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition-all active:scale-95"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition-all active:scale-95 min-h-[40px] text-center"
           >
-            <User className="w-3.5 h-3.5 text-slate-300" />
-            <span>My Profile</span>
+            <User className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+            <span className="truncate">My Profile</span>
           </Link>
         </div>
       </div>
 
       {/* METRICS GRID - Glassmorphic Dark Mode */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Metric 1: Total Revenue */}
-        <div className="bg-slate-900/80 backdrop-blur-md border border-emerald-500/30 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-emerald-500/60 transition-colors">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <TrendingUp className="w-24 h-24 text-emerald-500" />
+        <div className="bg-slate-900/80 backdrop-blur-md border border-emerald-500/30 rounded-2xl p-4 sm:p-5 lg:p-6 shadow-xl relative overflow-hidden group hover:border-emerald-500/60 transition-colors flex flex-col justify-between">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <TrendingUp className="w-16 h-16 sm:w-24 sm:h-24 text-emerald-500" />
           </div>
-          <p className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">Confirmed Cash</p>
-          <h2 className="text-3xl font-black text-white">{formatCurrency(metrics.totalRevenue)}</h2>
-          <p className="text-slate-400 text-xs mt-2">Deposited and verified</p>
+          <div>
+            <p className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1 sm:mb-2 h-8 flex items-center">Confirmed Cash</p>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white">{formatCurrency(metrics.totalRevenue)}</h2>
+          </div>
+          <p className="text-slate-400 text-xs mt-2 line-clamp-2">Deposited and verified</p>
         </div>
 
         {/* Metric 2: Active Dispatches */}
-        <div className="bg-slate-900/80 backdrop-blur-md border border-amber-500/30 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-amber-500/60 transition-colors">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Truck className="w-24 h-24 text-amber-500" />
+        <div className="bg-slate-900/80 backdrop-blur-md border border-amber-500/30 rounded-2xl p-4 sm:p-5 lg:p-6 shadow-xl relative overflow-hidden group hover:border-amber-500/60 transition-colors flex flex-col justify-between">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Truck className="w-16 h-16 sm:w-24 sm:h-24 text-amber-500" />
           </div>
-          <p className="text-amber-400 text-xs font-bold uppercase tracking-wider mb-2">Active Jobs Today</p>
-          <h2 className="text-3xl font-black text-white">{metrics.activeDispatchesToday}</h2>
-          <p className="text-slate-400 text-xs mt-2">Pending, En-Route, or On-Site</p>
+          <div>
+            <p className="text-amber-400 text-xs font-bold uppercase tracking-wider mb-1 sm:mb-2 h-8 flex items-center">Active Jobs</p>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white">{metrics.activeDispatchesToday}</h2>
+          </div>
+          <p className="text-slate-400 text-xs mt-2 line-clamp-2">Pending, En-Route, or On-Site</p>
         </div>
 
         {/* Metric 3: Available Fleet */}
-        <div className="bg-slate-900/80 backdrop-blur-md border border-blue-500/30 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-blue-500/60 transition-colors">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Wrench className="w-24 h-24 text-blue-500" />
+        <div className="bg-slate-900/80 backdrop-blur-md border border-blue-500/30 rounded-2xl p-4 sm:p-5 lg:p-6 shadow-xl relative overflow-hidden group hover:border-blue-500/60 transition-colors flex flex-col justify-between">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Wrench className="w-16 h-16 sm:w-24 sm:h-24 text-blue-500" />
           </div>
-          <p className="text-blue-400 text-xs font-bold uppercase tracking-wider mb-2">Available Fleet</p>
-          <h2 className="text-3xl font-black text-white">{metrics.availableMachines}</h2>
-          <p className="text-slate-400 text-xs mt-2">{metrics.rentedMachines} currently rented</p>
+          <div>
+            <p className="text-blue-400 text-xs font-bold uppercase tracking-wider mb-1 sm:mb-2 h-8 flex items-center">Available Fleet</p>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white">{metrics.availableMachines}</h2>
+          </div>
+          <p className="text-slate-400 text-xs mt-2 line-clamp-2">{metrics.rentedMachines} currently rented</p>
         </div>
 
         {/* Metric 4: Repairs / Alerts */}
-        <div className="bg-slate-900/80 backdrop-blur-md border border-rose-500/30 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-rose-500/60 transition-colors">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <ShieldAlert className="w-24 h-24 text-rose-500" />
+        <div className="bg-slate-900/80 backdrop-blur-md border border-rose-500/30 rounded-2xl p-4 sm:p-5 lg:p-6 shadow-xl relative overflow-hidden group hover:border-rose-500/60 transition-colors flex flex-col justify-between">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <ShieldAlert className="w-16 h-16 sm:w-24 sm:h-24 text-rose-500" />
           </div>
-          <p className="text-rose-400 text-xs font-bold uppercase tracking-wider mb-2">Fleet In Repair</p>
-          <h2 className="text-3xl font-black text-white">{metrics.repairMachines}</h2>
-          <p className="text-slate-400 text-xs mt-2">Requires immediate attention</p>
+          <div>
+            <p className="text-rose-400 text-xs font-bold uppercase tracking-wider mb-1 sm:mb-2 h-8 flex items-center">Fleet In Repair</p>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white">{metrics.repairMachines}</h2>
+          </div>
+          <p className="text-slate-400 text-xs mt-2 line-clamp-2">Requires immediate attention</p>
         </div>
       </div>
 

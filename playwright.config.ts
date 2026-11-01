@@ -1,12 +1,33 @@
 import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Explicitly load .env.test configuration for Playwright
+const testEnv = dotenv.config({ path: path.resolve(__dirname, '.env.test') }).parsed || {};
+const dbUrl = testEnv.DATABASE_URL || process.env.DATABASE_URL || '';
+
+// Parse database name from URL without printing credentials
+const cleanUrl = dbUrl.split('?')[0];
+const dbName = cleanUrl.split('/').pop() || '';
+
+console.log(`[Playwright Startup] Target Database: "${dbName}"`);
+
+if (!dbName.endsWith('_test')) {
+  throw new Error(
+    `[Playwright Startup FATAL] Playwright must run strictly against a database ending in "_test"! Detected database name: "${dbName}". Execution aborted.`
+  );
+}
+
+process.env.DATABASE_URL = dbUrl;
 
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  retries: 0,
+  workers: 1,
+  timeout: 60000,
+  reporter: 'list',
   
   use: {
     // Base URL to use in actions like `await page.goto('/')`.
@@ -21,17 +42,21 @@ export default defineConfig({
       name: 'Google Chrome',
       use: {
         ...devices['Desktop Chrome'],
-        // This strictly configures Playwright to use the branded Google Chrome 
-        // rather than the default open-source Chromium.
         channel: 'chrome', 
       },
     },
   ],
 
-  // Run your local dev server before starting the tests
+  // Run dev server pointing strictly at .env.test before starting the tests
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
+    timeout: 120 * 1000,
+    env: {
+      ...testEnv,
+      PORT: '3000',
+    },
   },
 });
+

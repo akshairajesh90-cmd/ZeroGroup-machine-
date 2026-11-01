@@ -17,35 +17,37 @@ export default async function StaffLayout({
   }
 
   return (
-    <div className="flex h-screen h-[100dvh] overflow-hidden bg-zinc-950 text-slate-100 font-sans">
+    <div className="flex flex-col h-screen h-[100dvh] overflow-hidden bg-zinc-950 text-slate-100 font-sans">
       <AdminReturnBanner userRole={session.user.role} />
-      {/* Staff Sidebar */}
-      <StaffSidebar
-        userName={session.user.name || "Office Staff"}
-        userEmail={session.user.email || ""}
-      />
+      <div className="flex flex-1 overflow-hidden min-h-0 min-w-0">
+        {/* Staff Sidebar */}
+        <StaffSidebar
+          userName={session.user.name || "Office Staff"}
+          userEmail={session.user.email || ""}
+        />
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden min-h-0 min-w-0">
-        {/* Topbar */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-zinc-800/80 bg-zinc-900/50 px-4 sm:px-6 backdrop-blur-md">
-          <div className="flex items-center gap-4">
-            <span className="lg:hidden font-bold text-emerald-400">ZERO GROUP</span>
-            <div className="hidden sm:flex items-center gap-2 rounded-full bg-zinc-800/60 px-3 py-1 text-xs text-zinc-400 border border-zinc-700/50">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Staff Portal • Operations Active</span>
+        {/* Main Content Area */}
+        <div className="flex flex-1 flex-col overflow-hidden min-h-0 min-w-0">
+          {/* Topbar */}
+          <header className="flex h-16 shrink-0 items-center justify-between border-b border-zinc-800/80 bg-zinc-900/50 px-4 sm:px-6 backdrop-blur-md">
+            <div className="flex items-center gap-4">
+              <span className="lg:hidden font-bold text-emerald-400">ZERO GROUP</span>
+              <div className="hidden sm:flex items-center gap-2 rounded-full bg-zinc-800/60 px-3 py-1 text-xs text-zinc-400 border border-zinc-700/50">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Staff Portal • Operations Active</span>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-400">
-              OFFICE STAFF
-            </span>
-          </div>
-        </header>
+            <div className="flex items-center gap-3">
+              <span className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-400">
+                OFFICE STAFF
+              </span>
+            </div>
+          </header>
 
-        <main className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 lg:p-8 bg-zinc-950 overscroll-y-contain [webkit-overflow-scrolling:touch]">
-          {children}
-        </main>
+          <main className="flex-1 overflow-y-auto min-h-0 p-4 pb-36 sm:p-6 sm:pb-12 lg:p-8 bg-zinc-950 overscroll-y-contain [webkit-overflow-scrolling:touch]">
+            {children}
+          </main>
+        </div>
       </div>
     </div>
   );

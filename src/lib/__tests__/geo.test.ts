@@ -1,6 +1,5 @@
 import {
   parseGoogleMapsUrl,
-  isValidCoordinate,
 } from "../geo";
 import {
   isAllowedHost,
@@ -8,8 +7,6 @@ import {
   resolveGoogleMapsLink,
 } from "../geo-server";
 import * as dns from "dns";
-import * as https from "https";
-import { EventEmitter } from "events";
 
 describe("Geo Utility & URL Parsing Tests", () => {
   describe("parseGoogleMapsUrl - Priority Hierarchy", () => {
@@ -101,6 +98,7 @@ describe("Geo Utility & URL Parsing Tests", () => {
       expect(isPrivateOrReservedIp("127.255.255.255")).toBe(true);
       expect(isPrivateOrReservedIp("::1")).toBe(true);
       expect(isPrivateOrReservedIp("::ffff:127.0.0.1")).toBe(true);
+      expect(isPrivateOrReservedIp("::ffff:7f00:1")).toBe(true);
 
       // Current network / 0.0.0.0
       expect(isPrivateOrReservedIp("0.0.0.0")).toBe(true);
@@ -164,11 +162,11 @@ describe("Geo Utility & URL Parsing Tests", () => {
       // Mock dns.promises.lookup to return a public IP for maps.app.goo.gl
       const originalLookup = dns.promises.lookup;
       // @ts-expect-error Mocking overload for { all: true }
-      jest.spyOn(dns.promises, "lookup").mockImplementation(async (hostname) => {
+      jest.spyOn(dns.promises, "lookup").mockImplementation(async (hostname: string) => {
         if (hostname === "maps.app.goo.gl") {
           return [{ address: "142.250.190.46", family: 4 }] as dns.LookupAddress[];
         }
-        return originalLookup(hostname as string, { all: true });
+        return originalLookup(hostname, { all: true });
       });
 
       // Custom requester simulating a 302 redirect from maps.app.goo.gl to evil.com
@@ -212,7 +210,7 @@ describe("Geo Utility & URL Parsing Tests", () => {
     test("Successfully un-nests google.com/url?q= on a redirect hop", async () => {
       // Mock dns.promises.lookup to return a public IP for maps.app.goo.gl
       // @ts-expect-error Mocking overload for { all: true }
-      jest.spyOn(dns.promises, "lookup").mockImplementation(async (hostname) => {
+      jest.spyOn(dns.promises, "lookup").mockImplementation(async () => {
         return [{ address: "142.250.190.46", family: 4 }] as dns.LookupAddress[];
       });
 
@@ -251,6 +249,39 @@ describe("Geo Utility & URL Parsing Tests", () => {
       expect(capturedFamily).toBe(4);
 
       jest.restoreAllMocks();
+    });
+  });
+
+  describe("Rate Limiting & Global Map Pruning", () => {
+    const { rateLimitMap, pruneExpiredRateLimits, checkRateLimit } = require("../rate-limiter");
+
+    beforeEach(() => {
+      rateLimitMap.clear();
+    });
+
+    test("pruneExpiredRateLimits prunes expired entries globally across ALL keys", () => {
+      const now = 100000;
+      // Key 1: expired
+      rateLimitMap.set("user-1", [now - 70000, now - 65000]);
+      // Key 2: active
+      rateLimitMap.set("user-2", [now - 30000, now - 10000]);
+      // Key 3: partially expired
+      rateLimitMap.set("user-3", [now - 80000, now - 5000]);
+
+      pruneExpiredRateLimits(60000, now);
+
+      expect(rateLimitMap.has("user-1")).toBe(false);
+      expect(rateLimitMap.get("user-2")).toEqual([now - 30000, now - 10000]);
+      expect(rateLimitMap.get("user-3")).toEqual([now - 5000]);
+    });
+
+    test("checkRateLimit blocks user when exceeding limit and allows within window", () => {
+      const key = "rate-limit-test-user";
+      for (let i = 0; i < 15; i++) {
+        expect(checkRateLimit(key, 15, 60000)).toBe(true);
+      }
+      // 16th request rejected
+      expect(checkRateLimit(key, 15, 60000)).toBe(false);
     });
   });
 });

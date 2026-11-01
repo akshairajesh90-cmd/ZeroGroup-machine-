@@ -18,7 +18,7 @@ export interface UseGeolocationCaptureOptions {
    */
   accuracyThreshold?: number;
   /**
-   * Geolocation timeout in milliseconds. Default: 10000ms.
+   * Geolocation timeout in milliseconds. Default: 15000ms (15 seconds).
    */
   timeoutMs?: number;
   /**
@@ -47,7 +47,7 @@ export function useGeolocationCapture(
 ): UseGeolocationCaptureReturn {
   const {
     accuracyThreshold = 50,
-    timeoutMs = 10000,
+    timeoutMs = 15000,
     onHighAccuracyCapture,
     onLowAccuracyPending,
   } = options;

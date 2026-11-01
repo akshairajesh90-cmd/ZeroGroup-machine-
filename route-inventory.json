@@ -1,0 +1,1344 @@
+{
+  "routes": [
+    {
+      "route": "/",
+      "module": "Shared",
+      "pageFile": "src/app/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 1,
+      "inputs": 2,
+      "selects": 0
+    },
+    {
+      "route": "/(dashboard)/customer/portal",
+      "module": "Shared",
+      "pageFile": "src/app/(dashboard)/customer/portal/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/(dashboard)/dispatch-board",
+      "module": "Shared",
+      "pageFile": "src/app/(dashboard)/dispatch-board/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/(dashboard)/field-diary",
+      "module": "Shared",
+      "pageFile": "src/app/(dashboard)/field-diary/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 3,
+      "inputs": 5,
+      "selects": 1
+    },
+    {
+      "route": "/(dashboard)/machines",
+      "module": "Shared",
+      "pageFile": "src/app/(dashboard)/machines/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/(dashboard)/settlements",
+      "module": "Shared",
+      "pageFile": "src/app/(dashboard)/settlements/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 3,
+      "inputs": 1,
+      "selects": 0
+    },
+    {
+      "route": "/(dashboard)/telemetry/[dispatchId]",
+      "module": "Shared",
+      "pageFile": "src/app/(dashboard)/telemetry/[dispatchId]/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/admin",
+      "module": "Admin",
+      "pageFile": "src/app/admin/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/admin/adjustments",
+      "module": "Admin",
+      "pageFile": "src/app/admin/adjustments/page.tsx",
+      "clientComponents": [
+        "src/app/admin/adjustments/NewAdjustmentForm.tsx",
+        "src/app/admin/adjustments/ReversalButton.tsx"
+      ],
+      "modals": [],
+      "buttons": 2,
+      "inputs": 2,
+      "selects": 2
+    },
+    {
+      "route": "/admin/advances",
+      "module": "Admin",
+      "pageFile": "src/app/admin/advances/page.tsx",
+      "clientComponents": [
+        "src/app/admin/advances/NewAdvanceForm.tsx"
+      ],
+      "modals": [],
+      "buttons": 1,
+      "inputs": 2,
+      "selects": 1
+    },
+    {
+      "route": "/admin/allocation",
+      "module": "Admin",
+      "pageFile": "src/app/admin/allocation/page.tsx",
+      "clientComponents": [
+        "src/app/admin/allocation/AllocationClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 5,
+      "inputs": 2,
+      "selects": 0
+    },
+    {
+      "route": "/admin/analytics",
+      "module": "Admin",
+      "pageFile": "src/app/admin/analytics/page.tsx",
+      "clientComponents": [
+        "src/components/analytics/ProfitMarginChart.tsx",
+        "src/components/analytics/UtilizationPie.tsx"
+      ],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/admin/billing",
+      "module": "Admin",
+      "pageFile": "src/app/admin/billing/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/admin/billing/print/[invoiceId]",
+      "module": "Admin",
+      "pageFile": "src/app/admin/billing/print/[invoiceId]/page.tsx",
+      "clientComponents": [
+        "src/components/admin/PrintButton.tsx"
+      ],
+      "modals": [],
+      "buttons": 1,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/admin/billing/receivables",
+      "module": "Admin",
+      "pageFile": "src/app/admin/billing/receivables/page.tsx",
+      "clientComponents": [
+        "src/app/admin/billing/receivables/ReceivablesClient.tsx",
+        "src/components/admin/ReceivablePaymentModal.tsx",
+        "src/components/ui/dialog.tsx",
+        "src/components/ui/select.tsx"
+      ],
+      "modals": [
+        "ReceivablePaymentModal",
+        "dialog"
+      ],
+      "buttons": 5,
+      "inputs": 1,
+      "selects": 1
+    },
+    {
+      "route": "/admin/credentials",
+      "module": "Admin",
+      "pageFile": "src/app/admin/credentials/page.tsx",
+      "clientComponents": [
+        "src/components/credentials/CredentialsHubClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 28,
+      "inputs": 10,
+      "selects": 4
+    },
+    {
+      "route": "/admin/dashboard",
+      "module": "Admin",
+      "pageFile": "src/app/admin/dashboard/page.tsx",
+      "clientComponents": [
+        "src/app/admin/dashboard/DashboardClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 3,
+      "inputs": 1,
+      "selects": 0
+    },
+    {
+      "route": "/admin/dispatch-board",
+      "module": "Admin",
+      "pageFile": "src/app/admin/dispatch-board/page.tsx",
+      "clientComponents": [
+        "src/components/dashboard/CalendarBoard.tsx",
+        "src/components/dashboard/DraggableEvent.tsx"
+      ],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/admin/live",
+      "module": "Admin",
+      "pageFile": "src/app/admin/live/page.tsx",
+      "clientComponents": [
+        "src/app/admin/live/LiveOperationsClient.tsx",
+        "src/components/live/DateRangeFilterBar.tsx",
+        "src/components/live/MultiEntitySearchBar.tsx",
+        "src/components/live/PersonRouteModal.tsx"
+      ],
+      "modals": [
+        "PersonRouteModal"
+      ],
+      "buttons": 20,
+      "inputs": 8,
+      "selects": 0
+    },
+    {
+      "route": "/admin/live/map",
+      "module": "Admin",
+      "pageFile": "src/app/admin/live/map/page.tsx",
+      "clientComponents": [
+        "src/app/admin/live/map/LiveMapClient.tsx",
+        "src/components/live/DateRangeFilterBar.tsx"
+      ],
+      "modals": [],
+      "buttons": 21,
+      "inputs": 2,
+      "selects": 1
+    },
+    {
+      "route": "/admin/profile",
+      "module": "Admin",
+      "pageFile": "src/app/admin/profile/page.tsx",
+      "clientComponents": [
+        "src/components/profile/UserProfileClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 8,
+      "inputs": 13,
+      "selects": 0
+    },
+    {
+      "route": "/admin/settings/rates",
+      "module": "Admin",
+      "pageFile": "src/app/admin/settings/rates/page.tsx",
+      "clientComponents": [
+        "src/app/admin/settings/rates/RatesClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 1,
+      "inputs": 2,
+      "selects": 0
+    },
+    {
+      "route": "/admin/settlements",
+      "module": "Admin",
+      "pageFile": "src/app/admin/settlements/page.tsx",
+      "clientComponents": [
+        "src/app/admin/settlements/SettlementClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 24,
+      "inputs": 15,
+      "selects": 4
+    },
+    {
+      "route": "/admin/staff",
+      "module": "Admin",
+      "pageFile": "src/app/admin/staff/page.tsx",
+      "clientComponents": [
+        "src/app/admin/staff/StaffPortalClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 9,
+      "inputs": 8,
+      "selects": 0
+    },
+    {
+      "route": "/admin/trash",
+      "module": "Admin",
+      "pageFile": "src/app/admin/trash/page.tsx",
+      "clientComponents": [
+        "src/app/admin/trash/TrashClientPage.tsx"
+      ],
+      "modals": [],
+      "buttons": 2,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/driver/cash",
+      "module": "Driver",
+      "pageFile": "src/app/driver/cash/page.tsx",
+      "clientComponents": [
+        "src/app/driver/cash/CashFormClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 3,
+      "inputs": 1,
+      "selects": 1
+    },
+    {
+      "route": "/driver/chat",
+      "module": "Driver",
+      "pageFile": "src/app/driver/chat/page.tsx",
+      "clientComponents": [
+        "src/app/driver/chat/ChatClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 8,
+      "inputs": 3,
+      "selects": 0
+    },
+    {
+      "route": "/driver/dispatches",
+      "module": "Driver",
+      "pageFile": "src/app/driver/dispatches/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/driver/expenses",
+      "module": "Driver",
+      "pageFile": "src/app/driver/expenses/page.tsx",
+      "clientComponents": [
+        "src/app/driver/expenses/FuelLogForm.tsx"
+      ],
+      "modals": [],
+      "buttons": 4,
+      "inputs": 5,
+      "selects": 2
+    },
+    {
+      "route": "/driver/home",
+      "module": "Driver",
+      "pageFile": "src/app/driver/home/page.tsx",
+      "clientComponents": [
+        "src/app/driver/home/ShiftTracker.tsx",
+        "src/components/driver/DriverSitePinger.tsx",
+        "src/components/driver/SeniorDriverAutopilot.tsx",
+        "src/components/shared/CollectPaymentButton.tsx",
+        "src/components/shared/CollectPaymentModal.tsx"
+      ],
+      "modals": [
+        "CollectPaymentModal"
+      ],
+      "buttons": 8,
+      "inputs": 1,
+      "selects": 1
+    },
+    {
+      "route": "/driver/map",
+      "module": "Driver",
+      "pageFile": "src/app/driver/map/page.tsx",
+      "clientComponents": [
+        "src/components/LiveMap.tsx"
+      ],
+      "modals": [],
+      "buttons": 1,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/driver/orders/[id]",
+      "module": "Driver",
+      "pageFile": "src/app/driver/orders/[id]/page.tsx",
+      "clientComponents": [
+        "src/app/driver/orders/[id]/DriverOrderClient.tsx",
+        "src/app/driver/orders/[id]/SaveLocationButton.tsx",
+        "src/components/dispatch/SiteLocationButtons.tsx",
+        "src/components/dispatch/SiteLocationPinModal.tsx",
+        "src/components/driver/DriverSitePinger.tsx",
+        "src/lib/offlineQueue.ts"
+      ],
+      "modals": [
+        "SiteLocationPinModal"
+      ],
+      "buttons": 16,
+      "inputs": 3,
+      "selects": 0
+    },
+    {
+      "route": "/driver/pay",
+      "module": "Driver",
+      "pageFile": "src/app/driver/pay/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/driver/pool",
+      "module": "Driver",
+      "pageFile": "src/app/driver/pool/page.tsx",
+      "clientComponents": [
+        "src/app/driver/pool/JobPoolClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 1,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/driver/portal",
+      "module": "Driver",
+      "pageFile": "src/app/driver/portal/page.tsx",
+      "clientComponents": [
+        "src/app/driver/portal/BreakdownForm.tsx"
+      ],
+      "modals": [],
+      "buttons": 1,
+      "inputs": 0,
+      "selects": 1
+    },
+    {
+      "route": "/driver/profile",
+      "module": "Driver",
+      "pageFile": "src/app/driver/profile/page.tsx",
+      "clientComponents": [
+        "src/components/profile/UserProfileClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 8,
+      "inputs": 13,
+      "selects": 0
+    },
+    {
+      "route": "/operator/equipment",
+      "module": "Operator",
+      "pageFile": "src/app/operator/equipment/page.tsx",
+      "clientComponents": [
+        "src/lib/offlineQueue.ts"
+      ],
+      "modals": [],
+      "buttons": 3,
+      "inputs": 1,
+      "selects": 0
+    },
+    {
+      "route": "/operator/field-diary/[dispatchId]",
+      "module": "Operator",
+      "pageFile": "src/app/operator/field-diary/[dispatchId]/page.tsx",
+      "clientComponents": [
+        "src/components/field/FieldDiaryClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 3,
+      "inputs": 4,
+      "selects": 0
+    },
+    {
+      "route": "/operator/home",
+      "module": "Operator",
+      "pageFile": "src/app/operator/home/page.tsx",
+      "clientComponents": [
+        "src/app/operator/home/CrewAllocation.tsx",
+        "src/app/operator/home/DocketCanvas.tsx",
+        "src/app/operator/home/LogExternalLaborForm.tsx",
+        "src/app/operator/home/PreStartChecklist.tsx",
+        "src/components/operator/AutoPinger.tsx",
+        "src/components/operator/RequestAdvanceButton.tsx",
+        "src/components/operator/UpdateSiteLocationButton.tsx",
+        "src/components/shared/CollectPaymentButton.tsx",
+        "src/components/shared/CollectPaymentModal.tsx",
+        "src/components/shared/IdleDelayButton.tsx",
+        "src/components/shared/ProfilePhotoUploader.tsx",
+        "src/lib/offlineQueue.ts"
+      ],
+      "modals": [
+        "CollectPaymentModal"
+      ],
+      "buttons": 22,
+      "inputs": 11,
+      "selects": 1
+    },
+    {
+      "route": "/operator/ledger",
+      "module": "Operator",
+      "pageFile": "src/app/operator/ledger/page.tsx",
+      "clientComponents": [
+        "src/app/operator/ledger/LedgerClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 2,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/operator/login",
+      "module": "Operator",
+      "pageFile": "src/app/operator/login/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 5,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/operator/pay",
+      "module": "Operator",
+      "pageFile": "src/app/operator/pay/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/operator/profile",
+      "module": "Operator",
+      "pageFile": "src/app/operator/profile/page.tsx",
+      "clientComponents": [
+        "src/components/profile/UserProfileClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 8,
+      "inputs": 13,
+      "selects": 0
+    },
+    {
+      "route": "/operator/scanner",
+      "module": "Operator",
+      "pageFile": "src/app/operator/scanner/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 2,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/owner/allocation",
+      "module": "Admin",
+      "pageFile": "src/app/owner/allocation/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/owner/billing",
+      "module": "Admin",
+      "pageFile": "src/app/owner/billing/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/owner/dashboard",
+      "module": "Admin",
+      "pageFile": "src/app/owner/dashboard/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/owner/employees",
+      "module": "Admin",
+      "pageFile": "src/app/owner/employees/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/owner/ledger",
+      "module": "Admin",
+      "pageFile": "src/app/owner/ledger/page.tsx",
+      "clientComponents": [
+        "src/app/owner/ledger/OwnerLedgerClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 3,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/owner/settlements",
+      "module": "Admin",
+      "pageFile": "src/app/owner/settlements/page.tsx",
+      "clientComponents": [
+        "src/app/owner/settlements/ExternalLaborModal.tsx",
+        "src/app/owner/settlements/SettlementClient.tsx",
+        "src/components/settlements/OperatorDiaryModal.tsx"
+      ],
+      "modals": [
+        "ExternalLaborModal",
+        "OperatorDiaryModal"
+      ],
+      "buttons": 29,
+      "inputs": 25,
+      "selects": 4
+    },
+    {
+      "route": "/owner/staff-log",
+      "module": "Admin",
+      "pageFile": "src/app/owner/staff-log/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/owner/trash",
+      "module": "Admin",
+      "pageFile": "src/app/owner/trash/page.tsx",
+      "clientComponents": [
+        "src/app/owner/trash/TrashClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 2,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/redirecting",
+      "module": "Shared",
+      "pageFile": "src/app/redirecting/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/reset-password",
+      "module": "Shared",
+      "pageFile": "src/app/reset-password/page.tsx",
+      "clientComponents": [
+        "src/app/reset-password/ResetPasswordClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 1,
+      "inputs": 2,
+      "selects": 1
+    },
+    {
+      "route": "/staff/billing/[dispatchId]",
+      "module": "Shared",
+      "pageFile": "src/app/staff/billing/[dispatchId]/page.tsx",
+      "clientComponents": [
+        "src/app/staff/billing/[dispatchId]/BillingClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 14,
+      "inputs": 10,
+      "selects": 1
+    },
+    {
+      "route": "/staff/cash",
+      "module": "Billing",
+      "pageFile": "src/app/staff/cash/page.tsx",
+      "clientComponents": [
+        "src/app/staff/cash/CashClient.tsx",
+        "src/components/forms/DirectPaymentModal.tsx"
+      ],
+      "modals": [
+        "DirectPaymentModal"
+      ],
+      "buttons": 5,
+      "inputs": 1,
+      "selects": 1
+    },
+    {
+      "route": "/staff/credentials",
+      "module": "Shared",
+      "pageFile": "src/app/staff/credentials/page.tsx",
+      "clientComponents": [
+        "src/components/credentials/CredentialsHubClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 28,
+      "inputs": 10,
+      "selects": 4
+    },
+    {
+      "route": "/staff/crew",
+      "module": "Shared",
+      "pageFile": "src/app/staff/crew/page.tsx",
+      "clientComponents": [
+        "src/app/staff/crew/CrewHubClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 35,
+      "inputs": 5,
+      "selects": 1
+    },
+    {
+      "route": "/staff/dashboard",
+      "module": "Shared",
+      "pageFile": "src/app/staff/dashboard/page.tsx",
+      "clientComponents": [
+        "src/app/staff/dashboard/DashboardClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 3,
+      "inputs": 1,
+      "selects": 0
+    },
+    {
+      "route": "/staff/directory",
+      "module": "Shared",
+      "pageFile": "src/app/staff/directory/page.tsx",
+      "clientComponents": [
+        "src/app/staff/directory/ChatClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 6,
+      "inputs": 2,
+      "selects": 0
+    },
+    {
+      "route": "/staff/dispatch",
+      "module": "Dispatch",
+      "pageFile": "src/app/staff/dispatch/page.tsx",
+      "clientComponents": [
+        "src/app/staff/dispatch/DispatchBoardClient.tsx",
+        "src/app/staff/dispatch/SiteLaborDisbursementReview.tsx",
+        "src/components/ToolReturnModal.tsx",
+        "src/components/admin/DispatchBillingModal.tsx",
+        "src/components/dispatch/EditDispatchModal.tsx",
+        "src/components/dispatch/SiteLocationButtons.tsx",
+        "src/components/dispatch/SiteLocationPinModal.tsx",
+        "src/components/dispatch/StatusChangeModal.tsx",
+        "src/components/ui/dialog.tsx",
+        "src/components/ui/select.tsx"
+      ],
+      "modals": [
+        "CreateDispatchModalV2",
+        "DispatchBillingModal",
+        "EditDispatchModal",
+        "SiteLocationPinModal",
+        "StatusChangeModal",
+        "ToolReturnModal",
+        "dialog"
+      ],
+      "buttons": 95,
+      "inputs": 38,
+      "selects": 28
+    },
+    {
+      "route": "/staff/dispatch/new",
+      "module": "Dispatch",
+      "pageFile": "src/app/staff/dispatch/new/page.tsx",
+      "clientComponents": [
+        "src/components/forms/NewDispatchForm.tsx"
+      ],
+      "modals": [],
+      "buttons": 7,
+      "inputs": 5,
+      "selects": 7
+    },
+    {
+      "route": "/staff/documents",
+      "module": "Shared",
+      "pageFile": "src/app/staff/documents/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/staff/drivers",
+      "module": "Shared",
+      "pageFile": "src/app/staff/drivers/page.tsx",
+      "clientComponents": [
+        "src/app/staff/drivers/DriversClientPage.tsx"
+      ],
+      "modals": [],
+      "buttons": 7,
+      "inputs": 3,
+      "selects": 0
+    },
+    {
+      "route": "/staff/employees",
+      "module": "Shared",
+      "pageFile": "src/app/staff/employees/page.tsx",
+      "clientComponents": [
+        "src/app/staff/employees/EmployeesClientPage.tsx"
+      ],
+      "modals": [],
+      "buttons": 6,
+      "inputs": 5,
+      "selects": 0
+    },
+    {
+      "route": "/staff/expenses",
+      "module": "Shared",
+      "pageFile": "src/app/staff/expenses/page.tsx",
+      "clientComponents": [
+        "src/app/staff/expenses/ExpensesClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 7,
+      "inputs": 1,
+      "selects": 0
+    },
+    {
+      "route": "/staff/expenses/new",
+      "module": "Shared",
+      "pageFile": "src/app/staff/expenses/new/page.tsx",
+      "clientComponents": [
+        "src/components/forms/NewExpenseForm.tsx"
+      ],
+      "modals": [],
+      "buttons": 15,
+      "inputs": 17,
+      "selects": 7
+    },
+    {
+      "route": "/staff/fleet",
+      "module": "Fleet",
+      "pageFile": "src/app/staff/fleet/page.tsx",
+      "clientComponents": [
+        "src/app/staff/fleet/FleetManagerClient.tsx",
+        "src/app/staff/fleet/components/AddMachineModal.tsx",
+        "src/app/staff/fleet/components/AddVehicleModal.tsx"
+      ],
+      "modals": [
+        "AddMachineModal",
+        "AddVehicleModal"
+      ],
+      "buttons": 10,
+      "inputs": 6,
+      "selects": 2
+    },
+    {
+      "route": "/staff/fleet/machine/[id]",
+      "module": "Fleet",
+      "pageFile": "src/app/staff/fleet/machine/[id]/page.tsx",
+      "clientComponents": [
+        "src/app/staff/fleet/machine/[id]/EditMachineModal.tsx",
+        "src/app/staff/fleet/machine/[id]/MachineDetailClient.tsx"
+      ],
+      "modals": [
+        "EditMachineModal"
+      ],
+      "buttons": 16,
+      "inputs": 10,
+      "selects": 1
+    },
+    {
+      "route": "/staff/fleet/vehicle/[id]",
+      "module": "Fleet",
+      "pageFile": "src/app/staff/fleet/vehicle/[id]/page.tsx",
+      "clientComponents": [
+        "src/app/staff/fleet/vehicle/[id]/EditVehicleModal.tsx",
+        "src/app/staff/fleet/vehicle/[id]/VehicleDetailClient.tsx"
+      ],
+      "modals": [
+        "EditVehicleModal"
+      ],
+      "buttons": 19,
+      "inputs": 11,
+      "selects": 2
+    },
+    {
+      "route": "/staff/invoices",
+      "module": "Billing",
+      "pageFile": "src/app/staff/invoices/page.tsx",
+      "clientComponents": [
+        "src/app/staff/invoices/InvoicesDashboard.tsx"
+      ],
+      "modals": [],
+      "buttons": 3,
+      "inputs": 1,
+      "selects": 0
+    },
+    {
+      "route": "/staff/invoices/[customerId]",
+      "module": "Billing",
+      "pageFile": "src/app/staff/invoices/[customerId]/page.tsx",
+      "clientComponents": [
+        "src/app/staff/invoices/[customerId]/CustomerStatement.tsx"
+      ],
+      "modals": [],
+      "buttons": 1,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/staff/live",
+      "module": "Dispatch",
+      "pageFile": "src/app/staff/live/page.tsx",
+      "clientComponents": [
+        "src/app/staff/live/LiveOperationsClient.tsx",
+        "src/components/live/DateRangeFilterBar.tsx",
+        "src/components/live/MultiEntitySearchBar.tsx",
+        "src/components/live/PersonRouteModal.tsx"
+      ],
+      "modals": [
+        "PersonRouteModal"
+      ],
+      "buttons": 22,
+      "inputs": 8,
+      "selects": 0
+    },
+    {
+      "route": "/staff/live/map",
+      "module": "Dispatch",
+      "pageFile": "src/app/staff/live/map/page.tsx",
+      "clientComponents": [
+        "src/app/staff/live/map/UnifiedLiveOperationsClient.tsx",
+        "src/app/staff/live/map/UnifiedMapInner.tsx",
+        "src/hooks/useGeolocationCapture.ts"
+      ],
+      "modals": [
+        "Edit Site Location Modal (inline)",
+        "Edit Store Location Modal (inline)"
+      ],
+      "buttons": 32,
+      "inputs": 11,
+      "selects": 0
+    },
+    {
+      "route": "/staff/maintenance",
+      "module": "Shared",
+      "pageFile": "src/app/staff/maintenance/page.tsx",
+      "clientComponents": [
+        "src/app/staff/maintenance/MaintenanceClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 4,
+      "inputs": 0,
+      "selects": 2
+    },
+    {
+      "route": "/staff/operators",
+      "module": "Shared",
+      "pageFile": "src/app/staff/operators/page.tsx",
+      "clientComponents": [
+        "src/app/staff/operators/OperatorsClientPage.tsx",
+        "src/components/operators/CreateOperatorModal.tsx",
+        "src/components/operators/EditOperatorModal.tsx"
+      ],
+      "modals": [
+        "CreateOperatorModal",
+        "EditOperatorModal"
+      ],
+      "buttons": 21,
+      "inputs": 11,
+      "selects": 5
+    },
+    {
+      "route": "/staff/operators/[id]",
+      "module": "Shared",
+      "pageFile": "src/app/staff/operators/[id]/page.tsx",
+      "clientComponents": [
+        "src/app/staff/operators/[id]/OperatorProfileClient.tsx",
+        "src/components/operators/EditOperatorModal.tsx"
+      ],
+      "modals": [
+        "EditOperatorModal"
+      ],
+      "buttons": 14,
+      "inputs": 4,
+      "selects": 2
+    },
+    {
+      "route": "/staff/orders",
+      "module": "Shared",
+      "pageFile": "src/app/staff/orders/page.tsx",
+      "clientComponents": [
+        "src/components/forms/OrderIntakeForm.tsx"
+      ],
+      "modals": [],
+      "buttons": 13,
+      "inputs": 19,
+      "selects": 5
+    },
+    {
+      "route": "/staff/profile",
+      "module": "Shared",
+      "pageFile": "src/app/staff/profile/page.tsx",
+      "clientComponents": [
+        "src/components/profile/UserProfileClient.tsx"
+      ],
+      "modals": [],
+      "buttons": 8,
+      "inputs": 13,
+      "selects": 0
+    },
+    {
+      "route": "/staff/projects",
+      "module": "Billing",
+      "pageFile": "src/app/staff/projects/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 0,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/staff/reconciliation",
+      "module": "Shared",
+      "pageFile": "src/app/staff/reconciliation/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 1,
+      "inputs": 0,
+      "selects": 0
+    },
+    {
+      "route": "/staff/settlements",
+      "module": "Billing",
+      "pageFile": "src/app/staff/settlements/page.tsx",
+      "clientComponents": [
+        "src/app/staff/settlements/SettlementDashboard.tsx"
+      ],
+      "modals": [],
+      "buttons": 3,
+      "inputs": 0,
+      "selects": 1
+    },
+    {
+      "route": "/staff/sub-leaders",
+      "module": "Shared",
+      "pageFile": "src/app/staff/sub-leaders/page.tsx",
+      "clientComponents": [],
+      "modals": [],
+      "buttons": 2,
+      "inputs": 4,
+      "selects": 0
+    },
+    {
+      "route": "/staff/tools",
+      "module": "Fleet",
+      "pageFile": "src/app/staff/tools/page.tsx",
+      "clientComponents": [
+        "src/app/staff/tools/AddToolModal.tsx",
+        "src/app/staff/tools/DeleteToolButton.tsx",
+        "src/app/staff/tools/EditToolModal.tsx",
+        "src/app/staff/tools/ToggleToolStatusButton.tsx"
+      ],
+      "modals": [
+        "AddToolModal",
+        "EditToolModal"
+      ],
+      "buttons": 10,
+      "inputs": 13,
+      "selects": 0
+    },
+    {
+      "route": "/staff/workers",
+      "module": "Shared",
+      "pageFile": "src/app/staff/workers/page.tsx",
+      "clientComponents": [
+        "src/app/staff/workers/WorkersClientPage.tsx"
+      ],
+      "modals": [],
+      "buttons": 7,
+      "inputs": 3,
+      "selects": 0
+    }
+  ],
+  "modals": [
+    {
+      "name": "MyProfileModal",
+      "type": "Standalone Component",
+      "file": "src/components/MyProfileModal.tsx",
+      "currentZIndex": "z-modal (1100)",
+      "targetZIndex": "z-modal (1100) [Below Toast 1200]",
+      "module": "Module 4.0 Layout Shell",
+      "associatedRoutes": []
+    },
+    {
+      "name": "MachineModal",
+      "type": "Dead Code Component",
+      "file": "src/components/fleet/MachineModal.tsx",
+      "currentZIndex": "none",
+      "targetZIndex": "N/A (Dead Code - 0 imports)",
+      "module": "Module 4.1 Fleet (To delete)",
+      "associatedRoutes": []
+    },
+    {
+      "name": "VehicleModal",
+      "type": "Dead Code Component",
+      "file": "src/components/fleet/VehicleModal.tsx",
+      "currentZIndex": "none",
+      "targetZIndex": "N/A (Dead Code - 0 imports)",
+      "module": "Module 4.1 Fleet (To delete)",
+      "associatedRoutes": []
+    },
+    {
+      "name": "AddMachineModal",
+      "type": "Standalone Component",
+      "file": "src/app/staff/fleet/components/AddMachineModal.tsx",
+      "currentZIndex": "z-modal (1100) / z-overlay (1000)",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.1 Fleet & Equipment",
+      "associatedRoutes": []
+    },
+    {
+      "name": "AddToolModal",
+      "type": "Standalone Component",
+      "file": "src/app/staff/tools/AddToolModal.tsx",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.1 Fleet & Equipment",
+      "associatedRoutes": []
+    },
+    {
+      "name": "AddVehicleModal",
+      "type": "Standalone Component",
+      "file": "src/app/staff/fleet/components/AddVehicleModal.tsx",
+      "currentZIndex": "z-modal (1100) / z-overlay (1000)",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.1 Fleet & Equipment",
+      "associatedRoutes": []
+    },
+    {
+      "name": "EditMachineModal",
+      "type": "Standalone Component",
+      "file": "src/app/staff/fleet/machine/[id]/EditMachineModal.tsx",
+      "currentZIndex": "z-[100]",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.1 Fleet & Equipment",
+      "associatedRoutes": []
+    },
+    {
+      "name": "EditToolModal",
+      "type": "Standalone Component",
+      "file": "src/app/staff/tools/EditToolModal.tsx",
+      "currentZIndex": "z-[100]",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.1 Fleet & Equipment",
+      "associatedRoutes": []
+    },
+    {
+      "name": "EditVehicleModal",
+      "type": "Standalone Component",
+      "file": "src/app/staff/fleet/vehicle/[id]/EditVehicleModal.tsx",
+      "currentZIndex": "z-[100]",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.1 Fleet & Equipment",
+      "associatedRoutes": []
+    },
+    {
+      "name": "ToolReturnModal",
+      "type": "Standalone Component",
+      "file": "src/components/ToolReturnModal.tsx",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.1 Fleet & Equipment",
+      "associatedRoutes": []
+    },
+    {
+      "name": "Edit Site Location Modal (inline)",
+      "type": "Inline Dialog",
+      "file": "src/app/staff/live/map/UnifiedLiveOperationsClient.tsx (lines 1583-1670)",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.1/4.6 Live Operations",
+      "associatedRoutes": [
+        "/staff/live/map"
+      ]
+    },
+    {
+      "name": "Edit Store Location Modal (inline)",
+      "type": "Inline Dialog",
+      "file": "src/app/staff/live/map/UnifiedLiveOperationsClient.tsx (lines 1393-1480)",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.1/4.6 Live Operations",
+      "associatedRoutes": [
+        "/staff/live/map"
+      ]
+    },
+    {
+      "name": "CreateDispatchModal",
+      "type": "Standalone Component",
+      "file": "src/components/dispatch/CreateDispatchModal.tsx",
+      "currentZIndex": "z-[60]",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.2 Orders & Dispatch",
+      "associatedRoutes": []
+    },
+    {
+      "name": "CreateDispatchModalV2",
+      "type": "Standalone Component",
+      "file": "src/components/dispatch/CreateDispatchModalV2.tsx",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.2 Orders & Dispatch",
+      "associatedRoutes": []
+    },
+    {
+      "name": "DispatchBillingModal",
+      "type": "Standalone Component",
+      "file": "src/components/admin/DispatchBillingModal.tsx",
+      "currentZIndex": "none",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.2 Orders & Dispatch",
+      "associatedRoutes": []
+    },
+    {
+      "name": "EditDispatchModal",
+      "type": "Standalone Component",
+      "file": "src/components/dispatch/EditDispatchModal.tsx",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.2 Orders & Dispatch",
+      "associatedRoutes": []
+    },
+    {
+      "name": "SiteLocationPinModal",
+      "type": "Standalone Component",
+      "file": "src/components/dispatch/SiteLocationPinModal.tsx",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.2 Orders & Dispatch",
+      "associatedRoutes": []
+    },
+    {
+      "name": "CollectPaymentModal",
+      "type": "Standalone Component",
+      "file": "src/components/shared/CollectPaymentModal.tsx",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.3 Customers & Billing",
+      "associatedRoutes": []
+    },
+    {
+      "name": "DirectPaymentModal",
+      "type": "Standalone Component",
+      "file": "src/components/forms/DirectPaymentModal.tsx",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.3 Customers & Billing",
+      "associatedRoutes": []
+    },
+    {
+      "name": "ReceivablePaymentModal",
+      "type": "Standalone Component",
+      "file": "src/components/admin/ReceivablePaymentModal.tsx",
+      "currentZIndex": "none",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.3 Customers & Billing",
+      "associatedRoutes": []
+    },
+    {
+      "name": "CreateOperatorModal",
+      "type": "Standalone Component",
+      "file": "src/components/operators/CreateOperatorModal.tsx",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.4 HR & Field Team",
+      "associatedRoutes": []
+    },
+    {
+      "name": "EditOperatorModal",
+      "type": "Standalone Component",
+      "file": "src/components/operators/EditOperatorModal.tsx",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.4 HR & Field Team",
+      "associatedRoutes": []
+    },
+    {
+      "name": "EditWageModal",
+      "type": "Standalone Component",
+      "file": "src/app/owner/employees/EditWageModal.tsx",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.4 HR & Field Team",
+      "associatedRoutes": []
+    },
+    {
+      "name": "ExternalLaborModal",
+      "type": "Standalone Component",
+      "file": "src/app/owner/settlements/ExternalLaborModal.tsx",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.4 HR & Field Team",
+      "associatedRoutes": []
+    },
+    {
+      "name": "OperatorDiaryModal",
+      "type": "Standalone Component",
+      "file": "src/components/settlements/OperatorDiaryModal.tsx",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.4 HR & Field Team",
+      "associatedRoutes": []
+    },
+    {
+      "name": "PersonRouteModal",
+      "type": "Standalone Component",
+      "file": "src/components/live/PersonRouteModal.tsx",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.6 GIS & Live Operations",
+      "associatedRoutes": []
+    },
+    {
+      "name": "StaffFieldDiaryOverrideModal",
+      "type": "Standalone Component",
+      "file": "src/components/dispatch/StaffFieldDiaryOverrideModal.tsx",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.7 Shared",
+      "associatedRoutes": []
+    },
+    {
+      "name": "StatusChangeModal",
+      "type": "Standalone Component",
+      "file": "src/components/dispatch/StatusChangeModal.tsx",
+      "currentZIndex": "z-50",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Module 4.7 Shared",
+      "associatedRoutes": []
+    },
+    {
+      "name": "dialog",
+      "type": "Radix UI Primitive",
+      "file": "src/components/ui/dialog.tsx",
+      "currentZIndex": "z-modal (1100) / z-overlay (1000)",
+      "targetZIndex": "z-modal (1100) / z-overlay (1000)",
+      "module": "Shared Primitive",
+      "associatedRoutes": []
+    }
+  ]
+}

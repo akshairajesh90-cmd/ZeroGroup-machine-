@@ -1,0 +1,50 @@
+{
+  "SystemSettings": {
+    "table": "SystemSettings",
+    "count": 1,
+    "maxUpdatedAt": "2026-11-01T05:09:47.509Z",
+    "sha256": "f0690c6298493f6ecd4abc42330ae7d793a4773f1f4a1215eb5256163d095c5e"
+  },
+  "User": {
+    "table": "User",
+    "count": 35,
+    "maxUpdatedAt": "2026-11-01T05:09:47.501Z",
+    "sha256": "5c9d3659cbc3d4e45783edb83a7c02baca9e4e8792b325c4259931797c053381"
+  },
+  "Employee": {
+    "table": "Employee",
+    "count": 34,
+    "maxUpdatedAt": "2026-11-01T05:09:47.503Z",
+    "sha256": "f4a3c048b4e8dca2c5f154e81c5e50a4fad67def924704530cb970e103443c6c"
+  },
+  "DailyDispatch": {
+    "table": "DailyDispatch",
+    "count": 237,
+    "maxUpdatedAt": "2026-10-31T20:12:55.932Z",
+    "sha256": "dbae06ab16dac3cd757cdbac64eb2e2958f2d496f88643e72d4cdecf907df0db"
+  },
+  "Machine": {
+    "table": "Machine",
+    "count": 17,
+    "maxUpdatedAt": "2026-10-25T18:58:02.448Z",
+    "sha256": "4c81d5f87dce11c52559da6911fc216f22a64f1bff54d0e940893ad77064771c"
+  },
+  "Vehicle": {
+    "table": "Vehicle",
+    "count": 3,
+    "maxUpdatedAt": "2026-10-30T16:42:33.958Z",
+    "sha256": "e07d4ecd3cc95fa4e98425f695279f0aef4461a6df93fa62d1ce4f57defcc30c"
+  },
+  "Customer": {
+    "table": "Customer",
+    "count": 10,
+    "maxUpdatedAt": "2026-10-12T18:06:38.266Z",
+    "sha256": "c4b4855d8e915e36b86aa536aa7e0312c56565e0428eaa9ab8313fef195f721b"
+  },
+  "Project": {
+    "table": "Project",
+    "count": 5,
+    "maxUpdatedAt": "2026-10-12T18:06:38.260Z",
+    "sha256": "7869138e3541fa2e605ac40035b567d324522f1e55656695c38e167417ef2f53"
+  }
+}

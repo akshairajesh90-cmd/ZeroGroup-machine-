@@ -52,7 +52,7 @@ export default async function AdminLayout({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 lg:p-8 overscroll-y-contain [webkit-overflow-scrolling:touch]">
+        <main className="flex-1 overflow-y-auto min-h-0 p-4 pb-36 sm:p-6 sm:pb-12 lg:p-8 overscroll-y-contain [webkit-overflow-scrolling:touch]">
           {children}
         </main>
       </div>
