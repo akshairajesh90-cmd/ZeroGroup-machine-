@@ -6,12 +6,12 @@ import { format, differenceInDays } from "date-fns";
 import { 
   ArrowLeft, Info, Fuel, Wrench, FileText, 
   AlertTriangle, ShieldAlert, CheckCircle2, Upload
-} from "lucide-react";
+, MapPin, Navigation, ExternalLink, Clock, User, Cog, Truck } from "lucide-react";
 import { createMaintenanceTicket, closeMaintenanceTicket, logStaffFuel, uploadVehicleDocument } from "@/actions/fleet";
 import { EditVehicleModal } from "./EditVehicleModal";
 
 export default function VehicleDetailClient({ vehicle }: any) {
-  const [activeTab, setActiveTab] = useState<"DOCS" | "MAINTENANCE" | "FUEL">("DOCS");
+  const [activeTab, setActiveTab] = useState<"TRIPS" | "DOCS" | "MAINTENANCE" | "FUEL">("TRIPS");
   
   // Modals
   const [showFuelModal, setShowFuelModal] = useState(false);
@@ -169,6 +169,9 @@ export default function VehicleDetailClient({ vehicle }: any) {
 
         {/* Tabs */}
         <div className="flex gap-4 border-b border-slate-800 pb-2 mt-8">
+          <button onClick={() => setActiveTab("TRIPS")} className={`pb-2 px-2 font-bold text-sm transition-colors flex items-center gap-2 ${activeTab === "TRIPS" ? "border-b-2 border-indigo-500 text-indigo-400" : "text-slate-400 hover:text-slate-200"}`}>
+            Delivery Trips & Sites
+          </button>
           <button onClick={() => setActiveTab("DOCS")} className={`pb-2 px-2 font-bold text-sm transition-colors flex items-center gap-2 ${activeTab === "DOCS" ? "border-b-2 border-indigo-500 text-indigo-400" : "text-slate-400 hover:text-slate-200"}`}>
             Documents Full List
           </button>
@@ -182,6 +185,139 @@ export default function VehicleDetailClient({ vehicle }: any) {
 
         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden min-h-[400px]">
           
+          {/* TRIPS TAB */}
+          {activeTab === "TRIPS" && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs uppercase bg-slate-950 text-slate-500 border-b border-slate-800">
+                  <tr>
+                    <th className="px-6 py-4 font-black">Date & Status</th>
+                    <th className="px-6 py-4 font-black">Customer Site & Location</th>
+                    <th className="px-6 py-4 font-black">Driver</th>
+                    <th className="px-6 py-4 font-black">Equipment & Tools Carried</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/50">
+                  {(vehicle.dispatches || []).map((d: any) => {
+                    const numLat = d.latitude ? Number(d.latitude) : null;
+                    const numLng = d.longitude ? Number(d.longitude) : null;
+                    const hasCoords = numLat !== null && numLng !== null && !isNaN(numLat) && !isNaN(numLng);
+                    const mapUrl = d.mapLink || (hasCoords ? `https://www.google.com/maps/dir/?api=1&destination=${numLat},${numLng}` : null);
+
+                    return (
+                      <tr key={d.id} className="hover:bg-slate-800/50 transition-colors">
+                        {/* Date & Status */}
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-slate-200">
+                            {format(new Date(d.dateOfService), 'dd MMM yyyy')}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                              d.status === "DELIVERED" || d.status === "COMPLETED"
+                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                : d.status === "IN_PROGRESS"
+                                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                : d.status === "EN_ROUTE"
+                                ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                                : "bg-slate-800 text-slate-400 border border-slate-700"
+                            }`}>
+                              {d.status}
+                            </span>
+                            {d.deliveredAt && (
+                              <span className="text-[10px] text-slate-500 flex items-center gap-0.5" title={`Delivered at ${new Date(d.deliveredAt).toLocaleTimeString()}`}>
+                                <Clock className="w-2.5 h-2.5" />
+                                {format(new Date(d.deliveredAt), 'p')}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Customer Site & Location */}
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-white">
+                            {d.customer?.name || "Client Site"}
+                          </div>
+                          <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-slate-500 shrink-0" />
+                            <span className="truncate max-w-xs">{d.location || "Site location"}</span>
+                          </div>
+                          {hasCoords && (
+                            <div className="mt-1 flex items-center gap-2">
+                              <span className="text-[10px] font-mono text-slate-500">
+                                {numLat?.toFixed(4)}, {numLng?.toFixed(4)}
+                              </span>
+                              {mapUrl && (
+                                <a
+                                  href={mapUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 font-bold hover:underline"
+                                >
+                                  <span>View Pin</span>
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Driver */}
+                        <td className="px-6 py-4 text-xs">
+                          {d.driver ? (
+                            <div className="flex items-center gap-1.5 text-slate-300">
+                              <User className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                              <span className="font-bold">{d.driver.fullName}</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-600">Unassigned</span>
+                          )}
+                        </td>
+
+                        {/* Machinery & Tools Carried */}
+                        <td className="px-6 py-4 text-xs space-y-1">
+                          {d.machine && (
+                            <div className="flex items-center gap-1 text-slate-200">
+                              <Cog className="w-3 h-3 text-emerald-400 shrink-0" />
+                              <span className="font-bold">{d.machine.name}</span>
+                            </div>
+                          )}
+                          {d.lift && (
+                            <div className="text-slate-400 text-[11px]">
+                              Lift: <span className="text-slate-300">{d.lift.name}</span>
+                            </div>
+                          )}
+                          {d.vibrator && (
+                            <div className="text-slate-400 text-[11px]">
+                              Vibrator: <span className="text-slate-300">{d.vibrator.name}</span>
+                            </div>
+                          )}
+                          {d.dispatchTools && d.dispatchTools.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {d.dispatchTools.map((dt: any) => (
+                                <span
+                                  key={dt.id}
+                                  className="px-1.5 py-0.5 rounded text-[10px] bg-slate-950 border border-slate-800 text-slate-300 font-medium"
+                                >
+                                  {dt.tool?.name || "Tool"}{dt.quantity > 1 ? ` (×${dt.quantity})` : ""}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {!d.machine && !d.lift && !d.vibrator && (!d.dispatchTools || d.dispatchTools.length === 0) && (
+                            <span className="text-slate-600">General transit</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {(!vehicle.dispatches || vehicle.dispatches.length === 0) && (
+                    <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-500">No delivery trips recorded for this vehicle.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {/* MAINTENANCE TAB */}
           {activeTab === "MAINTENANCE" && (
             <div className="overflow-x-auto">

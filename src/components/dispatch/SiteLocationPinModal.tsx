@@ -10,7 +10,45 @@ import {
   Check,
   Building2,
   Compass,
+  Truck,
+  User,
+  Wrench,
+  Clock,
+  Cog,
 } from "lucide-react";
+
+export interface SiteLocationLogistics {
+  vehicle?: {
+    id?: string;
+    modelName?: string | null;
+    licensePlate?: string | null;
+    type?: string | null;
+  } | null;
+  driver?: {
+    id?: string;
+    fullName?: string | null;
+    phone?: string | null;
+  } | null;
+  operator?: {
+    id?: string;
+    fullName?: string | null;
+    phone?: string | null;
+  } | null;
+  machine?: {
+    id?: string;
+    name?: string | null;
+    modelNumber?: string | null;
+    serialNumber?: string | null;
+  } | null;
+  tools?: Array<{
+    id?: string;
+    toolName?: string;
+    quantity?: number;
+    returnedAt?: Date | string | null;
+  }> | null;
+  deliveredAt?: Date | string | null;
+  status?: string | null;
+}
 
 export interface SiteLocationPinModalProps {
   isOpen: boolean;
@@ -29,6 +67,7 @@ export interface SiteLocationPinModalProps {
   offRoadDistanceM?: number | null;
   isCentroidVerified?: boolean | null;
   dwellConfidence?: number | null;
+  logistics?: SiteLocationLogistics | null;
 }
 
 export function SiteLocationPinModal({
@@ -48,6 +87,7 @@ export function SiteLocationPinModal({
   offRoadDistanceM,
   isCentroidVerified,
   dwellConfidence,
+  logistics,
 }: SiteLocationPinModalProps) {
   const [copied, setCopied] = useState(false);
 
@@ -186,6 +226,96 @@ export function SiteLocationPinModal({
               </div>
             )}
           </div>
+
+          {/* Logistics Journey & Assigned Equipment Card */}
+          {logistics && (logistics.vehicle || logistics.driver || logistics.machine || (logistics.tools && logistics.tools.length > 0)) && (
+            <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Truck className="w-3.5 h-3.5 text-indigo-400" />
+                  Logistics & Dispatched Assets
+                </span>
+                {logistics.deliveredAt && (
+                  <span className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    <Clock className="w-3 h-3" />
+                    Delivered: {new Date(logistics.deliveredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                {logistics.vehicle && (
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                    <Truck className="w-4 h-4 text-indigo-400 shrink-0" />
+                    <div className="min-w-0">
+                      <span className="text-[10px] text-slate-500 block">Transport Truck</span>
+                      <span className="font-bold text-white truncate block">
+                        {logistics.vehicle.licensePlate || logistics.vehicle.modelName || "Delivery Truck"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {logistics.driver && (
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                    <User className="w-4 h-4 text-blue-400 shrink-0" />
+                    <div className="min-w-0">
+                      <span className="text-[10px] text-slate-500 block">Transport Driver</span>
+                      <span className="font-bold text-white truncate block">
+                        {logistics.driver.fullName || "Assigned Driver"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {logistics.machine && (
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                    <Cog className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <div className="min-w-0">
+                      <span className="text-[10px] text-slate-500 block">Deployed Machine</span>
+                      <span className="font-bold text-white truncate block">
+                        {logistics.machine.name || "Primary Machine"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {logistics.operator && (
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                    <User className="w-4 h-4 text-purple-400 shrink-0" />
+                    <div className="min-w-0">
+                      <span className="text-[10px] text-slate-500 block">Site Operator</span>
+                      <span className="font-bold text-white truncate block">
+                        {logistics.operator.fullName || "Assigned Operator"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {logistics.tools && logistics.tools.length > 0 && (
+                <div className="pt-2 border-t border-slate-800/80">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                    <Wrench className="w-3 h-3 text-rose-400" />
+                    Dispatched Tools & Inventory ({logistics.tools.length})
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {logistics.tools.map((t, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] bg-slate-900 text-slate-300 border border-slate-800 font-medium"
+                      >
+                        <span className="text-white font-bold">{t.toolName}</span>
+                        {t.quantity && t.quantity > 1 ? (
+                          <span className="text-slate-500 font-mono">×{t.quantity}</span>
+                        ) : null}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Dual-Point Off-Road Navigation Card */}
           {(isOffRoad || accessLatitude != null) && (

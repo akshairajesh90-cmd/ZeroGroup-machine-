@@ -244,8 +244,125 @@ async function main() {
         },
       ],
     });
-    console.log("✅ Created Audit Logs in test DB");
+        console.log("✅ Created Audit Logs in test DB");
   }
+
+  // 8. Tools & Dispatch Tools (For project7_test)
+  const toolCount = await prisma.tool.count();
+  if (toolCount === 0) {
+    const t1 = await prisma.tool.create({
+      data: {
+        toolId: "TL-VIB-01",
+        name: "Petrol Vibrator",
+        toolType: "VIBRATOR",
+        totalInventory: 8,
+        dailyRate: 1000,
+        status: "AVAILABLE",
+      },
+    });
+    const t2 = await prisma.tool.create({
+      data: {
+        toolId: "TL-002",
+        name: "2-Wheel Trolly with Sheet",
+        toolType: "TROLLY",
+        totalInventory: 14,
+        dailyRate: 200,
+        status: "AVAILABLE",
+      },
+    });
+    const t3 = await prisma.tool.create({
+      data: {
+        toolId: "TL-BRK-01",
+        name: "Heavy Concrete Breaker",
+        toolType: "BREAKER",
+        totalInventory: 4,
+        dailyRate: 1500,
+        status: "AVAILABLE",
+      },
+    });
+    console.log("✅ Created Tools in test DB");
+
+    // Link vehicle, driver, and tools to the active test dispatches
+    const testVehicle = await prisma.vehicle.findFirst();
+    const testDriver = await prisma.employee.findFirst({ where: { role: Role.DRIVER } });
+    const dispatches = await prisma.dailyDispatch.findMany({ take: 3 });
+
+    for (let idx = 0; idx < dispatches.length; idx++) {
+      const d = dispatches[idx];
+      await prisma.dailyDispatch.update({
+        where: { id: d.id },
+        data: {
+          vehicleId: testVehicle?.id,
+          driverId: testDriver?.id,
+          deliveredAt: new Date(),
+        },
+      });
+
+      await prisma.dispatchTool.create({
+        data: {
+          dispatchId: d.id,
+          toolId: idx === 0 ? t1.id : idx === 1 ? t2.id : t3.id,
+          quantity: 2,
+        },
+      });
+    }
+    console.log("✅ Linked Vehicles, Drivers, and Tools to dispatches in test DB");
+  }
+
+  // 8. Ensure all fleet machines have realistic customer dispatches and route data
+  const allMachines = await prisma.machine.findMany({
+    include: { dispatches: { select: { id: true } } },
+  });
+  const testVehicles = await prisma.vehicle.findMany();
+  const testDrivers = await prisma.employee.findMany({ where: { role: Role.DRIVER } });
+  const allTools = await prisma.tool.findMany();
+
+  const keralaSites = [
+    { name: "Pala Bypass Bridge - Sector 3", lat: 9.7118, lng: 76.6853 },
+    { name: "Kottayam Medical College Expansion", lat: 9.6254, lng: 76.5368 },
+    { name: "Erattupetta High Range Highway Work", lat: 9.6841, lng: 76.7865 },
+    { name: "Changanassery Commercial Hub - Phase 2", lat: 9.4442, lng: 76.5411 },
+    { name: "Aluva Metro Depot Pier Extension", lat: 10.1076, lng: 76.3516 },
+    { name: "Ettumanoor Temple Bypass Flyover", lat: 9.6687, lng: 76.5645 },
+  ];
+
+  for (let mIdx = 0; mIdx < allMachines.length; mIdx++) {
+    const m = allMachines[mIdx];
+    if (m.dispatches.length === 0 && cust) {
+      const site = keralaSites[mIdx % keralaSites.length];
+      const assignedVehicle = testVehicles.length > 0 ? testVehicles[mIdx % testVehicles.length] : undefined;
+      const assignedDriver = testDrivers.length > 0 ? testDrivers[mIdx % testDrivers.length] : undefined;
+      const serviceDate = subDays(new Date(), (mIdx % 5) + 1);
+
+      const newDispatch = await prisma.dailyDispatch.create({
+        data: {
+          customerId: cust.id,
+          machineId: m.id,
+          operatorId: operatorEmp?.id,
+          vehicleId: assignedVehicle?.id,
+          driverId: assignedDriver?.id,
+          dateOfService: serviceDate,
+          status: "DELIVERED",
+          location: site.name,
+          latitude: site.lat,
+          longitude: site.lng,
+          customerCharge: 4500,
+          deliveredAt: serviceDate,
+        },
+      });
+
+      if (allTools.length > 0) {
+        await prisma.dispatchTool.create({
+          data: {
+            dispatchId: newDispatch.id,
+            toolId: allTools[mIdx % allTools.length].id,
+            quantity: 2,
+          },
+        });
+      }
+    }
+  }
+  console.log("✅ Seeded customer dispatches and route data for all fleet machines");
 
   console.log("🎉 Test database successfully seeded with realistic metrics!");
 }

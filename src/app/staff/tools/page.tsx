@@ -7,6 +7,7 @@ import { EditToolModal } from "./EditToolModal";
 import { AddToolModal } from "./AddToolModal";
 import { DeleteToolButton } from "./DeleteToolButton";
 import { ToggleToolStatusButton } from "./ToggleToolStatusButton";
+import { ToolDeploymentsModal } from "./ToolDeploymentsModal";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,17 @@ export default async function ToolsInventoryPage() {
         where: {
           dispatch: {
             status: { in: ["ACCEPTED", "EN_ROUTE", "IN_PROGRESS", "DELIVERED"] }
+          }
+        },
+        include: {
+          dispatch: {
+            include: {
+              customer: true,
+              driver: true,
+              operator: true,
+              vehicle: true,
+              machine: true,
+            }
           }
         }
       }
@@ -121,10 +133,11 @@ export default async function ToolsInventoryPage() {
                       {/* Deployed On-Site */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         {deployedCount > 0 ? (
-                          <div className="flex items-center gap-1.5 text-rose-400 font-bold font-mono">
-                            <Truck className="h-3.5 w-3.5" />
-                            {deployedCount} Deployed
-                          </div>
+                          <ToolDeploymentsModal
+                            toolName={tool.name}
+                            totalDeployed={deployedCount}
+                            deployments={tool.dispatchTools as any}
+                          />
                         ) : (
                           <span className="text-zinc-600 font-medium">0 Deployed</span>
                         )}
@@ -194,4 +207,3 @@ export default async function ToolsInventoryPage() {
     </div>
   );
 }
-

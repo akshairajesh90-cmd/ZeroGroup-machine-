@@ -69,8 +69,11 @@ export interface CachedLocationPing {
   accuracy?: number;
   altitude?: number;
   speed?: number;
+  heading?: number;
   timestamp: number;
   synced: boolean;
+  sessionId?: string;
+  seq?: number;
 }
 
 // ─── Dexie database class ────────────────────────────────────────────────────
@@ -93,6 +96,10 @@ class IronRentOfflineDb extends Dexie {
       externalLabor: "++id, localDiaryId",
       equipmentVerifications: "++id, localDiaryId, dispatchToolId",
       locationPings: "++id, employeeId, dispatchId, timestamp, synced",
+    });
+
+    this.version(3).stores({
+      locationPings: "++id, employeeId, dispatchId, timestamp, synced, sessionId, seq, [sessionId+seq]",
     });
   }
 }

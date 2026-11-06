@@ -22,18 +22,28 @@ test.describe('Clean Unified Login', () => {
 
   test('OTP Reset page auto-fills phone from query param', async ({ page }) => {
     await page.goto('/reset-password?phone=9876543210');
-    const phoneInput = page.locator('input[placeholder*="9876543210"]').first();
+    const phoneInput = page.locator('input[type="tel"]').first();
     await expect(phoneInput).toBeVisible();
     const val = await phoneInput.inputValue();
     expect(val).toContain('9876543210');
   });
 
-  test('OTP Reset page verifies identity with Name and Email', async ({ page }) => {
+  test('Password Reset page supports multi-role operator selection', async ({ page }) => {
     await page.goto('/reset-password');
-    await expect(page.getByText(/Name & Email Verify/i)).toBeVisible();
-    await page.fill('input[placeholder*="Suresh"]', 'Suresh Kumar');
-    await page.fill('input[placeholder*="suresh@"]', 'suresh@zerogroup.in');
-    await expect(page.getByRole('button', { name: /Verify Identity & Send SMS OTP/i })).toBeVisible();
+    await expect(page.getByText(/Verify Identity & Request Reset/i)).toBeVisible();
+    await expect(page.getByText(/Select Your Role\(s\) \/ Crew Skills/i)).toBeVisible();
+
+    // Select multiple operator roles: Mixer Operator + Lift Operator
+    const mixerBtn = page.locator('button:has-text("Concrete Mixer Operator")');
+    const liftBtn = page.locator('button:has-text("Lift / Hoist Operator")');
+    await expect(mixerBtn).toBeVisible();
+    await expect(liftBtn).toBeVisible();
+
+    await mixerBtn.click();
+    await liftBtn.click();
+
+    // Verify counter increments
+    await expect(page.getByText(/selected/i).first()).toBeVisible();
   });
 });
 
@@ -84,7 +94,7 @@ test.describe('Staff Credentials Hub', () => {
 
   test('Staff dashboard has Official IDs & Logins button', async ({ page }) => {
     await page.goto('/staff/dashboard');
-    await expect(page.getByRole('link', { name: /official ids|logins/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /official ids|logins/i }).first()).toBeVisible();
   });
 });
 

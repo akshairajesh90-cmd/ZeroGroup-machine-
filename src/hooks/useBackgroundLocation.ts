@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { registerPlugin } from "@capacitor/core";
 import { offlineDb } from "@/lib/offlineDb";
+import { getGeoSessionId, getNextPingSequence } from "@/lib/geoSession";
 import { BackgroundGeolocationPlugin } from "@capacitor-community/background-geolocation";
 
 const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>("BackgroundGeolocation");
@@ -56,7 +57,9 @@ export function useBackgroundLocation(employeeId?: string, dispatchId?: string) 
                  altitude: location.altitude || undefined,
                  speed: location.speed || undefined,
                  timestamp: location.time || Date.now(),
-                 synced: false
+                 synced: false,
+                 sessionId: getGeoSessionId(),
+                 seq: getNextPingSequence(),
                });
             }
           }

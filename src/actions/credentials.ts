@@ -715,6 +715,7 @@ export async function submitPasswordResetRequestAction(data: {
   name?: string;
   phone?: string;
   role?: string;
+  roles?: string[];
   identifier?: string;
   notes?: string;
 }): Promise<{
@@ -729,10 +730,14 @@ export async function submitPasswordResetRequestAction(data: {
   try {
     const cleanName = (data.name || "").trim();
     const rawPhone = (data.phone || data.identifier || "").trim();
-    const requestedRole = (data.role || "").trim();
+    const requestedRoles: string[] = Array.isArray(data.roles) && data.roles.length > 0
+      ? data.roles.map((r) => r.trim()).filter(Boolean)
+      : data.role && data.role.trim()
+      ? [data.role.trim()]
+      : [];
 
-    // 1. If Name, Phone, and Role are provided: perform verified matching
-    if (cleanName && rawPhone && requestedRole) {
+    // 1. If Name, Phone, and at least one Role are provided: perform verified matching
+    if (cleanName && rawPhone && requestedRoles.length > 0) {
       const cleanPhoneDigits = rawPhone.replace(/\D/g, "");
       const last10 = cleanPhoneDigits.length >= 10 ? cleanPhoneDigits.slice(-10) : cleanPhoneDigits;
 
@@ -779,11 +784,12 @@ export async function submitPasswordResetRequestAction(data: {
       }
 
       // Check role match against primary Role, defaultCrewRole, and capableRoles (crew allocation)
-      const isRoleValid = checkCrewRoleMatch(matchedNameEmp, requestedRole);
-      if (!isRoleValid) {
+      const matchingRoles = requestedRoles.filter((r) => checkCrewRoleMatch(matchedNameEmp, r));
+      if (matchingRoles.length === 0) {
+        const roleLabels = requestedRoles.map((r) => r.replace(/_/g, " ")).join(", ");
         return {
           success: false,
-          error: `The selected role "${requestedRole.replace(/_/g, " ")}" does not match the registered or crew allocation roles for ${matchedNameEmp.name}.`,
+          error: `None of the selected roles (${roleLabels}) match the registered or crew allocation roles for ${matchedNameEmp.name}.`,
         };
       }
 
@@ -802,12 +808,15 @@ export async function submitPasswordResetRequestAction(data: {
       }
 
       // Flag user for staff reset
+      const formattedRoles = requestedRoles.join(", ");
       await prisma.user.update({
         where: { id: matchedNameEmp.user.id },
         data: {
           resetRequested: true,
           resetRequestedAt: new Date(),
-          resetRequestNotes: data.notes?.trim() || `Verified Request: ${matchedNameEmp.name} (Role: ${requestedRole})`,
+          resetRequestNotes: data.notes?.trim()
+            ? `${data.notes.trim()} | Roles: ${formattedRoles}`
+            : `Verified Request: ${matchedNameEmp.name} (Roles: ${formattedRoles})`,
         },
       });
 

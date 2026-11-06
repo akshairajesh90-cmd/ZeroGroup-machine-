@@ -1,6 +1,7 @@
 // ZERO GROUP — Robust Universal Geolocation Capture Engine
 // Handles high-accuracy GPS with automatic low-accuracy network fallback,
-// permission detection, and graceful development simulation.
+// permission detection, client-side sliding-window median jitter filter,
+// velocity sanity check, and graceful development simulation.
 
 export interface GeoLocationResult {
   latitude: number;
@@ -10,6 +11,8 @@ export interface GeoLocationResult {
   timestamp: number;
   speed?: number | null; // in km/h
   heading?: number | null; // in degrees 0-360
+  filtered?: boolean;
+  filterReason?: string;
 }
 
 export interface GeoCaptureOptions {
@@ -19,7 +22,163 @@ export interface GeoCaptureOptions {
   allowSimulationFallback?: boolean;
   fallbackLatitude?: number;
   fallbackLongitude?: number;
+  applyJitterFilter?: boolean;
 }
+
+export interface GpsFilterReading {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  timestamp: number;
+  speed?: number | null;
+  heading?: number | null;
+}
+
+export interface GpsFilterResult {
+  accepted: boolean;
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  reason?: "ACCURACY_EXCEEDED" | "VELOCITY_EXCEEDED" | "DEGRADED_OVERRIDE" | "ACCEPTED";
+  rawSpeedKmH?: number | null;
+}
+
+/**
+ * Calculates great-circle distance between two points in meters using Haversine formula
+ */
+export function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000; // Radius of Earth in meters
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Client-Side Sliding-Window Median Filter with Velocity Guard and Degradation Override
+ */
+export class SlidingWindowGpsFilter {
+  private window: GpsFilterReading[] = [];
+  private windowSize: number;
+  private maxVelocityKmH: number;
+  private accuracyThresholdM: number;
+  private degradationTimeoutMs: number;
+  private degradationStartTime: number | null = null;
+  private lastAccepted: GpsFilterReading | null = null;
+
+  constructor(options?: {
+    windowSize?: number;
+    maxVelocityKmH?: number;
+    accuracyThresholdM?: number;
+    degradationTimeoutMs?: number;
+  }) {
+    this.windowSize = options?.windowSize || 5;
+    this.maxVelocityKmH = options?.maxVelocityKmH || 120;
+    this.accuracyThresholdM = options?.accuracyThresholdM || 50;
+    this.degradationTimeoutMs = options?.degradationTimeoutMs || 30000; // 30s
+  }
+
+  public filter(raw: GpsFilterReading): GpsFilterResult {
+    const now = raw.timestamp || Date.now();
+
+    // 1. Accuracy Check & Canopy / Quarry Degradation Override
+    let isDegradedOverride = false;
+    if (raw.accuracy > this.accuracyThresholdM) {
+      if (this.degradationStartTime === null) {
+        this.degradationStartTime = now;
+      }
+      const degradationDuration = now - this.degradationStartTime;
+      if (degradationDuration <= this.degradationTimeoutMs) {
+        return {
+          accepted: false,
+          latitude: raw.latitude,
+          longitude: raw.longitude,
+          accuracy: raw.accuracy,
+          reason: "ACCURACY_EXCEEDED",
+        };
+      }
+      // Over 30 seconds of persistent degraded signal (canopy / quarry)
+      isDegradedOverride = true;
+    } else {
+      this.degradationStartTime = null;
+    }
+
+    // 2. Velocity Jump Check (Reject multipath reflection glitches > 120 km/h)
+    if (this.lastAccepted) {
+      const dtSec = (now - this.lastAccepted.timestamp) / 1000;
+      if (dtSec > 0.5 && dtSec < 180) {
+        const dist = calculateDistanceMeters(
+          this.lastAccepted.latitude,
+          this.lastAccepted.longitude,
+          raw.latitude,
+          raw.longitude
+        );
+        const speedKmH = (dist / dtSec) * 3.6;
+        if (speedKmH > this.maxVelocityKmH) {
+          return {
+            accepted: false,
+            latitude: raw.latitude,
+            longitude: raw.longitude,
+            accuracy: raw.accuracy,
+            reason: "VELOCITY_EXCEEDED",
+            rawSpeedKmH: speedKmH,
+          };
+        }
+      }
+    }
+
+    // 3. Sliding-window Median Filter
+    this.window.push(raw);
+    if (this.window.length > this.windowSize) {
+      this.window.shift();
+    }
+
+    let finalLat = raw.latitude;
+    let finalLng = raw.longitude;
+
+    if (this.window.length >= 3) {
+      const sortedLats = [...this.window.map((p) => p.latitude)].sort((a, b) => a - b);
+      const sortedLngs = [...this.window.map((p) => p.longitude)].sort((a, b) => a - b);
+      const mid = Math.floor(sortedLats.length / 2);
+      finalLat = sortedLats[mid];
+      finalLng = sortedLngs[mid];
+    }
+
+    const acceptedReading: GpsFilterReading = {
+      ...raw,
+      latitude: finalLat,
+      longitude: finalLng,
+    };
+    this.lastAccepted = acceptedReading;
+
+    return {
+      accepted: true,
+      latitude: finalLat,
+      longitude: finalLng,
+      accuracy: raw.accuracy,
+      reason: isDegradedOverride ? "DEGRADED_OVERRIDE" : "ACCEPTED",
+    };
+  }
+
+  public getLastAccepted(): GpsFilterReading | null {
+    return this.lastAccepted;
+  }
+
+  public reset() {
+    this.window = [];
+    this.degradationStartTime = null;
+    this.lastAccepted = null;
+  }
+}
+
+// Global default singleton filter for app-wide continuity
+export const defaultGpsFilter = new SlidingWindowGpsFilter();
 
 /**
  * Checks if geolocation is supported and running in a secure origin
@@ -46,7 +205,8 @@ export function isGeolocationAvailable(): { available: boolean; reason?: string 
 }
 
 /**
- * Captures current position with automatic high → low accuracy fallback
+ * Captures current position with automatic high → low accuracy fallback,
+ * optional sliding-window filter, and graceful simulated fallback.
  */
 export async function captureCurrentPosition(
   options: GeoCaptureOptions = {}
@@ -57,6 +217,7 @@ export async function captureCurrentPosition(
     allowSimulationFallback = true,
     fallbackLatitude,
     fallbackLongitude,
+    applyJitterFilter = false,
   } = options;
 
   const check = isGeolocationAvailable();
@@ -81,15 +242,17 @@ export async function captureCurrentPosition(
     });
 
     const rawSpeed = pos.coords.speed;
-    const speedKmH = (rawSpeed !== null && rawSpeed !== undefined && !isNaN(rawSpeed) && rawSpeed >= 0)
-      ? Math.round(rawSpeed * 3.6 * 10) / 10
-      : null;
+    const speedKmH =
+      rawSpeed !== null && rawSpeed !== undefined && !isNaN(rawSpeed) && rawSpeed >= 0
+        ? Math.round(rawSpeed * 3.6 * 10) / 10
+        : null;
     const rawHeading = pos.coords.heading;
-    const headingDeg = (rawHeading !== null && rawHeading !== undefined && !isNaN(rawHeading) && rawHeading >= 0)
-      ? Math.round(rawHeading)
-      : null;
+    const headingDeg =
+      rawHeading !== null && rawHeading !== undefined && !isNaN(rawHeading) && rawHeading >= 0
+        ? Math.round(rawHeading)
+        : null;
 
-    return {
+    const rawResult: GeoLocationResult = {
       latitude: pos.coords.latitude,
       longitude: pos.coords.longitude,
       accuracy: Math.round(pos.coords.accuracy || 10),
@@ -98,6 +261,35 @@ export async function captureCurrentPosition(
       speed: speedKmH,
       heading: headingDeg,
     };
+
+    if (applyJitterFilter) {
+      const filtered = defaultGpsFilter.filter({
+        latitude: rawResult.latitude,
+        longitude: rawResult.longitude,
+        accuracy: rawResult.accuracy,
+        timestamp: rawResult.timestamp,
+        speed: rawResult.speed,
+        heading: rawResult.heading,
+      });
+
+      if (!filtered.accepted) {
+        return {
+          ...rawResult,
+          filtered: true,
+          filterReason: filtered.reason,
+        };
+      }
+
+      return {
+        ...rawResult,
+        latitude: filtered.latitude,
+        longitude: filtered.longitude,
+        filtered: false,
+        filterReason: filtered.reason,
+      };
+    }
+
+    return rawResult;
   } catch (err: any) {
     console.warn("[GeoCapture] High accuracy GPS fix failed or timed out:", err.message);
 

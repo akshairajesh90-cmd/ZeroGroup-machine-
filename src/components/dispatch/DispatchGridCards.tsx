@@ -61,6 +61,20 @@ export function DispatchGridCards({ dispatches, onGenerateBill, isPending }: Dis
               offRoadDistanceM={d.offRoadDistanceM}
               isCentroidVerified={d.isCentroidVerified}
               dwellConfidence={d.dwellConfidence}
+              logistics={{
+                vehicle: d.vehicle,
+                driver: d.driver,
+                operator: d.operator,
+                machine: d.machine,
+                tools: d.dispatchTools?.map((dt: any) => ({
+                  id: dt.id,
+                  toolName: dt.tool?.name || "Tool",
+                  quantity: dt.quantity,
+                  returnedAt: dt.returnedAt,
+                })),
+                deliveredAt: d.deliveredAt,
+                status: d.status,
+              }}
             />
           </div>
 

@@ -964,6 +964,27 @@ export default function DispatchBoardClient({
                             customerName={group.customer?.name}
                             mapLink={group.mapLink}
                             variant="compact"
+                            isOffRoad={group.isOffRoad}
+                            accessLatitude={group.accessLatitude}
+                            accessLongitude={group.accessLongitude}
+                            offRoadBearingDeg={group.offRoadBearingDeg}
+                            offRoadDistanceM={group.offRoadDistanceM}
+                            isCentroidVerified={group.isCentroidVerified}
+                            dwellConfidence={group.dwellConfidence}
+                            logistics={{
+                              vehicle: group.vehicle,
+                              driver: group.driver,
+                              operator: group.operator,
+                              machine: group.machine,
+                              tools: group.dispatchTools?.map((dt: any) => ({
+                                id: dt.id,
+                                toolName: dt.tool?.name || "Tool",
+                                quantity: dt.quantity,
+                                returnedAt: dt.returnedAt,
+                              })),
+                              deliveredAt: group.deliveredAt,
+                              status: group.status,
+                            }}
                           />
                           <div className="text-[10px] text-slate-500 pt-1 flex items-center justify-between">
                             <span>Date: {new Date(group.dateOfService).toISOString().split("T")[0]}</span>
@@ -1235,6 +1256,27 @@ export default function DispatchBoardClient({
                   customerName={group.customer?.name}
                   mapLink={group.mapLink}
                   variant="cards"
+                  isOffRoad={group.isOffRoad}
+                  accessLatitude={group.accessLatitude}
+                  accessLongitude={group.accessLongitude}
+                  offRoadBearingDeg={group.offRoadBearingDeg}
+                  offRoadDistanceM={group.offRoadDistanceM}
+                  isCentroidVerified={group.isCentroidVerified}
+                  dwellConfidence={group.dwellConfidence}
+                  logistics={{
+                    vehicle: group.vehicle,
+                    driver: group.driver,
+                    operator: group.operator,
+                    machine: group.machine,
+                    tools: group.dispatchTools?.map((dt: any) => ({
+                      id: dt.id,
+                      toolName: dt.tool?.name || "Tool",
+                      quantity: dt.quantity,
+                      returnedAt: dt.returnedAt,
+                    })),
+                    deliveredAt: group.deliveredAt,
+                    status: group.status,
+                  }}
                 />
                 <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1 text-xs">
                   <div className="text-amber-400 font-bold mb-2">Job Assets:</div>

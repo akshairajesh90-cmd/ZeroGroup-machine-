@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { MapPin, Navigation, ExternalLink } from "lucide-react";
-import { SiteLocationPinModal } from "./SiteLocationPinModal";
+import { SiteLocationPinModal, type SiteLocationLogistics } from "./SiteLocationPinModal";
 
 export interface SiteLocationButtonsProps {
   latitude?: number | string | null;
@@ -21,6 +21,7 @@ export interface SiteLocationButtonsProps {
   offRoadDistanceM?: number | null;
   isCentroidVerified?: boolean | null;
   dwellConfidence?: number | null;
+  logistics?: SiteLocationLogistics | null;
 }
 
 /**
@@ -80,6 +81,7 @@ export function SiteLocationButtons({
   offRoadDistanceM,
   isCentroidVerified,
   dwellConfidence,
+  logistics,
 }: SiteLocationButtonsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -267,6 +269,7 @@ export function SiteLocationButtons({
           offRoadDistanceM={offRoadDistanceM}
           isCentroidVerified={isCentroidVerified}
           dwellConfidence={dwellConfidence}
+          logistics={logistics}
         />
       )}
     </>

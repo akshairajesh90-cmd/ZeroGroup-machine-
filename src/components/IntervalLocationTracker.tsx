@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { updateEmployeeLocation } from "@/actions/location";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { captureCurrentPosition } from "@/lib/geoCapture";
-import { offlineDb } from "@/lib/offlineDb";
+import { offlineDb, CachedLocationPing } from "@/lib/offlineDb";
+import { getGeoSessionId, getNextPingSequence } from "@/lib/geoSession";
 
-let globalLastPingTime = 0;
 let isPingingInProgress = false;
+let isFlushingInProgress = false;
 
 interface IntervalLocationTrackerProps {
   intervalMs?: number;
@@ -26,15 +26,67 @@ export default function IntervalLocationTracker({
   const [currentCadence, setCurrentCadence] = useState<number>(movingIntervalMs);
   const lastCoordsRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
 
-  // 1. Screen Wake Lock Management (Keeps screen awake on truck dashboard mount)
-  useEffect(() => {
-    if (typeof window === "undefined" || !("wakeLock" in navigator)) return;
+  // Replay & Flush offline queued pings to Route Handler atomically
+  const flushOfflineQueue = useCallback(async () => {
+    if (isFlushingInProgress) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
 
-    let isMounted = true;
+    try {
+      isFlushingInProgress = true;
+      const unsynced = await offlineDb.locationPings
+        .filter((p) => p.synced === false)
+        .toArray();
+
+      if (!unsynced || unsynced.length === 0) return;
+
+      // Sort strictly by seq ascending, fallback to timestamp
+      const sorted = unsynced.sort(
+        (a, b) => (a.seq ?? 0) - (b.seq ?? 0) || a.timestamp - b.timestamp
+      );
+
+      const payload = {
+        pings: sorted.map((p) => ({
+          employeeId: p.employeeId,
+          dispatchId: p.dispatchId,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          accuracy: p.accuracy,
+          altitude: p.altitude,
+          speed: p.speed,
+          heading: p.heading,
+          timestamp: p.timestamp,
+          source: "OFFLINE_REPLAY",
+          sessionId: p.sessionId,
+          seq: p.seq,
+        })),
+      };
+
+      const res = await fetch("/api/location/ping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        keepalive: true,
+      });
+
+      if (res.ok) {
+        const idsToRemove = sorted.map((p) => p.id).filter(Boolean) as number[];
+        await offlineDb.locationPings.bulkDelete(idsToRemove);
+        console.log(`[IntervalLocationTracker] Replayed ${idsToRemove.length} offline pings.`);
+      }
+    } catch (err: any) {
+      console.warn("[IntervalLocationTracker] Flush offline queue notice:", err.message);
+    } finally {
+      isFlushingInProgress = false;
+    }
+  }, []);
+
+  // 1. Screen Wake Lock & Visibility Focus Flusher
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
     const requestWakeLock = async () => {
+      if (!("wakeLock" in navigator)) return;
       try {
-        // Battery check: Don't force wake lock if battery is under 20% and discharging
         if ("getBattery" in navigator) {
           const battery: any = await (navigator as any).getBattery();
           if (battery.level < 0.2 && !battery.charging) {
@@ -45,7 +97,6 @@ export default function IntervalLocationTracker({
 
         if (document.visibilityState === "visible" && !wakeLockRef.current) {
           wakeLockRef.current = await (navigator as any).wakeLock.request("screen");
-          console.log("[WakeLock] Screen WakeLock acquired.");
           wakeLockRef.current.addEventListener("release", () => {
             wakeLockRef.current = null;
           });
@@ -60,22 +111,26 @@ export default function IntervalLocationTracker({
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         requestWakeLock();
-      } else {
-        console.warn("[IntervalLocationTracker] Driver switched away from app or locked screen.");
+        flushOfflineQueue();
       }
     };
 
+    const handleOnline = () => {
+      flushOfflineQueue();
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("online", handleOnline);
 
     return () => {
-      isMounted = false;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("online", handleOnline);
       if (wakeLockRef.current) {
         wakeLockRef.current.release().catch(() => {});
         wakeLockRef.current = null;
       }
     };
-  }, []);
+  }, [flushOfflineQueue]);
 
   // 2. Adaptive GPS Ping Loop
   useEffect(() => {
@@ -90,10 +145,16 @@ export default function IntervalLocationTracker({
       isPingingInProgress = true;
 
       try {
+        // Try flushing any queued pings first if online
+        if (navigator.onLine) {
+          flushOfflineQueue().catch(() => {});
+        }
+
         const pos = await captureCurrentPosition({
           timeout: 10000,
           maximumAge: 15000,
           allowSimulationFallback: true,
+          applyJitterFilter: true,
         });
 
         // Determine if moving or stationary to adjust next cadence
@@ -113,46 +174,47 @@ export default function IntervalLocationTracker({
         const nextCadence = isMoving ? movingIntervalMs : idleIntervalMs;
         setCurrentCadence(nextCadence);
 
-        // Network check: If offline, save directly to Dexie
-        if (typeof navigator !== "undefined" && !navigator.onLine) {
+        const sessionId = getGeoSessionId();
+        const seq = getNextPingSequence();
+
+        const pingPayload = {
+          employeeId,
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+          accuracy: pos.accuracy,
+          speed: pos.speed || undefined,
+          heading: pos.heading || undefined,
+          timestamp: pos.timestamp,
+          source: pos.source || "BROWSER",
+          sessionId,
+          seq,
+        };
+
+        // If offline, store in Dexie directly
+        if (!navigator.onLine) {
           if (employeeId) {
             await offlineDb.locationPings.add({
+              ...pingPayload,
               employeeId,
-              latitude: pos.latitude,
-              longitude: pos.longitude,
-              accuracy: pos.accuracy,
-              speed: pos.speed || undefined,
-              timestamp: pos.timestamp,
               synced: false,
             });
-            console.log("[IntervalLocationTracker] Offline: Queued ping in Dexie.");
+            console.log(`[IntervalLocationTracker] Offline: Queued ping #${seq} in Dexie.`);
           }
-          globalLastPingTime = now;
         } else {
-          // Send to Server
-          const res = await updateEmployeeLocation(
-            pos.latitude,
-            pos.longitude,
-            pos.accuracy,
-            pos.source,
-            pos.speed,
-            pos.heading,
-            pos.timestamp
-          );
+          // Direct HTTP POST to lean stateless Route Handler
+          const res = await fetch("/api/location/ping", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(pingPayload),
+            keepalive: true,
+          });
 
-          if (res?.success) {
-            globalLastPingTime = now;
-          } else {
-            console.warn("[IntervalLocationTracker] Location sync notice:", res?.error);
-            // Save to Dexie on server failure as well
+          if (!res.ok) {
+            console.warn("[IntervalLocationTracker] Server returned non-200. Queuing in Dexie.");
             if (employeeId) {
               await offlineDb.locationPings.add({
+                ...pingPayload,
                 employeeId,
-                latitude: pos.latitude,
-                longitude: pos.longitude,
-                accuracy: pos.accuracy,
-                speed: pos.speed || undefined,
-                timestamp: pos.timestamp,
                 synced: false,
               }).catch(() => {});
             }
@@ -162,7 +224,6 @@ export default function IntervalLocationTracker({
         console.warn("[IntervalLocationTracker] GPS capture notice:", err.message);
       } finally {
         isPingingInProgress = false;
-        // Schedule next execution dynamically
         if (!isDestroyed) {
           timeoutRef.current = setTimeout(executePingCycle, currentCadence);
         }
@@ -176,7 +237,7 @@ export default function IntervalLocationTracker({
       isDestroyed = true;
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [movingIntervalMs, idleIntervalMs, employeeId, currentCadence]);
+  }, [movingIntervalMs, idleIntervalMs, employeeId, currentCadence, flushOfflineQueue]);
 
   return null;
 }

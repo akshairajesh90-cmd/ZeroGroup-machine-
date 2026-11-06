@@ -98,6 +98,20 @@ export function DispatchTableLedger({
                         offRoadDistanceM={d.offRoadDistanceM}
                         isCentroidVerified={d.isCentroidVerified}
                         dwellConfidence={d.dwellConfidence}
+                        logistics={{
+                          vehicle: d.vehicle,
+                          driver: d.driver,
+                          operator: d.operator,
+                          machine: d.machine,
+                          tools: d.dispatchTools?.map((dt: any) => ({
+                            id: dt.id,
+                            toolName: dt.tool?.name || "Tool",
+                            quantity: dt.quantity,
+                            returnedAt: dt.returnedAt,
+                          })),
+                          deliveredAt: d.deliveredAt,
+                          status: d.status,
+                        }}
                       />
                       <div className="text-[10px] text-slate-500 pt-1 flex items-center justify-between">
                         <span>Date: {new Date(d.dateOfService).toISOString().split("T")[0]}</span>

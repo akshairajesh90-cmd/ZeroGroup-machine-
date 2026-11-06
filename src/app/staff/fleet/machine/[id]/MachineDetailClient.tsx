@@ -6,7 +6,8 @@ import { format } from "date-fns";
 import dynamic from "next/dynamic";
 import { 
   ArrowLeft, Info, Banknote, Fuel, MapPin, 
-  Wrench, AlertTriangle, Plus, CheckCircle2 
+  Wrench, AlertTriangle, Plus, CheckCircle2,
+  Truck, User, ExternalLink, Compass, Navigation, Clock 
 } from "lucide-react";
 import { createMaintenanceTicket, closeMaintenanceTicket, logStaffFuel } from "@/actions/fleet";
 import { EditMachineModal } from "./EditMachineModal";
@@ -17,7 +18,7 @@ const DynamicAssetMap = dynamic(
 );
 
 export default function MachineDetailClient({ 
-  machine, latitude, longitude, latestLocation, isFinancialAuth 
+  machine, latitude, longitude, latestLocation, isFinancialAuth, depotLatitude, depotLongitude, depotName 
 }: any) {
   const [activeTab, setActiveTab] = useState<"HISTORY" | "MAINTENANCE" | "FUEL">("HISTORY");
   
@@ -160,7 +161,10 @@ export default function MachineDetailClient({
           <DynamicAssetMap 
             latitude={latitude}
             longitude={longitude}
-            label={latestLocation || "Unknown Location"}
+            label={latestLocation || "Customer Job Site"}
+            depotLatitude={depotLatitude}
+            depotLongitude={depotLongitude}
+            depotName={depotName}
           />
         </div>
 
@@ -184,25 +188,137 @@ export default function MachineDetailClient({
               <table className="w-full text-sm text-left">
                 <thead className="text-xs uppercase bg-slate-950 text-slate-500 border-b border-slate-800">
                   <tr>
-                    <th className="px-6 py-4 font-black">Date</th>
-                    <th className="px-6 py-4 font-black">Location</th>
-                    <th className="px-6 py-4 font-black">Status</th>
+                    <th className="px-6 py-4 font-black">Date & Status</th>
+                    <th className="px-6 py-4 font-black">Customer Site & Location</th>
+                    <th className="px-6 py-4 font-black">Logistics & Crew</th>
+                    <th className="px-6 py-4 font-black">Dispatched Tools</th>
                     {isFinancialAuth && <th className="px-6 py-4 font-black text-right">Revenue (₹)</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
-                  {machine.dispatches.map((d: any) => (
-                    <tr key={d.id} className="hover:bg-slate-800/50">
-                      <td className="px-6 py-4 text-slate-300">{format(new Date(d.dateOfService), 'PPP')}</td>
-                      <td className="px-6 py-4 font-medium text-slate-200">{d.location}</td>
-                      <td className="px-6 py-4">
-                        <span className="px-2 py-1 rounded text-[10px] font-black bg-slate-800 text-slate-400 uppercase tracking-wider">{d.status}</span>
-                      </td>
-                      {isFinancialAuth && <td className="px-6 py-4 text-right font-mono text-emerald-400">{Number(d.customerCharge).toFixed(2)}</td>}
-                    </tr>
-                  ))}
+                  {machine.dispatches.map((d: any) => {
+                    const numLat = d.latitude ? Number(d.latitude) : null;
+                    const numLng = d.longitude ? Number(d.longitude) : null;
+                    const hasCoords = numLat !== null && numLng !== null && !isNaN(numLat) && !isNaN(numLng);
+                    const mapUrl = d.mapLink || (hasCoords ? `https://www.google.com/maps/dir/?api=1&destination=${numLat},${numLng}` : null);
+
+                    return (
+                      <tr key={d.id} className="hover:bg-slate-800/50 transition-colors">
+                        {/* Date & Status */}
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-slate-200">
+                            {format(new Date(d.dateOfService), 'dd MMM yyyy')}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                              d.status === "DELIVERED" || d.status === "COMPLETED"
+                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                : d.status === "IN_PROGRESS"
+                                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                : d.status === "EN_ROUTE"
+                                ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                                : "bg-slate-800 text-slate-400 border border-slate-700"
+                            }`}>
+                              {d.status}
+                            </span>
+                            {d.deliveredAt && (
+                              <span className="text-[10px] text-slate-500 flex items-center gap-0.5" title={`Delivered at ${new Date(d.deliveredAt).toLocaleTimeString()}`}>
+                                <Clock className="w-2.5 h-2.5" />
+                                {format(new Date(d.deliveredAt), 'p')}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Customer Site & Location */}
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-white">
+                            {d.customer?.name || "Client Site"}
+                          </div>
+                          <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-slate-500 shrink-0" />
+                            <span className="truncate max-w-xs">{d.location || "Site location"}</span>
+                          </div>
+                          {hasCoords && (
+                            <div className="mt-1 flex items-center gap-2">
+                              <span className="text-[10px] font-mono text-slate-500">
+                                {numLat?.toFixed(4)}, {numLng?.toFixed(4)}
+                              </span>
+                              {mapUrl && (
+                                <a
+                                  href={mapUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 font-bold hover:underline"
+                                >
+                                  <span>View Pin</span>
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                </a>
+                              )}
+                              {d.isCentroidVerified && (
+                                <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.2 rounded font-bold border border-purple-500/30">
+                                  Centroid Verified
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Logistics & Crew */}
+                        <td className="px-6 py-4 text-xs">
+                          {d.vehicle ? (
+                            <div className="flex items-center gap-1.5 text-slate-300">
+                              <Truck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                              <span className="font-bold">{d.vehicle.licensePlate || d.vehicle.modelName}</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-600 block">No truck assigned</span>
+                          )}
+
+                          {d.driver && (
+                            <div className="flex items-center gap-1.5 text-slate-400 mt-0.5">
+                              <User className="w-3 h-3 text-blue-400 shrink-0" />
+                              <span>Driver: <strong className="text-slate-300">{d.driver.fullName}</strong></span>
+                            </div>
+                          )}
+
+                          {d.operator && (
+                            <div className="flex items-center gap-1.5 text-slate-400 mt-0.5">
+                              <User className="w-3 h-3 text-emerald-400 shrink-0" />
+                              <span>Op: <strong className="text-slate-300">{d.operator.fullName}</strong></span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Dispatched Tools */}
+                        <td className="px-6 py-4">
+                          {d.dispatchTools && d.dispatchTools.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 max-w-xs">
+                              {d.dispatchTools.map((dt: any) => (
+                                <span
+                                  key={dt.id}
+                                  className="px-2 py-0.5 rounded text-[10px] bg-slate-950 border border-slate-800 text-slate-300 font-medium"
+                                >
+                                  {dt.tool?.name || "Tool"}{dt.quantity > 1 ? ` (×${dt.quantity})` : ""}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-600">No extra tools</span>
+                          )}
+                        </td>
+
+                        {/* Revenue */}
+                        {isFinancialAuth && (
+                          <td className="px-6 py-4 text-right font-mono text-emerald-400 font-bold">
+                            ₹{Number(d.customerCharge || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
                   {machine.dispatches.length === 0 && (
-                    <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-500">No dispatch history.</td></tr>
+                    <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-500">No dispatch history.</td></tr>
                   )}
                 </tbody>
               </table>

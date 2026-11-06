@@ -119,6 +119,7 @@ export interface SitePinProps {
   driverName?: string | null;
   crewCount?: number;
   dateOfService?: string;
+  tools?: { id: string; name: string; quantity: number; variant?: string | null }[];
 }
 
 export interface VehicleCardProps {
@@ -264,6 +265,53 @@ export default function LiveMapClient({
   } | null>(null);
   const [isLoadingTrail, setIsLoadingTrail] = useState(false);
 
+  // ── 2-SECOND SILENT LIVE MAP MICRO-POLL ─────────────────────────────
+  const [liveEmployeePins, setLiveEmployeePins] = useState<PinProps[]>(
+    employeePins.length > 0 ? employeePins : pins
+  );
+  const [liveSyncTime, setLiveSyncTime] = useState<Date>(new Date());
+
+  useEffect(() => {
+    setLiveEmployeePins(employeePins.length > 0 ? employeePins : pins);
+  }, [employeePins, pins]);
+
+  useEffect(() => {
+    let active = true;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/admin/location/live");
+        if (!res.ok || !active) return;
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          setLiveEmployeePins((prev) => {
+            const copy = [...prev];
+            for (const item of json.data) {
+              const idx = copy.findIndex((p) => p.id === item.id);
+              if (idx !== -1) {
+                copy[idx] = {
+                  ...copy[idx],
+                  latitude: item.lat,
+                  longitude: item.lng,
+                  speed: item.speed,
+                  lastUpdate: item.lastUpdate,
+                };
+              }
+            }
+            return copy;
+          });
+          setLiveSyncTime(new Date());
+        }
+      } catch {
+        // Silent catch for live poll
+      }
+    }, 2000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   // Search & Filtering State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSection, setSelectedSection] = useState<
@@ -289,8 +337,8 @@ export default function LiveMapClient({
   }, [routeTrails]);
 
   const allEmployees = useMemo(
-    () => (employeePins.length > 0 ? employeePins : pins),
-    [employeePins, pins]
+    () => (liveEmployeePins.length > 0 ? liveEmployeePins : (employeePins.length > 0 ? employeePins : pins)),
+    [liveEmployeePins, employeePins, pins]
   );
 
   // Unique locations list for dropdown
@@ -1202,6 +1250,23 @@ export default function LiveMapClient({
                     {site.driverName && (
                       <div>
                         Driver: <span className="font-medium text-slate-800">{site.driverName}</span>
+                      </div>
+                    )}
+                    {site.tools && site.tools.length > 0 && (
+                      <div className="pt-1.5 border-t border-slate-100 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                          🛠️ Tools on Site ({site.tools.length})
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {site.tools.map((t) => (
+                            <span
+                              key={t.id}
+                              className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-[10px] font-semibold border border-slate-200"
+                            >
+                              {t.quantity}× {t.name}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                     <div className="border-t border-slate-100 pt-1.5 mt-1.5 flex justify-between items-center text-[10px]">

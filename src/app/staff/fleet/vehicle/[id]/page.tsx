@@ -12,19 +12,35 @@ export default async function VehicleReportPage({ params }: { params: { id: stri
   const vehicle = await prisma.vehicle.findUnique({
     where: { id: params.id },
     include: {
+      dispatches: {
+        orderBy: { dateOfService: "desc" },
+        take: 20,
+        include: {
+          customer: true,
+          driver: true,
+          machine: true,
+          lift: true,
+          vibrator: true,
+          dispatchTools: {
+            include: {
+              tool: true,
+            },
+          },
+        },
+      },
       fuelLogs: {
         orderBy: { date: "desc" },
         take: 10,
-        include: { driver: true }
+        include: { driver: true },
       },
       maintenanceTickets: {
         orderBy: { createdAt: "desc" },
         take: 10,
       },
       documents: {
-        orderBy: { expiryDate: "asc" }
-      }
-    }
+        orderBy: { expiryDate: "asc" },
+      },
+    },
   });
 
   if (!vehicle) {
@@ -32,6 +48,6 @@ export default async function VehicleReportPage({ params }: { params: { id: stri
   }
 
   return (
-    <VehicleDetailClient vehicle={vehicle} />
+    <VehicleDetailClient vehicle={JSON.parse(JSON.stringify(vehicle))} />
   );
 }

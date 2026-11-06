@@ -62,3 +62,4 @@ step_*
 target_*
 temp_*
 *.log
+proof-screenshots/

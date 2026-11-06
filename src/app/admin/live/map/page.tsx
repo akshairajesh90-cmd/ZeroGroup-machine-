@@ -116,6 +116,9 @@ export default async function LiveMapPage({
       crewAssignments: {
         include: { employee: { select: { id: true, name: true } } },
       },
+      dispatchTools: {
+        include: { tool: { select: { id: true, name: true, toolType: true } } },
+      },
     },
   });
 
@@ -273,6 +276,12 @@ export default async function LiveMapPage({
       driverName: d.driver?.name ?? null,
       crewCount: d.crewAssignments?.length ?? 0,
       dateOfService: new Date(d.dateOfService).toISOString().split("T")[0],
+      tools: d.dispatchTools?.map((dt) => ({
+        id: dt.tool.id,
+        name: dt.tool.name,
+        quantity: dt.quantity,
+        variant: dt.variant,
+      })) ?? [],
     }));
 
   // ── Serialize vehicle fleet cards ─────────────────────────────────────────

@@ -16,42 +16,43 @@ import {
   FileText,
   BadgeCheck,
   Tag,
+  Check,
 } from "lucide-react";
 import { submitPasswordResetRequestAction } from "@/actions/credentials";
 
 export const CREW_ALLOCATION_GROUPS = [
   {
-    category: "Drivers & Transport",
+    category: "Machine & Equipment Operators",
     roles: [
-      { value: "DRIVER", label: "Fleet Driver" },
+      { value: "MIXER_OPERATOR", label: "Concrete Mixer Operator", icon: "🛠️" },
+      { value: "HYDRAULIC_OPERATOR", label: "Hydraulic Machine Operator", icon: "🚜" },
+      { value: "LIFT_OPERATOR", label: "Lift / Hoist Operator", icon: "🏗️" },
+      { value: "VIBRATOR_OPERATOR", label: "Vibrator Operator", icon: "⚡" },
+      { value: "P_VIBRATOR", label: "Petrol Vibrator Operator", icon: "⛽" },
+      { value: "OPERATOR", label: "General Plant / Machine Operator", icon: "⚙️" },
     ],
   },
   {
-    category: "Machine & Equipment Operators",
+    category: "Drivers & Transport",
     roles: [
-      { value: "MIXER_OPERATOR", label: "Concrete Mixer Operator" },
-      { value: "HYDRAULIC_OPERATOR", label: "Hydraulic Machine Operator" },
-      { value: "LIFT_OPERATOR", label: "Lift / Hoist Operator" },
-      { value: "VIBRATOR_OPERATOR", label: "Vibrator Operator" },
-      { value: "P_VIBRATOR", label: "Petrol Vibrator Operator" },
-      { value: "OPERATOR", label: "General Plant / Machine Operator" },
+      { value: "DRIVER", label: "Fleet Driver", icon: "🚚" },
     ],
   },
   {
     category: "Site & Trolly Crew",
     roles: [
-      { value: "WORKER_LEADER", label: "Site Leader / Mason Lead" },
-      { value: "SUB_LEADER", label: "Sub Leader" },
-      { value: "TROLLY_1_WHEEL", label: "1-Wheel Trolly Operator" },
-      { value: "TROLLY_2_WHEEL", label: "2-Wheel Trolly Operator" },
-      { value: "HELPER", label: "General Helper (Pani / Site Labour)" },
-      { value: "WORKER", label: "General Site Crew / Worker" },
+      { value: "WORKER_LEADER", label: "Site Leader / Mason Lead", icon: "👷" },
+      { value: "SUB_LEADER", label: "Sub Leader", icon: "👥" },
+      { value: "TROLLY_1_WHEEL", label: "1-Wheel Trolly Operator", icon: "🛞" },
+      { value: "TROLLY_2_WHEEL", label: "2-Wheel Trolly Operator", icon: "🛞" },
+      { value: "HELPER", label: "General Helper (Pani / Site Labour)", icon: "🤝" },
+      { value: "WORKER", label: "General Site Crew / Worker", icon: "🧱" },
     ],
   },
   {
     category: "Office & Operations Support",
     roles: [
-      { value: "STAFF", label: "Office Staff / Depot Assistant" },
+      { value: "STAFF", label: "Office Staff / Depot Assistant", icon: "🏢" },
     ],
   },
 ];
@@ -64,7 +65,7 @@ export default function ResetPasswordClient({
   const isNumeric = /^\+?\d+$/.test(prefilledIdentifier.trim());
   const [name, setName] = useState(isNumeric ? "" : prefilledIdentifier);
   const [phone, setPhone] = useState(isNumeric ? prefilledIdentifier : "");
-  const [role, setRole] = useState<string>("DRIVER");
+  const [selectedRoles, setSelectedRoles] = useState<string[]>(["OPERATOR"]);
   const [notes, setNotes] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,9 +73,21 @@ export default function ResetPasswordClient({
   const [submittedData, setSubmittedData] = useState<{
     name: string;
     role: string;
+    roles: string[];
     phone: string;
     capableRoles?: string[];
   } | null>(null);
+
+  const toggleRole = (roleValue: string) => {
+    setSelectedRoles((prev) => {
+      if (prev.includes(roleValue)) {
+        if (prev.length === 1) return prev; // Keep at least one selected
+        return prev.filter((r) => r !== roleValue);
+      } else {
+        return [...prev, roleValue];
+      }
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,6 +99,10 @@ export default function ResetPasswordClient({
       setErrorMsg("Please enter your registered Mobile Number.");
       return;
     }
+    if (selectedRoles.length === 0) {
+      setErrorMsg("Please select at least one role / crew skill.");
+      return;
+    }
 
     setIsSubmitting(true);
     setErrorMsg(null);
@@ -94,14 +111,16 @@ export default function ResetPasswordClient({
       const res = await submitPasswordResetRequestAction({
         name: name.trim(),
         phone: phone.trim(),
-        role: role,
+        role: selectedRoles[0],
+        roles: selectedRoles,
         notes: notes.trim(),
       });
 
       if (res.success) {
         setSubmittedData({
           name: res.employeeName || name.trim(),
-          role: res.employeeRole || role,
+          role: res.employeeRole || selectedRoles[0],
+          roles: selectedRoles,
           phone: res.phone || phone.trim(),
           capableRoles: res.capableRoles || [],
         });
@@ -201,30 +220,61 @@ export default function ResetPasswordClient({
                   </p>
                 </div>
 
-                {/* Designated Role / Crew Allocation Selection */}
+                {/* Designated Role(s) / Crew Allocation Selection */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Your Role / Crew Allocation</span>
-                  </label>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-semibold"
-                  >
-                    {CREW_ALLOCATION_GROUPS.map((group) => (
-                      <optgroup key={group.category} label={`── ${group.category} ──`} className="bg-slate-900 text-slate-400 font-bold">
-                        {group.roles.map((r) => (
-                          <option key={r.value} value={r.value} className="bg-slate-950 text-white font-normal py-1">
-                            {r.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Select your primary designation or any of your allocated capable crew roles.
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Select Your Role(s) / Crew Skills</span>
+                    </label>
+                    <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                      {selectedRoles.length} selected
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mb-2.5">
+                    Tap to select one or multiple roles. Operators handling multiple machines (e.g. Mixer + Lift + Vibrator) can select all applicable roles.
                   </p>
+
+                  <div className="space-y-3 max-h-72 overflow-y-auto pr-1 border border-slate-800/80 rounded-2xl p-2.5 bg-slate-950/60">
+                    {CREW_ALLOCATION_GROUPS.map((group) => (
+                      <div key={group.category} className="space-y-1.5">
+                        <span className="text-[10px] font-bold tracking-wider uppercase text-slate-500 px-1 block">
+                          ── {group.category} ──
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {group.roles.map((r) => {
+                            const isSelected = selectedRoles.includes(r.value);
+                            return (
+                              <button
+                                key={r.value}
+                                type="button"
+                                onClick={() => toggleRole(r.value)}
+                                className={`min-h-[42px] px-3 py-2 rounded-xl text-xs font-medium text-left flex items-center justify-between transition-all border ${
+                                  isSelected
+                                    ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-200 shadow-sm"
+                                    : "bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                                }`}
+                              >
+                                <span className="flex items-center gap-1.5 truncate">
+                                  <span className="text-sm shrink-0">{r.icon}</span>
+                                  <span className="truncate">{r.label}</span>
+                                </span>
+                                <span
+                                  className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 ml-1.5 ${
+                                    isSelected
+                                      ? "bg-emerald-500 border-emerald-400 text-slate-950"
+                                      : "border-slate-700 bg-slate-900"
+                                  }`}
+                                >
+                                  {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Optional Note */}
@@ -294,9 +344,19 @@ export default function ResetPasswordClient({
                   <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
                     <BadgeCheck className="w-3.5 h-3.5" /> Verified Crew Member
                   </span>
-                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                    {submittedData.role}
-                  </span>
+                  <div className="flex flex-wrap gap-1 justify-end max-w-[65%]">
+                    {submittedData.roles && submittedData.roles.length > 0 ? (
+                      submittedData.roles.map((r) => (
+                        <span key={r} className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                          {r.replace(/_/g, " ")}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                        {submittedData.role}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between py-0.5">

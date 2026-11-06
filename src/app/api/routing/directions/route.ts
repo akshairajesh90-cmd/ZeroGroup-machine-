@@ -58,147 +58,159 @@ function sampleWaypoints(points: [number, number][], maxPoints = 25): [number, n
   return result;
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    let waypoints: [number, number][] = [];
+async function processRouting(body: any) {
+  let waypoints: [number, number][] = [];
 
-    if (Array.isArray(body.waypoints) && body.waypoints.length >= 2) {
-      waypoints = body.waypoints;
-    } else if (Array.isArray(body.coordinates) && body.coordinates.length >= 2) {
-      waypoints = body.coordinates.map((c: any) => {
-        const a = Number(c[0]);
-        const b = Number(c[1]);
-        if (a > 50 && b < 20) {
-          return [b, a] as [number, number];
-        }
-        return [a, b] as [number, number];
-      });
-    } else if (body.origin && body.destination) {
-      waypoints = [
-        [Number(body.origin[0]), Number(body.origin[1])],
-        [Number(body.destination[0]), Number(body.destination[1])],
-      ];
-    }
-
-    let dualPoint = null;
-    if (body.accessWaypoint && body.gatePin) {
-      dualPoint = resolveDualPointNavigation(
-        [Number(body.accessWaypoint[0]), Number(body.accessWaypoint[1])],
-        [Number(body.gatePin[0]), Number(body.gatePin[1])]
-      );
-    }
-
-    if (waypoints.length < 2) {
-      return NextResponse.json(
-        { error: "At least two coordinates (origin & destination) are required." },
-        { status: 400 }
-      );
-    }
-
-    // Filter invalid coordinates
-    waypoints = waypoints.filter(
-      (p) =>
-        Array.isArray(p) &&
-        p.length >= 2 &&
-        !isNaN(p[0]) &&
-        !isNaN(p[1]) &&
-        p[0] !== 0 &&
-        p[1] !== 0
-    );
-
-    if (waypoints.length < 2) {
-      return NextResponse.json(
-        { error: "Invalid coordinates provided." },
-        { status: 400 }
-      );
-    }
-
-    // Build Cache Key from sampled waypoints
-    const sampled = sampleWaypoints(waypoints, 15);
-    const cacheKey = sampled
-      .map(([lat, lng]) => `${lat.toFixed(4)},${lng.toFixed(4)}`)
-      .join(";");
-
-    const cached = routeCache.get(cacheKey);
-    if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
-      return NextResponse.json({
-        success: true,
-        ...cached,
-        fromCache: true,
-      });
-    }
-
-    // Call OSRM Road Routing API
-    // OSRM expects coordinates in {lon},{lat} format!
-    const osrmCoords = sampled.map(([lat, lng]) => `${lng},${lat}`).join(";");
-    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${osrmCoords}?overview=full&geometries=geojson`;
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500); // 4.5s timeout
-
-    let osrmData: any = null;
-    try {
-      const response = await fetch(osrmUrl, {
-        signal: controller.signal,
-        headers: { "User-Agent": "ZeroGroupRoadRouter/1.0" },
-      });
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        osrmData = await response.json();
+  if (Array.isArray(body?.waypoints) && body.waypoints.length >= 2) {
+    waypoints = body.waypoints;
+  } else if (Array.isArray(body?.coordinates) && body.coordinates.length >= 2) {
+    waypoints = body.coordinates.map((c: any) => {
+      const a = Number(c[0]);
+      const b = Number(c[1]);
+      if (a > 50 && b < 20) {
+        return [b, a] as [number, number];
       }
-    } catch (err: any) {
-      clearTimeout(timeoutId);
-      console.warn("[RoadRouter] OSRM fetch failed or timed out:", err.message);
+      return [a, b] as [number, number];
+    });
+  } else if (body?.origin && body?.destination) {
+    waypoints = [
+      [Number(body.origin[0]), Number(body.origin[1])],
+      [Number(body.destination[0]), Number(body.destination[1])],
+    ];
+  }
+
+  let dualPoint = null;
+  if (body?.accessWaypoint && body?.gatePin) {
+    dualPoint = resolveDualPointNavigation(
+      [Number(body.accessWaypoint[0]), Number(body.accessWaypoint[1])],
+      [Number(body.gatePin[0]), Number(body.gatePin[1])]
+    );
+  }
+
+  if (waypoints.length < 2) {
+    return NextResponse.json(
+      { error: "At least two coordinates (origin & destination) are required." },
+      { status: 400 }
+    );
+  }
+
+  // Filter invalid coordinates
+  waypoints = waypoints.filter(
+    (p) =>
+      Array.isArray(p) &&
+      p.length >= 2 &&
+      !isNaN(p[0]) &&
+      !isNaN(p[1]) &&
+      p[0] !== 0 &&
+      p[1] !== 0
+  );
+
+  if (waypoints.length < 2) {
+    return NextResponse.json(
+      { error: "Invalid coordinates provided." },
+      { status: 400 }
+    );
+  }
+
+  // Build Cache Key from sampled waypoints
+  const sampled = sampleWaypoints(waypoints, 15);
+  const cacheKey = sampled
+    .map(([lat, lng]) => `${lat.toFixed(4)},${lng.toFixed(4)}`)
+    .join(";");
+
+  const cached = routeCache.get(cacheKey);
+  if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
+    return NextResponse.json({
+      success: true,
+      ...cached,
+      fromCache: true,
+    });
+  }
+
+  // Call OSRM Road Routing API
+  // OSRM expects coordinates in {lon},{lat} format!
+  const osrmCoords = sampled.map(([lat, lng]) => `${lng},${lat}`).join(";");
+  const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${osrmCoords}?overview=full&geometries=geojson`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
+
+  let osrmData: any = null;
+  try {
+    const response = await fetch(osrmUrl, {
+      signal: controller.signal,
+      headers: { "User-Agent": "ZeroGroupRoadRouter/1.0" },
+    });
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      osrmData = await response.json();
     }
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    console.warn("[RoadRouter] OSRM fetch failed or timed out:", err.message);
+  }
 
-    // If OSRM returned road route successfully
-    if (osrmData && osrmData.code === "Ok" && osrmData.routes?.[0]?.geometry?.coordinates) {
-      const route = osrmData.routes[0];
-      // Convert OSRM GeoJSON [lon, lat] back to Leaflet [lat, lng]
-      const coordinates: [number, number][] = route.geometry.coordinates.map(
-        ([lon, lat]: [number, number]) => [lat, lon]
-      );
-      const distanceKm = Math.round((route.distance / 1000) * 10) / 10;
-      const durationMins = Math.max(1, Math.round(route.duration / 60));
+  // If OSRM returned road route successfully
+  if (osrmData && osrmData.code === "Ok" && osrmData.routes?.[0]?.geometry?.coordinates) {
+    const route = osrmData.routes[0];
+    // Convert OSRM GeoJSON [lon, lat] back to Leaflet [lat, lng]
+    const coordinates: [number, number][] = route.geometry.coordinates.map(
+      ([lon, lat]: [number, number]) => [lat, lon]
+    );
+    const distanceKm = Math.round((route.distance / 1000) * 10) / 10;
+    const durationMins = Math.max(1, Math.round(route.duration / 60));
 
-      const result: CachedRoute = {
-        coordinates,
-        distanceKm,
-        durationMins,
-        isRoadSnapped: true,
-        cachedAt: Date.now(),
-      };
-
-      routeCache.set(cacheKey, result);
-
-      return NextResponse.json({
-        success: true,
-        ...result,
-        durationMin: durationMins,
-        dualPoint: dualPoint || undefined,
-      });
-    }
-
-    // Fallback: Return straight lines between given waypoints
-    const fallbackDist = calculatePathDistance(waypoints);
-    const fallbackDuration = Math.max(1, Math.round(fallbackDist * 1.8));
-    const fallbackResult: CachedRoute = {
-      coordinates: waypoints,
-      distanceKm: fallbackDist,
-      durationMins: fallbackDuration,
-      isRoadSnapped: false,
+    const result: CachedRoute = {
+      coordinates,
+      distanceKm,
+      durationMins,
+      isRoadSnapped: true,
       cachedAt: Date.now(),
     };
 
+    routeCache.set(cacheKey, result);
+
     return NextResponse.json({
       success: true,
-      ...fallbackResult,
-      durationMin: fallbackDuration,
+      ...result,
+      durationMin: durationMins,
       dualPoint: dualPoint || undefined,
-      fallback: true,
     });
+  }
+
+  // Fallback: Return straight lines between given waypoints
+  const fallbackDist = calculatePathDistance(waypoints);
+  const fallbackDuration = Math.max(1, Math.round(fallbackDist * 1.8));
+  const fallbackResult: CachedRoute = {
+    coordinates: waypoints,
+    distanceKm: fallbackDist,
+    durationMins: fallbackDuration,
+    isRoadSnapped: false,
+    cachedAt: Date.now(),
+  };
+
+  return NextResponse.json({
+    success: true,
+    ...fallbackResult,
+    durationMin: fallbackDuration,
+    dualPoint: dualPoint || undefined,
+    fallback: true,
+  });
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      try {
+        const text = await req.text();
+        if (text) body = JSON.parse(text);
+      } catch {}
+    }
+    return await processRouting(body);
   } catch (error: any) {
     console.error("[RoadRouter] Error handling route request:", error);
     return NextResponse.json(
@@ -209,31 +221,34 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const originStr = searchParams.get("origin");
-  const destStr = searchParams.get("destination");
-  const waypointsStr = searchParams.get("waypoints");
+  try {
+    const { searchParams } = new URL(req.url);
+    const originStr = searchParams.get("origin");
+    const destStr = searchParams.get("destination");
+    const waypointsStr = searchParams.get("waypoints");
 
-  let waypoints: [number, number][] = [];
+    let waypoints: [number, number][] = [];
 
-  if (waypointsStr) {
-    waypoints = waypointsStr.split(";").map((pair) => {
-      const [lat, lng] = pair.split(",").map(Number);
-      return [lat, lng];
-    });
-  } else if (originStr && destStr) {
-    const [origLat, origLng] = originStr.split(",").map(Number);
-    const [destLat, destLng] = destStr.split(",").map(Number);
-    waypoints = [
-      [origLat, origLng],
-      [destLat, destLng],
-    ];
+    if (waypointsStr) {
+      waypoints = waypointsStr.split(";").map((pair) => {
+        const [lat, lng] = pair.split(",").map(Number);
+        return [lat, lng];
+      });
+    } else if (originStr && destStr) {
+      const [origLat, origLng] = originStr.split(",").map(Number);
+      const [destLat, destLng] = destStr.split(",").map(Number);
+      waypoints = [
+        [origLat, origLng],
+        [destLat, destLng],
+      ];
+    }
+
+    return await processRouting({ waypoints });
+  } catch (error: any) {
+    console.error("[RoadRouter] Error handling GET route request:", error);
+    return NextResponse.json(
+      { error: "Internal error calculating road route", details: error.message },
+      { status: 500 }
+    );
   }
-
-  const postReq = new NextRequest(req.url, {
-    method: "POST",
-    body: JSON.stringify({ waypoints }),
-  });
-
-  return POST(postReq);
 }

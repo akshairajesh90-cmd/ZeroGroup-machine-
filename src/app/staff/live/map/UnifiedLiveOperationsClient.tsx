@@ -201,7 +201,7 @@ export default function UnifiedLiveOperationsClient({
 
   // 1. SWR 5-SECOND BACKGROUND MICRO-POLL
   const { data: liveStream } = useSWR("/api/admin/location/live", fetcher, {
-    refreshInterval: 5000,
+    refreshInterval: 2000,
     revalidateOnFocus: true,
   });
 
