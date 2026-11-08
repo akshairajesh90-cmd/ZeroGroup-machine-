@@ -1,7 +1,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/serverAuth";
+import { checkRateLimit } from "@/lib/rate-limiter";
+import { requireAuth, AuthError } from "@/lib/serverAuth";
 import { logAudit } from "@/lib/auditLogger";
 import {
   calculateLiftOperatorWage,
@@ -10,6 +11,13 @@ import {
 } from "@/lib/pricingEngine";
 
 export async function getAssetPnL(startDate: string, endDate: string) {
+  // Authenticate user and enforce rate limit (15 req per minute)
+  const authCtx = await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
+  if (!checkRateLimit(`rate:${authCtx.userId}`, 15)) {
+    // 429 Too Many Requests
+    throw new AuthError(429, "Rate limit exceeded. Please try again later.");
+  }
+
   await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
 
   // Use raw queries with CTEs to avoid cartesian products on joins

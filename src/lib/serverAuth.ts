@@ -14,7 +14,7 @@ export interface AuthContext {
 
 // Typed errors thrown by requireAuth so API routes can catch & return proper HTTP codes
 export class AuthError extends Error {
-  constructor(public statusCode: 401 | 403, message: string) {
+  constructor(public statusCode: number, message: string) {
     super(message);
     this.name = "AuthError";
   }

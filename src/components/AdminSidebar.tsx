@@ -24,6 +24,7 @@ import {
   UserCog,
   KeyRound,
   User,
+  Globe,
 } from "lucide-react";
 import { handleSignOut } from "@/actions/auth";
 import { getPendingPasswordResetCountAction } from "@/actions/credentials";
@@ -157,6 +158,7 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
         { label: "Driver Mobile App", href: "/driver/home", icon: Truck },
         { label: "Field Operator App", href: "/operator/home", icon: HardHat },
         { label: "Trash & Recovery", href: "/owner/trash", icon: Trash2 },
+        { label: "Public Website & Yard", href: "/admin/settings/website", icon: Globe },
       ]
     }
   ];

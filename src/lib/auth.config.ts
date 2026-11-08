@@ -29,8 +29,8 @@ export const authConfig = {
   secret: authSecret,
   trustHost: true,
   pages: {
-    signIn: "/",
-    error: "/",
+    signIn: "/login",
+    error: "/login",
   },
   session: {
     strategy: "jwt",
@@ -110,6 +110,7 @@ export const authConfig = {
         // Allow public paths without a session
         if (
           pathname === "/" ||
+          pathname === "/login" ||
           pathname === "/operator/login" ||
           pathname.startsWith("/reset-password") ||
           pathname.startsWith("/api/")
@@ -120,26 +121,30 @@ export const authConfig = {
         return false;
       }
 
-      // If arriving at root with an error or logout parameter, stay on root to display message/re-login
-      if (pathname === "/" && (nextUrl.searchParams.has("error") || nextUrl.searchParams.has("logout"))) {
+      // If arriving at /login with an error or logout parameter, stay on /login
+      if (pathname === "/login" && (nextUrl.searchParams.has("error") || nextUrl.searchParams.has("logout"))) {
         return true;
+      }
+
+      // ── LOGGED IN: REDIRECT /login OR /redirecting TO ROLE DASHBOARD ────────
+      if (pathname === "/login" || pathname === "/redirecting") {
+        if (role === "OWNER" || role === "ADMIN") return safeRedirect("/admin/dashboard");
+        if (role === "STAFF") return safeRedirect("/staff/dashboard");
+        if (role === "OPERATOR") return safeRedirect("/operator/home");
+        return safeRedirect("/driver/home");
       }
 
       // ── GOD MODE UNIVERSAL BYPASS ────────────────────────────────────────────
       // OWNER and ADMIN can go ANYWHERE. No exceptions. Period.
       const isGodMode = role === "OWNER" || role === "ADMIN";
       if (isGodMode) {
-        // Only redirect away from the bare root "/" or "/redirecting" to their home
-        if (pathname === "/" || pathname === "/redirecting") {
-          return safeRedirect("/admin/dashboard");
-        }
         return true;
       }
 
       // ── LOGGED IN, NON-ADMIN ROLE ─────────────────────────────────────────────
 
-      // Redirect root or /redirecting based on role
-      if (pathname === "/" || pathname === "/redirecting") {
+      // Redirect /redirecting based on role
+      if (pathname === "/redirecting") {
         if (role === "STAFF") return safeRedirect("/staff/dashboard");
         if (role === "OPERATOR") return safeRedirect("/operator/home");
         return safeRedirect("/driver/home");

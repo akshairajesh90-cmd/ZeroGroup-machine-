@@ -1,3 +1,8 @@
+export const dynamic = 'force-dynamic';
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL is missing – Prisma cannot connect');
+}
+
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 

@@ -792,13 +792,21 @@ model ChatMessage {
 }
 
 model SystemSettings {
-  id              String   @id @default(cuid())
-  maintenanceMode Boolean  @default(false)
-  storeName       String?  @default("Zero Group Main Yard & Store")
-  storeAddress    String?  @default("Pala, Kottayam, Kerala")
-  storeLatitude   Decimal? @default(9.5916) @db.Decimal(10, 7)
-  storeLongitude  Decimal? @default(76.5222) @db.Decimal(10, 7)
-  updatedAt       DateTime @updatedAt
+  id                String   @id @default(cuid())
+  maintenanceMode   Boolean  @default(false)
+  maintenanceNotice String?  @default("Scheduled fleet maintenance window. Emergency plant dispatch active via helpline.")
+  storeName         String?  @default("Zero Group Main Yard & Store")
+  storeAddress      String?  @default("Pala, Kottayam, Kerala")
+  storeLatitude     Decimal? @default(9.5916) @db.Decimal(10, 7)
+  storeLongitude    Decimal? @default(76.5222) @db.Decimal(10, 7)
+  companyPhone      String?  @default("+91 94470 00000")
+  whatsappNumber    String?  @default("919447000000")
+  companyEmail      String?  @default("operations@zerogroup.in")
+  gstinNumber       String?  @default("32AAAAZ0000A1Z5")
+  heroHeadline      String?  @default("Heavy Construction Equipment & Precision Plant Logistics")
+  heroSubheadline   String?  @default("Commercial concrete mixers, vertical material hoists, and heavy de-watering plant supplied across Kerala with certified operators.")
+  publicNotice      String?  @default("Full equipment fleet operational across Central Kerala. Direct flatbed site dispatch active.")
+  updatedAt         DateTime @updatedAt
 
   @@map("system_settings")
 }

