@@ -23,7 +23,13 @@ const authSecret =
     ? process.env.AUTH_SECRET
     : (process.env.NEXTAUTH_SECRET && process.env.NEXTAUTH_SECRET.trim() !== "")
     ? process.env.NEXTAUTH_SECRET
-    : "6b5e265634b023c3eee10686920115d65626617b3fea572037c1694816cb1534";
+    : undefined;
+
+if (!authSecret && process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build") {
+  throw new Error(
+    "[FATAL AUTH CONFIG] Missing AUTH_SECRET or NEXTAUTH_SECRET in environment. Plaintext fallbacks are strictly prohibited."
+  );
+}
 
 export const authConfig = {
   secret: authSecret,

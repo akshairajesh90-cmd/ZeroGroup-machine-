@@ -71,6 +71,9 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "ZERO GROUP",
   },
+  verification: {
+    google: "google5713decb6fa7f26a",
+  },
 };
 
 export const viewport: Viewport = {
