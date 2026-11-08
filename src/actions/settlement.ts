@@ -1,13 +1,9 @@
-'use server';
+/**
+ * Settlement Actions Facade - Zero Group
+ * Re-exports modularized settlement actions to preserve backward compatibility:
+ * - Calculate Engine: calculateOperatorSettlement, calculateWorkerLedgerBalances, calculateMultiPlayerBreakdown
+ * - Adjustments: createManualAdjustment, approveManualAdjustment
+ * - Lifecycle: generateSettlement, updateSettlement, finalizeSettlement, finalizeWeeklySettlement
+ */
 
-export {
-  calculateOperatorSettlement,
-  calculateWorkerLedgerBalances,
-  calculateMultiPlayerBreakdown,
-  createManualAdjustment,
-  approveManualAdjustment,
-  generateSettlement,
-  updateSettlement,
-  finalizeSettlement,
-  finalizeWeeklySettlement,
-} from './settlement/index';
+export * from './settlement/index';
