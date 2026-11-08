@@ -3,6 +3,8 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Providers } from "./providers";
+import { auth } from "@/lib/auth";
+import ImpersonateExitButton from "@/components/driver/ImpersonateExitButton";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -16,17 +18,58 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "ZERO GROUP — Enterprise Equipment & Logistics",
-  description: "Enterprise equipment rental ERP and field PWA for ZERO GROUP",
+  metadataBase: new URL("https://zero-group-machine.vercel.app"),
+  title: {
+    default: "ZERO GROUP — Heavy Machinery & Construction Plant Rentals | Kerala",
+    template: "%s | ZERO GROUP Machinery",
+  },
+  description:
+    "Commercial hydraulic concrete mixers, high-rise material hoists, needle vibrator rigs, and industrial de-watering pumps on hire across Kerala. Supplied directly from Central Yard with certified operators.",
+  keywords: [
+    "ZERO GROUP",
+    "Zero Group machine",
+    "Concrete mixer rental Kerala",
+    "Heavy machinery hire Kottayam",
+    "Material hoist rental Kerala",
+    "Builder hoist hire Kerala",
+    "Construction equipment rentals Ernakulam",
+    "Needle vibrator rental Kerala",
+    "Diesel de-watering pump rental",
+    "Pala heavy equipment hire",
+  ],
+  authors: [{ name: "ZERO GROUP Heavy Machinery & Equipment Rentals" }],
+  creator: "ZERO GROUP",
+  publisher: "ZERO GROUP",
   manifest: "/manifest.json",
   robots: {
-    index: false,
-    follow: false,
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  openGraph: {
+    title: "ZERO GROUP — Heavy Machinery & Construction Plant Rentals",
+    description:
+      "Commercial concrete mixers, vertical material hoists, vibrators, and de-watering pumps on hire across Kerala. Supplied with certified operators.",
+    url: "https://zero-group-machine.vercel.app",
+    siteName: "ZERO GROUP Machinery Rentals",
+    locale: "en_IN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ZERO GROUP — Heavy Machinery & Plant Rentals",
+    description: "Commercial concrete mixers, high-rise material hoists, and de-watering plant across Kerala.",
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "ZG Driver",
+    title: "ZERO GROUP",
   },
 };
 
@@ -34,11 +77,7 @@ export const viewport: Viewport = {
   themeColor: "#0f172a",
   width: "device-width",
   initialScale: 1,
-
 };
-
-import { auth } from "@/lib/auth";
-import ImpersonateExitButton from "@/components/driver/ImpersonateExitButton";
 
 export default async function RootLayout({
   children,

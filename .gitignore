@@ -22,6 +22,12 @@ playwright/.auth/
 # misc
 .DS_Store
 *.pem
+*.bak
+*.backup
+*.old
+*.orig
+*.tmp
+*.swp
 
 # debug
 npm-debug.log*
@@ -44,12 +50,13 @@ next-env.d.ts
 
 /src/generated/prisma
 
-# temporary dev/scratch scripts
+# temporary dev/scratch scripts & artifacts
 fix_*.js
 fix_*.ts
 fix_*.py
 scratch_*.ts
 scratch/
+.scratch/
 check_logins.js
 get_users.ts
 keep_alive_tunnel.js

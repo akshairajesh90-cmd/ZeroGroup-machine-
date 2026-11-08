@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+Allow: /login
+Disallow: /admin/
+Disallow: /owner/
+Disallow: /staff/
+Disallow: /driver/
+Disallow: /operator/
+Disallow: /api/
+Disallow: /redirecting
+
+User-agent: Googlebot
+Allow: /
+Allow: /login
+Disallow: /admin/
+Disallow: /owner/
+Disallow: /staff/
+Disallow: /driver/
+Disallow: /operator/
+Disallow: /api/
+Disallow: /redirecting
+
+Sitemap: https://zero-group-machine.vercel.app/sitemap.xml
