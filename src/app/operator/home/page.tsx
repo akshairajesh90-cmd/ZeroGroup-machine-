@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/serverAuth";
 import { startOfDay, endOfDay, format, addDays } from "date-fns";
 import PreStartChecklist from "./PreStartChecklist";
 import DocketCanvas from "./DocketCanvas";
-import { ClipboardList, User } from "lucide-react";
+import { ClipboardList, User, MessageSquare } from "lucide-react";
 import CrewAllocation from "./CrewAllocation";
 import Link from "next/link";
 import UpdateSiteLocationButton from "@/components/operator/UpdateSiteLocationButton";
@@ -147,13 +147,22 @@ export default async function OperatorHomePage() {
             <p className="text-[10px] text-zinc-600 font-medium mt-0.5">Tap photo to update</p>
           </div>
         </div>
-        <Link
-          href="/operator/profile"
-          className="flex items-center gap-1.5 p-2 px-3 rounded-xl bg-zinc-800/80 border border-zinc-700/80 text-xs font-bold text-zinc-200 hover:text-white hover:border-orange-500/50 transition-all shadow-sm active:scale-95 shrink-0"
-        >
-          <User className="h-4 w-4 text-orange-400" />
-          <span>My Profile</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/operator/chat"
+            className="flex items-center gap-1.5 p-2 px-3 rounded-xl bg-orange-500/10 border border-orange-500/30 text-xs font-bold text-orange-400 hover:text-white hover:bg-orange-500 transition-all shadow-sm active:scale-95 shrink-0"
+          >
+            <MessageSquare className="h-4 w-4" />
+            <span>Crew Chat</span>
+          </Link>
+          <Link
+            href="/operator/profile"
+            className="flex items-center gap-1.5 p-2 px-3 rounded-xl bg-zinc-800/80 border border-zinc-700/80 text-xs font-bold text-zinc-200 hover:text-white hover:border-orange-500/50 transition-all shadow-sm active:scale-95 shrink-0"
+          >
+            <User className="h-4 w-4 text-orange-400" />
+            <span>My Profile</span>
+          </Link>
+        </div>
       </div>
 
       {/* ─── Saturday Payout Summary ──────────────────────────────── */}

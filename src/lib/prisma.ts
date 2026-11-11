@@ -19,15 +19,25 @@ const globalForPg = globalThis as unknown as {
   pgPool?: Pool;
 };
 
+// High-Concurrency Connection Pooling: scaled for traffic surges
+const poolMax = process.env.DATABASE_POOL_MAX 
+  ? parseInt(process.env.DATABASE_POOL_MAX, 10) 
+  : (process.env.NODE_ENV === "production" ? 30 : 20);
+
 export const pool =
   globalForPg.pgPool ??
   new Pool({
     connectionString: rawConnectionString,
     ssl: isCloud ? { rejectUnauthorized: false } : undefined,
-    connectionTimeoutMillis: 10000,
-    idleTimeoutMillis: 30000,
-    max: 10,
+    connectionTimeoutMillis: 15000,
+    idleTimeoutMillis: 10000, // Recycle idle connections faster under load
+    max: poolMax,
   });
+
+// Handle idle connection drops gracefully without process crash
+pool.on("error", (err) => {
+  console.error("[PostgreSQL Pool Transient Error]:", err?.message || err);
+});
 
 if (process.env.NODE_ENV !== "production") {
   globalForPg.pgPool = pool;

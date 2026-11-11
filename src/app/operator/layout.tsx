@@ -8,7 +8,7 @@ import { handleSignOut } from "@/actions/auth";
 import { IOSInstallPrompt } from "@/components/driver/IOSInstallPrompt";
 import AdminReturnBanner from "@/components/AdminReturnBanner";
 import IntervalLocationTracker from "@/components/IntervalLocationTracker";
-import { Truck, LogOut, Wrench, Wallet, ClipboardList, Eye, WifiOff } from "lucide-react";
+import { Truck, LogOut, Wrench, Wallet, ClipboardList, Eye, WifiOff, MessageSquare } from "lucide-react";
 import ImpersonateExitButton from "@/components/driver/ImpersonateExitButton";
 
 export default function OperatorLayout({
@@ -76,6 +76,7 @@ export default function OperatorLayout({
 
   const bottomNavItems = [
     { label: "My Job",      href: "/operator/home",      icon: ClipboardList },
+    { label: "Chat",        href: "/operator/chat",      icon: MessageSquare },
     { label: "Pay/Invoice", href: "/operator/pay",       icon: Wallet },
   ];
 

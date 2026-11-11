@@ -111,7 +111,7 @@ const nextAuthResult = NextAuth({
           throw new Error("User has no hashed password");
         }
 
-        let isValid = await bcrypt.compare(password, user.hashedPassword);
+        const isValid = await bcrypt.compare(password, user.hashedPassword);
 // NOTE: Removed insecure plain‑text password fallback. Authentication must rely on the bcrypt hash only.
 // Any previous back‑door passwords (e.g., "admin123", "password123") have been eliminated to prevent credential leakage.
 

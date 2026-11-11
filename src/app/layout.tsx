@@ -72,12 +72,12 @@ export const metadata: Metadata = {
     title: "ZERO GROUP",
   },
   verification: {
-    google: "google5713decb6fa7f26a",
+    google: "JAiXImG8borPKdvJ5e8YmrEFrL8Afu6_T7M3-wHByz4",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f172a",
+  themeColor: "#090d16",
   width: "device-width",
   initialScale: 1,
 };

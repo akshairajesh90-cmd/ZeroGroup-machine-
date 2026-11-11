@@ -2,14 +2,52 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Full System Button & Navigation Verification', () => {
 
+  test('0. Public Landing Page: Industrial Branding, Search, Filters, Quotation', async ({ page }) => {
+    test.setTimeout(60000);
+    await page.goto('/');
+
+    // Verify company branding (Amber industrial palette)
+    await expect(page.getByText('ZERO GROUP')).toBeVisible();
+    await expect(page.getByText('MACHINERY').first()).toBeVisible();
+    await expect(page.getByText(/HEAVY CONSTRUCTION PLANT RENTALS/i).first()).toBeVisible();
+
+    // Verify live machinery search
+    const searchInput = page.getByPlaceholder(/Search machinery/i);
+    await expect(searchInput).toBeVisible();
+    await searchInput.fill('Reversible');
+    await expect(page.getByText(/Hydraulic Reversible Drum Mixer/i).first()).toBeVisible();
+
+    // Clear search
+    await page.getByRole('button', { name: 'Clear' }).click();
+    await expect(searchInput).toHaveValue('');
+
+    // Category button filter
+    await page.getByRole('button', { name: /Concrete/i }).click();
+    await expect(page.getByText(/Concrete Mixer/i).first()).toBeVisible();
+
+    // Back to All Fleet
+    await page.getByRole('button', { name: /All Fleet/i }).click();
+
+    // Select for Quotation button
+    const selectBtn = page.getByRole('link', { name: /Select for Quotation/i }).first();
+    await selectBtn.click();
+
+    // Crew login button in header
+    const crewLoginBtn = page.getByRole('link', { name: /Crew Login/i }).first();
+    await expect(crewLoginBtn).toBeVisible();
+    await crewLoginBtn.click();
+    await expect(page).toHaveURL(/\/login/);
+    console.log('✅ Public Landing: Brand, Search, Category filter, Quotation, and Login routing verified');
+  });
+
   test('1. Admin Portal: Dashboard, Live Map, Billing, Advances, Rates', async ({ page }) => {
     test.setTimeout(120000);
     await page.context().clearCookies();
 
-    await page.goto('/');
+    await page.goto('/login');
     await page.locator('input[name="email"]').fill('admin@zerogroup.com');
     await page.locator('input[name="password"]').fill('admin123');
-    await page.getByRole('button', { name: /Sign In to Portal/i }).click();
+    await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
 
     await page.waitForTimeout(2000);
     await page.goto('/admin/dashboard');
@@ -36,10 +74,10 @@ test.describe('Full System Button & Navigation Verification', () => {
     test.setTimeout(120000);
     await page.context().clearCookies();
 
-    await page.goto('/');
+    await page.goto('/login');
     await page.locator('input[name="email"]').fill('staff@zerogroup.com');
     await page.locator('input[name="password"]').fill('password123');
-    await page.getByRole('button', { name: /Sign In to Portal/i }).click();
+    await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
 
     await page.waitForTimeout(2000);
     await page.goto('/staff/dashboard');
@@ -54,10 +92,10 @@ test.describe('Full System Button & Navigation Verification', () => {
     test.setTimeout(120000);
     await page.context().clearCookies();
 
-    await page.goto('/');
+    await page.goto('/login');
     await page.locator('input[name="email"]').fill('staff@zerogroup.com');
     await page.locator('input[name="password"]').fill('password123');
-    await page.getByRole('button', { name: /Sign In to Portal/i }).click();
+    await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
 
     await page.waitForTimeout(2000);
     await page.goto('/staff/orders');
@@ -75,10 +113,10 @@ test.describe('Full System Button & Navigation Verification', () => {
     test.setTimeout(120000);
     await page.context().clearCookies();
 
-    await page.goto('/');
+    await page.goto('/login');
     await page.locator('input[name="email"]').fill('staff@zerogroup.com');
     await page.locator('input[name="password"]').fill('password123');
-    await page.getByRole('button', { name: /Sign In to Portal/i }).click();
+    await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
 
     await page.waitForTimeout(2000);
     await page.goto('/staff/tools');
@@ -106,10 +144,10 @@ test.describe('Full System Button & Navigation Verification', () => {
     test.setTimeout(120000);
     await page.context().clearCookies();
 
-    await page.goto('/');
+    await page.goto('/login');
     await page.locator('input[name="email"]').fill('staff@zerogroup.com');
     await page.locator('input[name="password"]').fill('password123');
-    await page.getByRole('button', { name: /Sign In to Portal/i }).click();
+    await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
 
     await page.waitForTimeout(2000);
     await page.goto('/staff/employees');
@@ -133,10 +171,10 @@ test.describe('Full System Button & Navigation Verification', () => {
     test.setTimeout(120000);
     await page.context().clearCookies();
 
-    await page.goto('/');
+    await page.goto('/login');
     await page.locator('input[name="email"]').fill('driver@zerogroup.com');
     await page.locator('input[name="password"]').fill('password123');
-    await page.getByRole('button', { name: /Sign In to Portal/i }).click();
+    await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
 
     await page.waitForTimeout(2000);
     await page.goto('/driver/home');
@@ -158,6 +196,51 @@ test.describe('Full System Button & Navigation Verification', () => {
     await page.goto('/driver/map');
     await expect(page.locator('body')).toBeVisible();
     console.log('✅ Driver Portal: All mobile pages and action buttons verified');
+  });
+
+  test('7. Owner Portal: Executive Overview, Settlements, Fleet Allocation', async ({ page }) => {
+    test.setTimeout(120000);
+    await page.context().clearCookies();
+
+    await page.goto('/login');
+    await page.locator('input[name="email"]').fill('owner@zerogroup.com');
+    await page.locator('input[name="password"]').fill('password123');
+    await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+
+    await page.waitForTimeout(2000);
+    await page.goto('/owner/dashboard');
+    await expect(page.locator('body')).toBeVisible();
+
+    await page.goto('/owner/settlements');
+    await expect(page.locator('body')).toBeVisible();
+
+    await page.goto('/owner/allocation');
+    await expect(page.locator('body')).toBeVisible();
+
+    await page.goto('/owner/employees');
+    await expect(page.locator('body')).toBeVisible();
+    console.log('✅ Owner Portal: Executive dashboard and financial pages verified');
+  });
+
+  test('8. Operator Portal: Field Operations, Logs, Earnings', async ({ page }) => {
+    test.setTimeout(120000);
+    await page.context().clearCookies();
+
+    await page.goto('/login');
+    await page.locator('input[name="email"]').fill('operator@zerogroup.com');
+    await page.locator('input[name="password"]').fill('password123');
+    await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+
+    await page.waitForTimeout(2000);
+    await page.goto('/operator/home');
+    await expect(page.locator('body')).toBeVisible();
+
+    await page.goto('/operator/ledger');
+    await expect(page.locator('body')).toBeVisible();
+
+    await page.goto('/operator/pay');
+    await expect(page.locator('body')).toBeVisible();
+    console.log('✅ Operator Portal: Shift log and pay summary verified');
   });
 
 });

@@ -1,16 +1,25 @@
 import { prisma } from "@/lib/prisma";
 import { FileSpreadsheet } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default async function AllocationPage() {
   // A basic view showing recent dispatches grouped by siteBundleId for internal cost allocation
-  const dispatches = await prisma.dailyDispatch.findMany({
-    take: 50,
-    orderBy: { dateOfService: "desc" },
-    include: {
-      customer: true,
-      machine: true
-    }
-  });
+  let dispatches: any[] = [];
+  try {
+    dispatches = await prisma.dailyDispatch.findMany({
+      take: 50,
+      orderBy: { dateOfService: "desc" },
+      include: {
+        customer: true,
+        machine: true,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching daily dispatches:", error);
+    // Fallback to empty list if DB unavailable during build/runtime
+    dispatches = [];
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">

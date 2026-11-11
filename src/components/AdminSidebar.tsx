@@ -25,6 +25,7 @@ import {
   KeyRound,
   User,
   Globe,
+  MessageSquare,
 } from "lucide-react";
 import { handleSignOut } from "@/actions/auth";
 import { getPendingPasswordResetCountAction } from "@/actions/credentials";
@@ -117,6 +118,7 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
       title: "Morning Briefing",
       items: [
         { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+        { label: "Operations Chat", href: "/admin/chat", icon: MessageSquare },
         { label: "ID & Passwords Hub", href: "/admin/credentials", icon: KeyRound },
         { label: "Analytics and Projects", href: "/staff/projects", icon: BarChart2 },
         { label: "Crew Directory", href: "/staff/directory", icon: Users },
@@ -172,7 +174,7 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
         aria-label="Toggle navigation menu"
         aria-expanded={isMobileMenuOpen}
         aria-controls="admin-mobile-drawer"
-        className="lg:hidden fixed bottom-6 left-6 z-40 p-3 rounded-full bg-indigo-600 border border-indigo-500 text-white hover:bg-indigo-500 active:scale-90 transition-transform shadow-2xl flex items-center justify-center touch-manipulation select-none min-w-[48px] min-h-[48px]"
+        className="lg:hidden fixed bottom-6 left-6 z-40 p-3 rounded-lg bg-blue-600 border border-blue-700 text-white hover:bg-blue-700 active:scale-95 transition-transform shadow-lg flex items-center justify-center touch-manipulation select-none min-w-[48px] min-h-[48px]"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}></path></svg>
       </button>
@@ -192,16 +194,16 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
         aria-label="Admin navigation drawer"
         role={isMobileMenuOpen ? "dialog" : undefined}
         aria-modal={isMobileMenuOpen ? "true" : undefined}
-        className={`fixed lg:static inset-y-0 left-0 z-[45] w-64 flex flex-col border-r border-slate-800/80 bg-slate-900/90 font-sans shadow-2xl transition-transform duration-300 ease-in-out backdrop-blur-xl ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+        className={`fixed lg:static inset-y-0 left-0 z-[45] w-64 flex flex-col border-r border-slate-800 bg-slate-900 font-sans shadow-md transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
         {/* Logo */}
-        <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-800/80 px-6 pt-4 lg:pt-0 pl-16 lg:pl-6">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 shadow-lg shadow-indigo-500/20">
-            <Shield className="h-5 w-5 text-white" />
+        <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-800 px-6 pt-4 lg:pt-0 pl-16 lg:pl-6">
+          <div className="flex h-9 w-9 items-center justify-center bg-amber-500 shadow-sm text-slate-950 rounded-lg">
+            <Shield className="h-5 w-5 text-slate-950" strokeWidth={1.5} />
           </div>
           <div>
             <h2 className="font-bold tracking-tight text-white text-base">ZERO GROUP</h2>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-400">
               {role === "OWNER" ? "Owner Portal" : "Admin Portal"}
             </p>
           </div>
@@ -227,14 +229,14 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all active:scale-[0.98] active:opacity-80 ${
                         isActive 
-                          ? (isDanger ? "bg-rose-500/20 text-rose-400" : "bg-indigo-500/20 text-indigo-400")
-                          : (isDanger ? "text-rose-400 hover:bg-rose-500/10 hover:text-rose-300" : "text-slate-300 hover:bg-slate-800/80 hover:text-white")
+                          ? (isDanger ? "bg-rose-500/20 text-rose-400 font-semibold" : "bg-slate-800 text-amber-400 font-semibold border-l-2 border-amber-500")
+                          : (isDanger ? "text-rose-400 hover:bg-rose-500/10" : "text-slate-300 hover:bg-slate-800/80 hover:text-white")
                       }`}
                     >
-                      <Icon className={`h-4 w-4 ${isActive ? (isDanger ? "text-rose-500" : "text-indigo-400") : (isDanger ? "text-rose-500" : "text-slate-400")}`} />
+                      <Icon className={`h-4 w-4 shrink-0 ${isActive ? (isDanger ? "text-rose-600" : "text-amber-400") : (isDanger ? "text-rose-500" : "text-slate-400")}`} strokeWidth={1.5} />
                       <span className="flex-1">{item.label}</span>
                       {item.href === "/admin/credentials" && pendingResetCount > 0 && (
-                        <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-500 text-slate-950 shadow-sm shadow-amber-500/30 animate-pulse">
+                        <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-500 text-slate-950 font-bold shadow-sm">
                           {pendingResetCount}
                         </span>
                       )}
@@ -247,14 +249,14 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
         </nav>
 
         {/* User Profile & Sign Out */}
-        <div className="border-t border-slate-800/80 p-4 shrink-0">
-          <div className="flex items-center justify-between rounded-xl bg-slate-950/60 p-3 border border-slate-800/50">
+        <div className="border-t border-slate-800 p-4 shrink-0">
+          <div className="flex items-center justify-between rounded-lg bg-slate-950 p-3 border border-slate-800">
             <Link 
               href="/admin/profile"
               className="flex items-center gap-2.5 overflow-hidden hover:opacity-80 transition-opacity"
               title="View & Edit My Profile"
             >
-              <div className="h-8 w-8 rounded-lg bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold text-xs shrink-0">
+              <div className="h-8 w-8 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-xs shrink-0">
                 {userName.charAt(0).toUpperCase()}
               </div>
               <div className="overflow-hidden">
@@ -265,7 +267,7 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
             <div className="flex items-center gap-1">
               <Link
                 href="/admin/profile"
-                className="rounded-lg p-2 text-slate-400 hover:bg-indigo-500/10 hover:text-indigo-400 transition-colors"
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
                 title="My Profile & IDs"
               >
                 <User className="h-4 w-4" />

@@ -31,6 +31,14 @@ const nextConfig = {
       { pathname: "/uploads/**" },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: "/api/admin/:path*",
+        destination: "/api/adminApi/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

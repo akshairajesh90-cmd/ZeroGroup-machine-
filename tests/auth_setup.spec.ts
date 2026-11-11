@@ -9,7 +9,7 @@ const operatorFile = path.join(__dirname, '../playwright/.auth/operator.json');
 
 setup('authenticate as admin', async ({ page }) => {
   setup.setTimeout(45000);
-  await page.goto('/');
+  await page.goto('/login');
   await page.fill('input[name="email"]', 'admin@zerogroup.com');
   await page.fill('input[name="password"]', 'admin123');
   await page.click('button[type="submit"]');
@@ -19,7 +19,7 @@ setup('authenticate as admin', async ({ page }) => {
 
 setup('authenticate as staff', async ({ page }) => {
   setup.setTimeout(45000);
-  await page.goto('/');
+  await page.goto('/login');
   await page.fill('input[name="email"]', 'staff@zerogroup.com');
   await page.fill('input[name="password"]', 'password123');
   await page.click('button[type="submit"]');
@@ -29,7 +29,7 @@ setup('authenticate as staff', async ({ page }) => {
 
 setup('authenticate as driver', async ({ page }) => {
   setup.setTimeout(45000);
-  await page.goto('/');
+  await page.goto('/login');
   await page.fill('input[name="email"]', 'driver@zerogroup.com');
   await page.fill('input[name="password"]', 'password123');
   await page.click('button[type="submit"]');
@@ -39,7 +39,7 @@ setup('authenticate as driver', async ({ page }) => {
 
 setup('authenticate as operator', async ({ page }) => {
   setup.setTimeout(45000);
-  await page.goto('/');
+  await page.goto('/login');
   await page.fill('input[name="email"]', 'operator@zerogroup.com');
   await page.fill('input[name="password"]', 'password123');
   await page.click('button[type="submit"]');

@@ -29,11 +29,11 @@ export default async function AdminLayout({
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden min-h-0 min-w-0">
         {/* Top Bar */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-800/80 bg-slate-900/50 px-4 sm:px-6 backdrop-blur-md shrink-0">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-800 bg-slate-900 px-4 sm:px-6 shadow-sm shrink-0">
           <div className="flex items-center gap-4">
-            <span className="lg:hidden font-bold text-indigo-400">ZERO GROUP</span>
-            <div className="hidden sm:flex items-center gap-2 rounded-full bg-slate-800/60 px-3 py-1 text-xs text-slate-400 border border-slate-700/50">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="lg:hidden font-bold text-amber-500">ZERO GROUP</span>
+            <div className="hidden sm:flex items-center gap-2 rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300 border border-slate-700">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
               <span>System Online · Live</span>
             </div>
           </div>
@@ -41,9 +41,9 @@ export default async function AdminLayout({
             <span
               className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${
                 role === "OWNER"
-                  ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-400"
-                  : role === "ADMIN"
                   ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                  : role === "ADMIN"
+                  ? "bg-slate-100 border-slate-200 text-slate-800"
                   : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
               }`}
             >

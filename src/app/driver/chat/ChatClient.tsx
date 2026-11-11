@@ -18,7 +18,9 @@ import {
   Truck,
   Sparkles,
   PhoneCall,
-  UserCheck
+  UserCheck,
+  Radio,
+  AtSign
 } from "lucide-react";
 import { getChatMessages, sendChatMessage } from "@/actions/chat";
 
@@ -37,8 +39,13 @@ type ChatMessageItem = {
   mediaUrl?: string | null;
   mediaType?: string | null;
   senderId: string;
+  receiverId?: string | null;
   senderName: string;
   senderRole: string;
+  senderPhoto?: string | null;
+  receiverName?: string | null;
+  receiverRole?: string | null;
+  isPersonal?: boolean;
   createdAt: string;
 };
 
@@ -50,6 +57,7 @@ export default function ChatClient({
   currentUserEmployeeId: string;
 }) {
   const [activeTab, setActiveTab] = useState<"chat" | "directory">("chat");
+  const [activeChatRecipient, setActiveChatRecipient] = useState<EmployeeItem | null>(null);
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
@@ -60,25 +68,63 @@ export default function ChatClient({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 4000);
-    return () => clearInterval(interval);
-  }, []);
+    let timerId: NodeJS.Timeout | null = null;
+    let isMounted = true;
+
+    const runPoll = async () => {
+      if (!isMounted) return;
+      if (typeof document !== "undefined" && document.hidden) {
+        // Tab is hidden/minimized: slow down polling to 30s to spare server & mobile battery
+        timerId = setTimeout(runPoll, 30000);
+        return;
+      }
+
+      await fetchMessages();
+      if (isMounted) {
+        timerId = setTimeout(runPoll, 4000);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== "undefined" && !document.hidden && isMounted) {
+        if (timerId) clearTimeout(timerId);
+        runPoll();
+      }
+    };
+
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+    }
+    runPoll();
+
+    return () => {
+      isMounted = false;
+      if (timerId) clearTimeout(timerId);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      }
+    };
+  }, [activeChatRecipient]);
 
   useEffect(() => {
     if (activeTab === "chat") {
       scrollToBottom();
     }
-  }, [messages, activeTab]);
+  }, [messages, activeTab, activeChatRecipient]);
 
   const fetchMessages = async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     try {
-      const data = await getChatMessages();
+      const data = await getChatMessages(activeChatRecipient ? activeChatRecipient.id : null);
       setMessages(data);
     } catch (err) {
       console.error("[CHAT] Failed to fetch messages:", err);
+    } finally {
+      isFetchingRef.current = false;
     }
   };
 
@@ -119,6 +165,11 @@ export default function ChatClient({
     const formData = new FormData();
     if (newMessage.trim()) formData.append("text", newMessage.trim());
     if (selectedFile) formData.append("file", selectedFile);
+    if (activeChatRecipient) {
+      formData.append("receiverId", activeChatRecipient.id);
+    } else {
+      formData.append("receiverId", "GROUP");
+    }
 
     try {
       await sendChatMessage(formData);
@@ -134,7 +185,18 @@ export default function ChatClient({
     }
   };
 
+  const handleStartPersonalChat = (emp: EmployeeItem) => {
+    setActiveChatRecipient(emp);
+    setActiveTab("chat");
+  };
+
+  const handleSwitchToGroup = () => {
+    setActiveChatRecipient(null);
+    setActiveTab("chat");
+  };
+
   const handleMentionUser = (empName: string) => {
+    setActiveChatRecipient(null);
     setNewMessage((prev) => (prev ? `${prev} @${empName} ` : `@${empName} `));
     setActiveTab("chat");
   };
@@ -216,7 +278,7 @@ export default function ChatClient({
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
-            <span>Group Chat</span>
+            <span>{activeChatRecipient ? `Personal (${activeChatRecipient.name.split(" ")[0]})` : "Group Chat"}</span>
           </button>
 
           <button
@@ -229,7 +291,7 @@ export default function ChatClient({
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>Crew Directory</span>
+            <span>Crew Contacts</span>
             <span className="px-1.5 py-0.2 rounded-full bg-slate-800 text-[10px] text-cyan-300 font-bold border border-slate-700">
               {employees.length}
             </span>
@@ -239,9 +301,32 @@ export default function ChatClient({
 
       {/* Main Content Area */}
       <div className="flex-1 min-h-0 relative flex flex-col overflow-hidden bg-slate-950">
-        {/* TAB 1: GROUP CHAT */}
+        {/* TAB 1: GROUP OR PERSONAL CHAT */}
         {activeTab === "chat" && (
           <div className="flex-1 flex flex-col h-full min-h-0">
+            {/* Direct Chat Switcher Banner */}
+            {activeChatRecipient && (
+              <div className="p-2.5 bg-slate-900/95 border-b border-amber-500/30 flex items-center justify-between shrink-0 px-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                  <span className="text-xs font-bold text-white">
+                    Direct with {activeChatRecipient.name}
+                  </span>
+                  <span className={`text-[9px] font-black uppercase px-1.5 py-0.2 rounded border ${getRoleBadgeClass(activeChatRecipient.role)}`}>
+                    {activeChatRecipient.role}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSwitchToGroup}
+                  className="flex items-center gap-1 text-[11px] font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-lg border border-slate-700 transition-colors"
+                >
+                  <Radio className="w-3 h-3 text-emerald-400" />
+                  <span>Group Broadcast</span>
+                </button>
+              </div>
+            )}
+
             {/* Messages Scroll Area */}
             <div
               className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3.5 [scrollbar-width:thin] [scrollbar-color:#334155_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-700/60 [&::-webkit-scrollbar-thumb]:rounded-full"
@@ -251,9 +336,13 @@ export default function ChatClient({
                   <div className="h-12 w-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-3">
                     <MessageSquare className="h-6 w-6 text-emerald-400/60" />
                   </div>
-                  <p className="text-sm font-semibold text-slate-300">No messages yet</p>
+                  <p className="text-sm font-semibold text-slate-300">
+                    {activeChatRecipient ? `No direct messages with ${activeChatRecipient.name} yet` : "No messages yet"}
+                  </p>
                   <p className="text-xs text-slate-500 mt-1 max-w-xs">
-                    Start communication with office staff, site operators, and dispatch leaders below.
+                    {activeChatRecipient
+                      ? "Send a private direct message or work assignment below."
+                      : "Start communication with office staff, site operators, and dispatch leaders below."}
                   </p>
                 </div>
               ) : (
@@ -280,6 +369,11 @@ export default function ChatClient({
                           >
                             {msg.senderRole}
                           </span>
+                          {msg.isPersonal && (
+                            <span className="text-[8px] font-semibold text-amber-400 bg-amber-500/10 px-1 py-0.2 rounded">
+                              Direct
+                            </span>
+                          )}
                         </div>
                       )}
 
@@ -299,15 +393,13 @@ export default function ChatClient({
                             />
                           </div>
                         )}
-
                         {msg.text && (
                           <p className="text-sm whitespace-pre-wrap leading-relaxed select-text">
                             {msg.text}
                           </p>
                         )}
-
                         <span
-                          className={`text-[10px] font-medium block text-right mt-1 ${
+                          className={`text-[9px] block text-right mt-1 font-medium ${
                             isMe ? "text-emerald-100/70" : "text-slate-400"
                           }`}
                         >
@@ -324,34 +416,26 @@ export default function ChatClient({
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Image Preview Banner */}
-            {filePreview && (
-              <div className="px-3 py-2 bg-slate-900/95 border-t border-slate-800 flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0">
+            {/* Input Floating Dock */}
+            <div className="p-3 bg-slate-900/95 border-t border-slate-800/90 backdrop-blur-xl shrink-0">
+              {/* Media Preview before send */}
+              {filePreview && (
+                <div className="mb-2.5 relative inline-block">
                   <img
                     src={filePreview}
                     alt="Preview"
-                    className="h-10 w-10 rounded-lg object-cover border border-slate-700"
+                    className="h-20 w-20 object-cover rounded-xl border-2 border-emerald-500/80 shadow-lg"
                   />
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-slate-200 truncate">
-                      {selectedFile?.name}
-                    </p>
-                    <p className="text-[10px] text-slate-400">Ready to send</p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={clearSelectedFile}
+                    className="absolute -top-2 -right-2 bg-rose-600 hover:bg-rose-500 text-white p-1 rounded-full shadow-md transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={clearSelectedFile}
-                  className="p-1 rounded-full text-slate-400 hover:text-rose-400 hover:bg-slate-800"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+              )}
 
-            {/* Input Form */}
-            <div className="p-2.5 sm:p-3 bg-slate-900/95 border-t border-slate-800/90 backdrop-blur-xl shrink-0">
               <form onSubmit={handleSend} className="flex items-center gap-2">
                 <input
                   type="file"
@@ -364,33 +448,33 @@ export default function ChatClient({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className={`p-2.5 rounded-xl border transition-colors shrink-0 ${
-                    selectedFile
-                      ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
-                      : "bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                  }`}
-                  title="Attach Photo or Document"
+                  className="p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/40 hover:bg-slate-900 transition-all active:scale-95"
+                  title="Attach Photo"
                 >
-                  <ImageIcon className="w-5 h-5" />
+                  <ImageIcon className="w-4 h-4" />
                 </button>
 
                 <input
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type a message to crew..."
-                  className="flex-1 min-w-0 bg-slate-950/90 border border-slate-800 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none transition-colors"
+                  placeholder={
+                    activeChatRecipient
+                      ? `Direct message to ${activeChatRecipient.name}...`
+                      : "Type a message to company channel..."
+                  }
+                  className="flex-1 bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none transition-colors"
                 />
 
                 <button
                   type="submit"
                   disabled={isSending || (!newMessage.trim() && !selectedFile)}
-                  className="p-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                  className="p-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl shadow-lg shadow-emerald-950/40 transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
                 >
                   {isSending ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    <Send className="w-5 h-5" />
+                    <Send className="w-4 h-4" />
                   )}
                 </button>
               </form>
@@ -401,77 +485,68 @@ export default function ChatClient({
         {/* TAB 2: CREW DIRECTORY */}
         {activeTab === "directory" && (
           <div className="flex-1 flex flex-col h-full min-h-0 bg-slate-950">
-            {/* Search & Filter Header */}
-            <div className="p-3 bg-slate-900/60 border-b border-slate-800/80 shrink-0 space-y-2">
+            {/* Search & Filters Topbar */}
+            <div className="p-3 border-b border-slate-800/80 bg-slate-900/60 space-y-2.5 shrink-0">
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search crew by name, role, or phone..."
+                  placeholder="Search crew by name, role, phone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs sm:text-sm text-white placeholder:text-slate-500 focus:border-cyan-500 outline-none"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder:text-slate-500 outline-none transition-colors"
                 />
-                {searchTerm && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchTerm("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
               </div>
 
-              {/* Role Filter Chips */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                {["ALL", "LEADERSHIP", "OPERATOR", "DRIVER"].map((roleKey) => (
+              {/* Role Filter Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
+                {["ALL", "LEADERSHIP", "OPERATOR", "DRIVER"].map((filter) => (
                   <button
-                    key={roleKey}
+                    key={filter}
                     type="button"
-                    onClick={() => setRoleFilter(roleKey)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0 transition-colors ${
-                      roleFilter === roleKey
-                        ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                        : "bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200"
+                    onClick={() => setRoleFilter(filter)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap transition-colors ${
+                      roleFilter === filter
+                        ? "bg-cyan-600 text-white shadow-sm"
+                        : "bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800"
                     }`}
                   >
-                    {roleKey === "LEADERSHIP" ? "Staff & Admin" : roleKey}
+                    {filter}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Employee List Scroll Area */}
-            <div
-              className="flex-1 overflow-y-auto p-2.5 sm:p-3 space-y-2 [scrollbar-width:thin] [scrollbar-color:#334155_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-700/60 [&::-webkit-scrollbar-thumb]:rounded-full"
-            >
+            {/* Crew Cards List */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-2 [scrollbar-width:thin] [scrollbar-color:#334155_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-700/60">
               {filteredEmployees.length === 0 ? (
-                <div className="p-8 text-center text-slate-500">
-                  <p className="text-sm font-semibold text-slate-400">No crew members found</p>
-                  <p className="text-xs text-slate-500 mt-1">Try another search keyword</p>
+                <div className="h-full flex flex-col items-center justify-center p-6 text-center text-slate-500">
+                  <Users className="w-8 h-8 text-slate-600 mb-2" />
+                  <p className="text-xs">No crew members found matching your search.</p>
                 </div>
               ) : (
                 filteredEmployees.map((emp) => {
-                  const rawPhone = emp.phone || "";
-                  const digits = rawPhone.replace(/\D/g, "");
-                  const last10 = digits.slice(-10);
-                  const waNumber = last10 ? `91${last10}` : "";
-                  const telUrl = last10 ? `tel:${last10}` : "";
+                  const rawPhone = emp.phone?.replace(/\D/g, "") || "";
+                  const waNumber = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
+                  const hasWhatsApp = waNumber.length >= 10;
+                  const isCurrentChatPartner = activeChatRecipient?.id === emp.id;
 
                   return (
                     <div
                       key={emp.id}
-                      className="p-3 bg-slate-900/70 border border-slate-800/80 hover:border-slate-700 rounded-xl flex items-center justify-between gap-3 transition-colors"
+                      className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
+                        isCurrentChatPartner
+                          ? "bg-emerald-950/30 border-emerald-500/50"
+                          : "bg-slate-900/60 border-slate-800/80 hover:border-slate-700"
+                      }`}
                     >
-                      {/* Left: Avatar & Info */}
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-10 w-10 rounded-full bg-slate-800 border border-slate-700/80 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                        <div className="h-10 w-10 rounded-full bg-slate-800 border border-slate-700 overflow-hidden flex items-center justify-center text-xs font-bold text-slate-200 shrink-0">
                           {emp.profilePhotoUrl ? (
                             <img
                               src={emp.profilePhotoUrl}
                               alt={emp.name}
-                              className="w-full h-full object-cover"
+                              className="h-full w-full object-cover"
                             />
                           ) : (
                             getRoleIcon(emp.role)
@@ -479,64 +554,75 @@ export default function ChatClient({
                         </div>
 
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <h4 className="text-xs sm:text-sm font-bold text-white truncate">
-                              {emp.name}
-                            </h4>
+                          <h4 className="text-xs font-bold text-white truncate">
+                            {emp.name}
+                          </h4>
+                          <div className="flex items-center gap-1.5 mt-0.5">
                             <span
-                              className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${getRoleBadgeClass(
+                              className={`text-[9px] font-black uppercase px-1.5 py-0.2 rounded border ${getRoleBadgeClass(
                                 emp.role
                               )}`}
                             >
                               {emp.role}
                             </span>
-                          </div>
-
-                          <p className="text-[11px] font-medium text-slate-400 mt-0.5 truncate">
-                            {rawPhone ? (
-                              <span>📱 {rawPhone}</span>
-                            ) : (
-                              <span className="text-slate-600">No phone linked</span>
+                            {emp.employeeCode && (
+                              <span className="text-[9px] font-mono text-slate-400">
+                                #{emp.employeeCode}
+                              </span>
                             )}
-                          </p>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Right: Quick Action Buttons */}
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {/* Mention in Chat Button */}
+                      {/* Action Shortcuts */}
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        {/* Start Personal 1-on-1 Chat */}
                         <button
                           type="button"
-                          onClick={() => handleMentionUser(emp.name)}
-                          className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 transition-colors"
-                          title={`Mention ${emp.name} in chat`}
+                          onClick={() => handleStartPersonalChat(emp)}
+                          className={`p-1.5 rounded-xl border transition-colors text-xs flex items-center gap-1 font-bold ${
+                            isCurrentChatPartner
+                              ? "bg-emerald-500 text-slate-950 border-emerald-400"
+                              : "bg-slate-950 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 border-slate-800"
+                          }`}
+                          title={`Direct Personal Chat with ${emp.name}`}
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
                         </button>
 
-                        {/* WhatsApp Button */}
-                        {waNumber ? (
+                        {/* Mention in Chat Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleMentionUser(emp.name)}
+                          className="p-1.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30 transition-colors"
+                          title={`Mention ${emp.name} in chat`}
+                        >
+                          <AtSign className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* WhatsApp direct launch */}
+                        {hasWhatsApp && (
                           <a
                             href={`https://wa.me/${waNumber}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500 hover:text-black border border-emerald-500/30 transition-all"
+                            className="p-1.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/30 transition-colors"
                             title={`Chat on WhatsApp: +${waNumber}`}
                           >
                             <Phone className="w-3.5 h-3.5" />
                           </a>
-                        ) : null}
+                        )}
 
-                        {/* Direct Call Button */}
-                        {telUrl ? (
+                        {/* Direct Phone Call */}
+                        {emp.phone && (
                           <a
-                            href={telUrl}
-                            className="p-2 rounded-lg bg-cyan-500/15 text-cyan-400 hover:bg-cyan-500 hover:text-black border border-cyan-500/30 transition-all"
-                            title={`Call ${emp.name}: ${last10}`}
+                            href={`tel:${emp.phone}`}
+                            className="p-1.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-blue-400 hover:border-blue-500/30 transition-colors"
+                            title={`Call phone: ${emp.phone}`}
                           >
                             <PhoneCall className="w-3.5 h-3.5" />
                           </a>
-                        ) : null}
+                        )}
                       </div>
                     </div>
                   );

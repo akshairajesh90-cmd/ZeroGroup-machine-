@@ -1,12 +1,18 @@
 import React from "react";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/serverAuth";
+import { resolveValidSenderId } from "@/actions/chat";
 import ChatClient from "./ChatClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function DriverChatPage() {
   const currentUser = await requireAuth();
+  const currentEmployeeId = await resolveValidSenderId(
+    currentUser.employeeId,
+    currentUser.userId,
+    currentUser.role
+  );
 
   // Fetch all active employees for the directory and mentions
   const employees = await prisma.employee.findMany({
@@ -32,7 +38,7 @@ export default async function DriverChatPage() {
     <div className="h-[calc(100dvh-11.5rem)] w-full overflow-hidden flex flex-col">
       <ChatClient
         employees={employees}
-        currentUserEmployeeId={currentUser.employeeId || ""}
+        currentUserEmployeeId={currentEmployeeId}
       />
     </div>
   );

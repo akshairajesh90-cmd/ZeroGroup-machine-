@@ -1,11 +1,20 @@
 import { prisma } from "@/lib/prisma";
 import { Users } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default async function EmployeesPage() {
-  const employees = await prisma.employee.findMany({
-    orderBy: { role: "asc" },
-    include: { user: true }
-  });
+  let employees: any[] = [];
+  try {
+    employees = await prisma.employee.findMany({
+      orderBy: { role: "asc" },
+      include: { user: true },
+    });
+  } catch (error) {
+    console.error("Error fetching employees:", error);
+    // Fallback to empty list during build/runtime if DB unavailable
+    employees = [];
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">

@@ -2,7 +2,8 @@ import { auth } from "@/lib/auth";
 import { getCorporateWebsiteSettings } from "@/actions/websiteSettings";
 import PublicLandingClient from "@/components/public/PublicLandingClient";
 
-export const dynamic = "force-dynamic";
+// High-Concurrency ISR: Cache page for 60s at Edge CDN, shielding server from 10k+ surges
+export const revalidate = 60;
 
 export default async function HomePage() {
   const [session, settings] = await Promise.all([
@@ -54,6 +55,20 @@ export default async function HomePage() {
     areaServed: {
       "@type": "AdministrativeArea",
       name: "Kerala",
+    },
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: "Commercial Construction Machinery Catalog",
+      itemListElement: (settings.catalogItems || []).map((item, idx) => ({
+        "@type": "Offer",
+        itemOffered: {
+          "@type": "Product",
+          name: item.title,
+          category: item.category,
+          description: `${item.classification} - ${item.power}. Ideal for: ${item.idealFor}`,
+        },
+        position: idx + 1,
+      })),
     },
   };
 

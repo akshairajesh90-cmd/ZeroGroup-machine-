@@ -40,7 +40,7 @@ export const authConfig = {
   },
   session: {
     strategy: "jwt",
-    maxAge: 60 * 60 * 24 * 30, // 30 days — keeps Operators logged in through dead zones
+    maxAge: 60 * 60 * 24 * 5, // 5 days session duration
   },
   callbacks: {
     async jwt({ token, user, trigger, session }) {

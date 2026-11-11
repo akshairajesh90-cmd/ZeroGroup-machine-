@@ -57,3 +57,7 @@ export function getEnv(): ServerEnv {
   cachedEnv = result.data;
   return cachedEnv;
 }
+
+export function _resetEnvCacheForTesting(): void {
+  cachedEnv = null;
+}

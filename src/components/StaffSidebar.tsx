@@ -19,6 +19,7 @@ import {
   PenTool,
   KeyRound,
   User,
+  MessageSquare,
 } from "lucide-react";
 import { handleSignOut } from "@/actions/auth";
 import { useState, useEffect, useRef } from "react";
@@ -132,6 +133,7 @@ export default function StaffSidebar({ userName, userEmail }: StaffSidebarProps)
       group: "Others & Operations Support",
       links: [
         { label: "ID & Passwords Hub", href: "/staff/credentials", icon: KeyRound },
+        { label: "Operations Chat & Crew", href: "/staff/directory", icon: MessageSquare },
         { label: "Crew Directory & Rates", href: "/staff/crew", icon: Users },
         { label: "Asset Maintenance", href: "/staff/maintenance", icon: PenTool },
         { label: "Live Operations Map", href: "/staff/live/map", icon: MapPin },

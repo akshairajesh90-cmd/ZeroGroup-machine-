@@ -184,7 +184,8 @@ model Employee {
   auditLogs                  AuditLog[]              @relation("EmployeeAuditLogs")
   confirmedDeposits          CashCollection[]        @relation("DepositConfirmer")
   cashCollections            CashCollection[]
-  chatMessages               ChatMessage[]
+  chatMessages               ChatMessage[]           @relation("SentChatMessages")
+  receivedChatMessages       ChatMessage[]           @relation("ReceivedChatMessages")
   driverDispatches           DailyDispatch[]         @relation("DriverDispatches")
   mainHelperDispatches       DailyDispatch[]         @relation("MainHelperDispatches")
   operatorDispatches         DailyDispatch[]         @relation("OperatorDispatches")
@@ -781,13 +782,16 @@ model ChatMessage {
   mediaUrl          String?
   mediaType         String?
   senderId          String
+  receiverId        String?
   createdAt         DateTime @default(now())
   isPendingDelete   Boolean  @default(false)
   markedForDeleteBy String?
-  sender            Employee @relation(fields: [senderId], references: [id])
+  sender            Employee  @relation("SentChatMessages", fields: [senderId], references: [id])
+  receiver          Employee? @relation("ReceivedChatMessages", fields: [receiverId], references: [id])
 
   @@index([createdAt])
   @@index([senderId])
+  @@index([receiverId])
   @@map("chat_messages")
 }
 
@@ -795,20 +799,64 @@ model SystemSettings {
   id                String   @id @default(cuid())
   maintenanceMode   Boolean  @default(false)
   maintenanceNotice String?  @default("Scheduled fleet maintenance window. Emergency plant dispatch active via helpline.")
+  emergencyPhone    String?  @default("+91 94471 23456")
   storeName         String?  @default("Zero Group Main Yard & Store")
   storeAddress      String?  @default("Pala, Kottayam, Kerala")
   storeLatitude     Decimal? @default(9.5916) @db.Decimal(10, 7)
   storeLongitude    Decimal? @default(76.5222) @db.Decimal(10, 7)
-  companyPhone      String?  @default("+91 94470 00000")
-  whatsappNumber    String?  @default("919447000000")
+  companyPhone      String?  @default("+91 94471 23456")
+  whatsappNumber    String?  @default("919447123456")
   companyEmail      String?  @default("operations@zerogroup.in")
-  gstinNumber       String?  @default("32AAAAZ0000A1Z5")
+  gstinNumber       String?  @default("32AAACZ0000A1Z5")
+  heroBadge         String?  @default("KERALA COMMERCIAL INFRASTRUCTURE & CONSTRUCTION LOGISTICS")
   heroHeadline      String?  @default("Heavy Construction Equipment & Precision Plant Logistics")
   heroSubheadline   String?  @default("Commercial concrete mixers, vertical material hoists, and heavy de-watering plant supplied across Kerala with certified operators.")
+  heroPrimaryCta    String?  @default("Request Hire Quotation")
+  heroSecondaryCta  String?  @default("Search Plant Inventory")
   publicNotice      String?  @default("Full equipment fleet operational across Central Kerala. Direct flatbed site dispatch active.")
+  districtsCovered  String[] @default(["Kottayam", "Ernakulam", "Idukki", "Alappuzha", "Pathanamthitta", "Thrissur", "Kollam", "Palakkad", "Thiruvananthapuram", "Malappuram", "Kozhikode", "Kannur", "Wayanad", "Kasaragod"])
+  footerCopy        String?  @default("ZERO GROUP Equipment Rentals. All commercial plant certified under Kerala industrial equipment safety guidelines.")
   updatedAt         DateTime @updatedAt
 
   @@map("system_settings")
+}
+
+model WebsiteCatalogItem {
+  id              String   @id @default(cuid())
+  category        String
+  categorySubtext String?
+  categoryIcon    String   @default("Cog")
+  title           String
+  power           String
+  specs           String[]
+  idealFor        String
+  classification  String
+  demandTag       String
+  sortOrder       Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("website_catalog_items")
+}
+
+model WebsiteValueProp {
+  id          String   @id @default(cuid())
+  badge       String
+  title       String
+  description String
+  iconName    String   @default("Truck")
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([sortOrder])
+  @@index([isActive])
+  @@map("website_value_props")
 }
 
 enum Role {
