@@ -28,7 +28,7 @@ const nextConfig = {
     // Serve images from /public/uploads without optimization issues
     unoptimized: false,
     localPatterns: [
-      { pathname: "/uploads/**" },
+      { pathname: "/**" },
     ],
   },
   async rewrites() {
