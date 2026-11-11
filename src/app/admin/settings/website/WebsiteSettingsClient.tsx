@@ -51,6 +51,12 @@ export default function WebsiteSettingsClient({ initialSettings }: WebsiteSettin
     heroSecondaryCta: initialSettings.heroSecondaryCta || "Search Plant Inventory",
     emergencyPhone: initialSettings.emergencyPhone || initialSettings.companyPhone || "+91 94471 23456",
     footerCopy: initialSettings.footerCopy || "ZERO GROUP Equipment Rentals. All commercial plant certified under Kerala industrial equipment safety guidelines.",
+    headerSubtitle: initialSettings.headerSubtitle || "Commercial Construction Machinery & Lift Rentals",
+    catalogHeading: initialSettings.catalogHeading || "Certified Construction Machinery Catalog",
+    catalogSubheading: initialSettings.catalogSubheading || "All machinery is serviced, pressure-tested, and certified prior to site mobilization.",
+    inquiryHeading: initialSettings.inquiryHeading || "Request Machinery Hire Quotation",
+    inquirySubheading: initialSettings.inquirySubheading || "Submit your project schedule below. Central Yard dispatch will confirm machine availability and issue formal hire rates.",
+    operatingHours: initialSettings.operatingHours || "Mon – Sun: 6:00 AM – 9:00 PM",
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -439,6 +445,20 @@ export default function WebsiteSettingsClient({ initialSettings }: WebsiteSettin
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Website Top Header Brand Subtitle
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.headerSubtitle || ""}
+                    onChange={(e) => setFormData({ ...formData, headerSubtitle: e.target.value })}
+                    className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-amber-500 transition-colors"
+                    placeholder="Commercial Construction Machinery & Lift Rentals"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">Appears below the ZERO GROUP logo in the sticky navigation header.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                     Hero Eyebrow Badge
                   </label>
                   <input
@@ -527,6 +547,40 @@ export default function WebsiteSettingsClient({ initialSettings }: WebsiteSettin
           {/* ═════════════════════════════════════════════════════════════════ */}
           {activeTab === "catalog" && (
             <div className="space-y-6">
+              {/* Section Header Controls */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 sm:p-6 space-y-4">
+                <div className="border-b border-slate-800 pb-2.5 flex items-center gap-2">
+                  <Cog className="w-4 h-4 text-amber-500" strokeWidth={1.5} />
+                  <h3 className="text-sm font-bold text-white">Machinery Catalog Section Header</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Catalog Section Main Title
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.catalogHeading || ""}
+                      onChange={(e) => setFormData({ ...formData, catalogHeading: e.target.value })}
+                      className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-amber-500 transition-colors"
+                      placeholder="Certified Construction Machinery Catalog"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Catalog Section Subtitle Description
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.catalogSubheading || ""}
+                      onChange={(e) => setFormData({ ...formData, catalogSubheading: e.target.value })}
+                      className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-amber-500 transition-colors"
+                      placeholder="All machinery is serviced, pressure-tested, and certified prior to site mobilization."
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5">
                 <div>
                   <h3 className="text-sm font-bold text-white">Commercial Plant & Machinery Catalog</h3>
@@ -917,6 +971,20 @@ export default function WebsiteSettingsClient({ initialSettings }: WebsiteSettin
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Central Yard Operating / Working Hours
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.operatingHours || ""}
+                    onChange={(e) => setFormData({ ...formData, operatingHours: e.target.value })}
+                    className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-amber-500 transition-colors"
+                    placeholder="Mon – Sun: 6:00 AM – 9:00 PM"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">Appears in the Central Base Yard contact block in the website footer.</p>
+                </div>
+
                 <p className="text-[11px] text-slate-400">
                   * Note: Coordinates are used by the system to compute driving polylines, km distances, and transit mobilization times to client sites.
                 </p>
@@ -999,6 +1067,40 @@ export default function WebsiteSettingsClient({ initialSettings }: WebsiteSettin
                       onChange={(e) => setFormData({ ...formData, companyEmail: e.target.value })}
                       className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs text-white outline-none focus:border-amber-500"
                       placeholder="operations@zerogroup.in"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Commercial Hire Inquiry Section Copy */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 sm:p-7 space-y-4">
+                <div className="border-b border-slate-800 pb-3 flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-amber-500" strokeWidth={1.5} />
+                  <h3 className="text-sm font-bold text-white">Commercial Hire Inquiry Section Copy</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Inquiry Section Main Title
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.inquiryHeading || ""}
+                      onChange={(e) => setFormData({ ...formData, inquiryHeading: e.target.value })}
+                      className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-amber-500 transition-colors"
+                      placeholder="Request Machinery Hire Quotation"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Inquiry Section Subtitle Description
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.inquirySubheading || ""}
+                      onChange={(e) => setFormData({ ...formData, inquirySubheading: e.target.value })}
+                      className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-amber-500 transition-colors"
+                      placeholder="Submit your project schedule below. Central Yard dispatch will confirm machine availability and issue formal hire rates."
                     />
                   </div>
                 </div>

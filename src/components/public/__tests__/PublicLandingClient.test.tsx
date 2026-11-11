@@ -58,6 +58,27 @@ describe("PublicLandingClient Component", () => {
       expect(dashLinks.length).toBeGreaterThan(0);
       expect(dashLinks[0]).toHaveAttribute("href", "/admin/dashboard");
     });
+
+    it("renders customized dynamic titles and operating hours from CMS settings", () => {
+      const customSettings = {
+        ...mockSettings,
+        headerSubtitle: "Kerala Heavy Civil & Concrete Machinery Rentals",
+        catalogHeading: "Specialized Plant Fleet Inventory",
+        catalogSubheading: "Inspected and delivered with certified operators.",
+        inquiryHeading: "Direct Project Booking Desk",
+        inquirySubheading: "Mobilize plant machinery with flatbed transport.",
+        operatingHours: "24/7 Mon – Sun Emergency Dispatch Active",
+      };
+
+      render(<PublicLandingClient settings={customSettings} />);
+
+      expect(screen.getByText("Kerala Heavy Civil & Concrete Machinery Rentals")).toBeInTheDocument();
+      expect(screen.getByText("Specialized Plant Fleet Inventory")).toBeInTheDocument();
+      expect(screen.getByText("Inspected and delivered with certified operators.")).toBeInTheDocument();
+      expect(screen.getByText("Direct Project Booking Desk")).toBeInTheDocument();
+      expect(screen.getByText("Mobilize plant machinery with flatbed transport.")).toBeInTheDocument();
+      expect(screen.getByText(/24\/7 Mon – Sun Emergency Dispatch Active/i)).toBeInTheDocument();
+    });
   });
 
   describe("Search & Machinery Filtering", () => {

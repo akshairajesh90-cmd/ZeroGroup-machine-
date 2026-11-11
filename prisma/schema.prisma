@@ -816,6 +816,12 @@ model SystemSettings {
   publicNotice      String?  @default("Full equipment fleet operational across Central Kerala. Direct flatbed site dispatch active.")
   districtsCovered  String[] @default(["Kottayam", "Ernakulam", "Idukki", "Alappuzha", "Pathanamthitta", "Thrissur", "Kollam", "Palakkad", "Thiruvananthapuram", "Malappuram", "Kozhikode", "Kannur", "Wayanad", "Kasaragod"])
   footerCopy        String?  @default("ZERO GROUP Equipment Rentals. All commercial plant certified under Kerala industrial equipment safety guidelines.")
+  headerSubtitle    String?  @default("Commercial Construction Machinery & Lift Rentals")
+  catalogHeading    String?  @default("Certified Construction Machinery Catalog")
+  catalogSubheading String?  @default("All machinery is serviced, pressure-tested, and certified prior to site mobilization.")
+  inquiryHeading    String?  @default("Request Machinery Hire Quotation")
+  inquirySubheading String?  @default("Submit your project schedule below. Central Yard dispatch will confirm machine availability and issue formal hire rates.")
+  operatingHours    String?  @default("Mon – Sun: 6:00 AM – 9:00 PM")
   updatedAt         DateTime @updatedAt
 
   @@map("system_settings")

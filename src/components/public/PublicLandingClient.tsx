@@ -244,7 +244,7 @@ export default function PublicLandingClient({ sessionUser, settings }: PublicLan
                 </span>
               </div>
               <p className="text-xs font-medium text-slate-400">
-                Commercial Construction Machinery & Lift Rentals
+                {settings.headerSubtitle || "Commercial Construction Machinery & Lift Rentals"}
               </p>
             </div>
           </Link>
@@ -393,10 +393,10 @@ export default function PublicLandingClient({ sessionUser, settings }: PublicLan
               Fleet Inventory (<span>{activeItems.length}</span> available units)
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold text-white mt-1.5 tracking-tight">
-              Certified Construction Machinery Catalog
+              {settings.catalogHeading || "Certified Construction Machinery Catalog"}
             </h2>
             <p className="mt-2 text-slate-400 text-sm max-w-xl mx-auto">
-              All machinery is serviced, pressure-tested, and certified prior to site mobilization.
+              {settings.catalogSubheading || "All machinery is serviced, pressure-tested, and certified prior to site mobilization."}
             </p>
           </div>
 
@@ -586,10 +586,10 @@ export default function PublicLandingClient({ sessionUser, settings }: PublicLan
               Commercial Operations Desk
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold text-white mt-1.5 tracking-tight">
-              Request Machinery Hire Quotation
+              {settings.inquiryHeading || "Request Machinery Hire Quotation"}
             </h2>
             <p className="mt-2 text-slate-400 text-sm max-w-lg mx-auto">
-              Submit your project schedule below. Central Yard dispatch will confirm machine availability and issue formal hire rates.
+              {settings.inquirySubheading || "Submit your project schedule below. Central Yard dispatch will confirm machine availability and issue formal hire rates."}
             </p>
           </div>
 
@@ -779,7 +779,7 @@ export default function PublicLandingClient({ sessionUser, settings }: PublicLan
             <p className="leading-relaxed text-[11px] text-slate-400">
               {settings.storeAddress}<br />
               Coordinates: {settings.storeLatitude.toFixed(4)}, {settings.storeLongitude.toFixed(4)}<br />
-              Hours: Mon – Sun: 6:00 AM – 9:00 PM
+              Hours: {settings.operatingHours || "Mon – Sun: 6:00 AM – 9:00 PM"}
             </p>
           </div>
 

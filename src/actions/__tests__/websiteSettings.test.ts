@@ -138,6 +138,12 @@ describe("Website Settings Server Action Suite", () => {
       emergencyPhone: "+91 94471 23456",
       districtsCovered: ["Kottayam", "Ernakulam"],
       footerCopy: "ZERO GROUP Machinery Rentals",
+      headerSubtitle: "Commercial Construction Machinery & Lift Rentals",
+      catalogHeading: "Certified Construction Machinery Catalog",
+      catalogSubheading: "All machinery is serviced, pressure-tested, and certified prior to site mobilization.",
+      inquiryHeading: "Request Machinery Hire Quotation",
+      inquirySubheading: "Submit your project schedule below.",
+      operatingHours: "Mon – Sun: 6:00 AM – 9:00 PM",
     };
 
     it("rejects invalid GPS coordinates", async () => {

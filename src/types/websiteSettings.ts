@@ -58,6 +58,12 @@ export const UpdateWebsiteSettingsInputSchema = z.object({
   emergencyPhone: z.string().max(25).optional().nullable(),
   districtsCovered: z.array(z.string().min(1).max(50)).max(30).default([]),
   footerCopy: z.string().max(350).optional().nullable(),
+  headerSubtitle: z.string().max(160).optional().nullable(),
+  catalogHeading: z.string().max(120).optional().nullable(),
+  catalogSubheading: z.string().max(350).optional().nullable(),
+  inquiryHeading: z.string().max(120).optional().nullable(),
+  inquirySubheading: z.string().max(350).optional().nullable(),
+  operatingHours: z.string().max(120).optional().nullable(),
   expectedUpdatedAt: z.string().optional(),
   catalogItems: z.array(CatalogItemSchema).max(50).optional(),
   valueProps: z.array(ValuePropSchema).max(12).optional(),
@@ -113,6 +119,12 @@ export interface CorporateWebsiteSettingsData {
   emergencyPhone?: string;
   districtsCovered?: string[];
   footerCopy?: string;
+  headerSubtitle?: string;
+  catalogHeading?: string;
+  catalogSubheading?: string;
+  inquiryHeading?: string;
+  inquirySubheading?: string;
+  operatingHours?: string;
   updatedAt?: string;
   catalogItems?: WebsiteCatalogItemData[];
   valueProps?: WebsiteValuePropData[];

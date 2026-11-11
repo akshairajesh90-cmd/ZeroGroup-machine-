@@ -129,6 +129,20 @@ async function fetchWebsiteSettingsFromDb(): Promise<CorporateWebsiteSettingsDat
       footerCopy:
         settings?.footerCopy ||
         "ZERO GROUP Equipment Rentals. All commercial plant certified under Kerala industrial equipment safety guidelines.",
+      headerSubtitle:
+        settings?.headerSubtitle || "Commercial Construction Machinery & Lift Rentals",
+      catalogHeading:
+        settings?.catalogHeading || "Certified Construction Machinery Catalog",
+      catalogSubheading:
+        settings?.catalogSubheading ||
+        "All machinery is serviced, pressure-tested, and certified prior to site mobilization.",
+      inquiryHeading:
+        settings?.inquiryHeading || "Request Machinery Hire Quotation",
+      inquirySubheading:
+        settings?.inquirySubheading ||
+        "Submit your project schedule below. Central Yard dispatch will confirm machine availability and issue formal hire rates.",
+      operatingHours:
+        settings?.operatingHours || "Mon – Sun: 6:00 AM – 9:00 PM",
       updatedAt: settings?.updatedAt ? settings.updatedAt.toISOString() : undefined,
       catalogItems,
       valueProps,
@@ -156,6 +170,12 @@ async function fetchWebsiteSettingsFromDb(): Promise<CorporateWebsiteSettingsDat
       emergencyPhone: "+91 94471 23456",
       districtsCovered: DEFAULT_KERALA_DISTRICTS,
       footerCopy: "ZERO GROUP Equipment Rentals. All commercial plant certified under Kerala industrial equipment safety guidelines.",
+      headerSubtitle: "Commercial Construction Machinery & Lift Rentals",
+      catalogHeading: "Certified Construction Machinery Catalog",
+      catalogSubheading: "All machinery is serviced, pressure-tested, and certified prior to site mobilization.",
+      inquiryHeading: "Request Machinery Hire Quotation",
+      inquirySubheading: "Submit your project schedule below. Central Yard dispatch will confirm machine availability and issue formal hire rates.",
+      operatingHours: "Mon – Sun: 6:00 AM – 9:00 PM",
       catalogItems: DEFAULT_CATALOG_ITEMS,
       valueProps: DEFAULT_VALUE_PROPS,
     };
@@ -262,6 +282,12 @@ export async function updateCorporateWebsiteSettings(data: unknown) {
             emergencyPhone: payload.emergencyPhone?.trim() || null,
             districtsCovered: payload.districtsCovered,
             footerCopy: payload.footerCopy?.trim() || null,
+            headerSubtitle: payload.headerSubtitle?.trim() || null,
+            catalogHeading: payload.catalogHeading?.trim() || null,
+            catalogSubheading: payload.catalogSubheading?.trim() || null,
+            inquiryHeading: payload.inquiryHeading?.trim() || null,
+            inquirySubheading: payload.inquirySubheading?.trim() || null,
+            operatingHours: payload.operatingHours?.trim() || null,
           },
         });
       } else {
@@ -287,6 +313,12 @@ export async function updateCorporateWebsiteSettings(data: unknown) {
             emergencyPhone: payload.emergencyPhone?.trim() || null,
             districtsCovered: payload.districtsCovered,
             footerCopy: payload.footerCopy?.trim() || null,
+            headerSubtitle: payload.headerSubtitle?.trim() || null,
+            catalogHeading: payload.catalogHeading?.trim() || null,
+            catalogSubheading: payload.catalogSubheading?.trim() || null,
+            inquiryHeading: payload.inquiryHeading?.trim() || null,
+            inquirySubheading: payload.inquirySubheading?.trim() || null,
+            operatingHours: payload.operatingHours?.trim() || null,
           },
         });
       }
