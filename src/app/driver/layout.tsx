@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { handleSignOut } from "@/actions/auth";
@@ -38,8 +39,15 @@ export default async function DriverLayout({
       {/* PWA Mobile Top Header */}
       <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-800/80 bg-slate-900/90 px-4 backdrop-blur-xl">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 shadow-md shadow-cyan-500/20">
-            <Truck className="h-5 w-5 text-white" />
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-800 border border-slate-700/80 overflow-hidden p-0.5 shadow-sm">
+            <Image
+              src="/logo.png"
+              alt="ZERO GROUP Logo"
+              width={40}
+              height={40}
+              className="h-full w-full object-contain"
+              priority
+            />
           </div>
           <div>
             <h1 className="text-sm font-black tracking-tight text-white">ZERO GROUP</h1>

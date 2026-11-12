@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { LogIn, Delete } from "lucide-react";
 
 export default function OperatorLoginPage() {
@@ -70,9 +71,21 @@ export default function OperatorLoginPage() {
     <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-8">
         
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-black text-white uppercase tracking-widest">Zero Group</h1>
-          <p className="text-sm font-bold text-orange-500 uppercase tracking-widest">Operator Portal</p>
+        <div className="text-center space-y-3 flex flex-col items-center">
+          <div className="h-16 w-16 rounded-2xl bg-zinc-900 border border-zinc-800 p-1 shadow-xl overflow-hidden">
+            <Image
+              src="/logo.png"
+              alt="ZERO GROUP Logo"
+              width={64}
+              height={64}
+              className="h-full w-full object-contain"
+              priority
+            />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black text-white uppercase tracking-widest">Zero Group</h1>
+            <p className="text-sm font-bold text-orange-500 uppercase tracking-widest">Operator Portal</p>
+          </div>
         </div>
 
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-2xl">

@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useFormState, useFormStatus } from "react-dom";
 import { authenticate } from "@/actions/auth";
 import { Lock, Mail, ArrowRight, ArrowLeft, HardHat } from "lucide-react";
@@ -53,8 +54,15 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md">
         {/* Brand Header */}
         <div className="mb-8 text-center">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500 text-slate-950 shadow-sm mb-4 border border-amber-400/30">
-            <HardHat className="h-6 w-6 text-slate-950" strokeWidth={1.5} />
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-900 shadow-md mb-4 border border-slate-800 overflow-hidden p-1">
+            <Image
+              src="/logo.png"
+              alt="ZERO GROUP Logo"
+              width={64}
+              height={64}
+              className="h-full w-full object-contain"
+              priority
+            />
           </div>
           <div className="flex items-center justify-center gap-2 mb-1">
             <h1 className="text-2xl font-bold tracking-tight text-white">ZERO GROUP</h1>

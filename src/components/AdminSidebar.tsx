@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Shield,
@@ -198,8 +199,15 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
       >
         {/* Logo */}
         <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-800 px-6 pt-4 lg:pt-0 pl-16 lg:pl-6">
-          <div className="flex h-9 w-9 items-center justify-center bg-amber-500 shadow-sm text-slate-950 rounded-lg">
-            <Shield className="h-5 w-5 text-slate-950" strokeWidth={1.5} />
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-800/90 border border-slate-700/80 overflow-hidden p-0.5 shadow-sm">
+            <Image
+              src="/logo.png"
+              alt="ZERO GROUP Logo"
+              width={40}
+              height={40}
+              className="h-full w-full object-contain"
+              priority
+            />
           </div>
           <div>
             <h2 className="font-bold tracking-tight text-white text-base">ZERO GROUP</h2>

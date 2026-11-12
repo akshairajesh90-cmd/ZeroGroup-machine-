@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Shield,
   KeyRound,
@@ -139,8 +140,15 @@ export default function ResetPasswordClient({
       <div className="w-full max-w-lg relative z-10">
         {/* Header Branding */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-amber-500 text-slate-950 shadow-sm mb-3 border border-amber-400/30">
-            <KeyRound className="w-6 h-6 text-slate-950" strokeWidth={1.5} />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-900 shadow-md mb-3 border border-slate-800 overflow-hidden p-1">
+            <Image
+              src="/logo.png"
+              alt="ZERO GROUP Logo"
+              width={64}
+              height={64}
+              className="h-full w-full object-contain"
+              priority
+            />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center justify-center gap-2">
             ZERO GROUP

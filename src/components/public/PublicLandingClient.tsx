@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { 
   Building2, Truck, Wrench, CheckCircle2, Phone, MessageSquare, 
   MapPin, ChevronRight, ArrowRight, HardHat, ExternalLink, 
@@ -233,8 +234,15 @@ export default function PublicLandingClient({ sessionUser, settings }: PublicLan
           
           {/* Logo & Heavy Machinery Tag */}
           <Link href="/" className="flex items-center gap-3.5 group">
-            <div className="h-11 w-11 rounded-lg bg-amber-500 flex items-center justify-center text-slate-950 shadow-sm border border-amber-400/30 group-hover:bg-amber-400 transition-colors">
-              <HardHat className="h-6 w-6 text-slate-950" strokeWidth={1.5} />
+            <div className="relative h-11 w-11 shrink-0 rounded-xl overflow-hidden bg-slate-900 border border-slate-800 shadow-sm flex items-center justify-center group-hover:border-amber-500/50 transition-colors">
+              <Image
+                src="/logo.png"
+                alt="ZERO GROUP Logo"
+                width={44}
+                height={44}
+                className="h-full w-full object-contain p-0.5"
+                priority
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -760,9 +768,15 @@ export default function PublicLandingClient({ sessionUser, settings }: PublicLan
       <footer className="border-t border-slate-800 bg-slate-900 py-12 text-slate-400 text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-white">
-              <div className="h-8 w-8 rounded-lg bg-amber-500 flex items-center justify-center text-slate-950 font-bold text-xs shadow-sm">
-                ZG
+            <div className="flex items-center gap-3 text-white">
+              <div className="relative h-9 w-9 shrink-0 rounded-lg overflow-hidden bg-slate-800/80 border border-slate-700/60 p-0.5 shadow-sm">
+                <Image
+                  src="/logo.png"
+                  alt="ZERO GROUP Logo"
+                  width={36}
+                  height={36}
+                  className="h-full w-full object-contain"
+                />
               </div>
               <span className="text-base font-bold text-white">ZERO GROUP</span>
             </div>

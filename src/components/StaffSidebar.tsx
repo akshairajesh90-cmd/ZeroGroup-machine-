@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Briefcase,
@@ -174,8 +175,15 @@ export default function StaffSidebar({ userName, userEmail }: StaffSidebarProps)
         className={`fixed lg:static inset-y-0 left-0 z-[45] w-64 flex flex-col border-r border-zinc-800 bg-zinc-950 font-sans shadow-2xl transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
         <Link href="/staff/dashboard" className="flex h-16 shrink-0 items-center gap-3 border-b border-zinc-800 px-6 bg-zinc-950/50 backdrop-blur-xl hover:bg-zinc-900 transition-colors pt-4 lg:pt-0 pl-16 lg:pl-6">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 shadow-lg shadow-emerald-500/20">
-            <Briefcase className="h-5 w-5 text-white" />
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden p-0.5 shadow-lg shadow-emerald-500/10">
+            <Image
+              src="/logo.png"
+              alt="ZERO GROUP Logo"
+              width={40}
+              height={40}
+              className="h-full w-full object-contain"
+              priority
+            />
           </div>
           <div>
             <h2 className="font-bold tracking-tight text-white text-base">ZERO GROUP</h2>

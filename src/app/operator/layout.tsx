@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { handleSignOut } from "@/actions/auth";
@@ -111,11 +112,20 @@ export default function OperatorLayout({
         <div className="flex items-center justify-between px-4 h-[60px] max-w-lg mx-auto">
           {/* Status Indicators & Name */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <span className="relative flex h-3 w-3">
                 <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isOffline ? "bg-red-400" : "bg-emerald-400"}`}></span>
                 <span className={`relative inline-flex rounded-full h-3 w-3 ${isOffline ? "bg-red-500" : "bg-emerald-500"}`}></span>
               </span>
+              <div className="relative h-7 w-7 shrink-0 rounded-lg overflow-hidden bg-zinc-900 border border-zinc-800 p-0.5">
+                <Image
+                  src="/logo.png"
+                  alt="ZERO GROUP Logo"
+                  width={28}
+                  height={28}
+                  className="h-full w-full object-contain"
+                />
+              </div>
               <span className="text-white font-black tracking-tight text-lg">
                 ZERO<span className="text-orange-500">GROUP</span>
               </span>

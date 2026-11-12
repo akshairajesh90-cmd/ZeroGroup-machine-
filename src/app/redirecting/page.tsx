@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export default function RedirectingPage() {
   const { data: session, status } = useSession();
@@ -34,8 +35,15 @@ export default function RedirectingPage() {
   return (
     <div className="min-h-screen w-full bg-slate-950 flex flex-col items-center justify-center p-4 font-sans text-white">
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-xl shadow-cyan-500/20">
-          <ShieldCheck className="h-7 w-7 text-white" />
+        <div className="relative h-16 w-16 rounded-2xl bg-slate-900 border border-slate-800 p-1 flex items-center justify-center shadow-xl overflow-hidden">
+          <Image
+            src="/logo.png"
+            alt="ZERO GROUP Logo"
+            width={64}
+            height={64}
+            className="h-full w-full object-contain"
+            priority
+          />
         </div>
         <div>
           <h2 className="text-xl font-bold tracking-tight">Securing Portal Access...</h2>
