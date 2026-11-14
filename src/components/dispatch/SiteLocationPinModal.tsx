@@ -15,7 +15,9 @@ import {
   Wrench,
   Clock,
   Cog,
+  Fuel,
 } from "lucide-react";
+import { auditTripFuelAndDistance } from "@/lib/gis/fuelAudit";
 
 export interface SiteLocationLogistics {
   vehicle?: {
@@ -105,6 +107,7 @@ export function SiteLocationPinModal({
   const numLat = latitude != null ? Number(latitude) : NaN;
   const numLng = longitude != null ? Number(longitude) : NaN;
   const hasCoords = !isNaN(numLat) && !isNaN(numLng) && (numLat !== 0 || numLng !== 0);
+  const tripAudit = hasCoords ? auditTripFuelAndDistance(numLat, numLng) : null;
 
   const displayLocation = locationName || address || "Job Site Location";
 
@@ -209,17 +212,30 @@ export function SiteLocationPinModal({
             </div>
 
             {hasCoords ? (
-              <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-xs gap-2">
-                <div className="font-mono text-slate-300 flex items-center gap-1.5">
-                  <Compass className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Lat: {numLat.toFixed(6)}</span>
-                  <span className="text-slate-600">•</span>
-                  <span>Lng: {numLng.toFixed(6)}</span>
+              <>
+                <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-xs gap-2">
+                  <div className="font-mono text-slate-300 flex items-center gap-1.5">
+                    <Compass className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Lat: {numLat.toFixed(6)}</span>
+                    <span className="text-slate-600">•</span>
+                    <span>Lng: {numLng.toFixed(6)}</span>
+                  </div>
+                  <span className="text-[11px] text-emerald-400 font-medium">
+                    Verified Destination Pin
+                  </span>
                 </div>
-                <span className="text-[11px] text-emerald-400 font-medium">
-                  Verified Destination Pin
-                </span>
-              </div>
+                {tripAudit && (
+                  <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-300">
+                    <div className="flex items-center gap-1.5 text-slate-400">
+                      <Fuel className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Haulage Est (Pala):</span>
+                    </div>
+                    <div className="font-semibold text-slate-200">
+                      ~{tripAudit.roundTripRoadKm} km RT <span className="text-slate-500">•</span> ~{tripAudit.expectedLiters}L diesel
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="pt-2 border-t border-slate-800/80 text-xs text-amber-400/90 flex items-center gap-1.5">
                 <span>⚠️ Coordinates not set — navigating via address lookup</span>

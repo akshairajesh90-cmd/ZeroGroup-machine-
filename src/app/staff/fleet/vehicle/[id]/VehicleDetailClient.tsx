@@ -8,6 +8,7 @@ import {
   AlertTriangle, ShieldAlert, CheckCircle2, Upload
 , MapPin, Navigation, ExternalLink, Clock, User, Cog, Truck } from "lucide-react";
 import { createMaintenanceTicket, closeMaintenanceTicket, logStaffFuel, uploadVehicleDocument } from "@/actions/fleet";
+import { auditTripFuelAndDistance } from "@/lib/gis/fuelAudit";
 import { EditVehicleModal } from "./EditVehicleModal";
 
 export default function VehicleDetailClient({ vehicle }: any) {
@@ -242,21 +243,32 @@ export default function VehicleDetailClient({ vehicle }: any) {
                             <span className="truncate max-w-xs">{d.location || "Site location"}</span>
                           </div>
                           {hasCoords && (
-                            <div className="mt-1 flex items-center gap-2">
-                              <span className="text-[10px] font-mono text-slate-500">
-                                {numLat?.toFixed(4)}, {numLng?.toFixed(4)}
-                              </span>
-                              {mapUrl && (
-                                <a
-                                  href={mapUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 font-bold hover:underline"
-                                >
-                                  <span>View Pin</span>
-                                  <ExternalLink className="w-2.5 h-2.5" />
-                                </a>
-                              )}
+                            <div className="mt-1 space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-mono text-slate-500">
+                                  {numLat?.toFixed(4)}, {numLng?.toFixed(4)}
+                                </span>
+                                {mapUrl && (
+                                  <a
+                                    href={mapUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 font-bold hover:underline"
+                                  >
+                                    <span>View Pin</span>
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                  </a>
+                                )}
+                              </div>
+                              {(() => {
+                                const tripAudit = auditTripFuelAndDistance(numLat!, numLng!);
+                                return (
+                                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px] text-slate-400">
+                                    <Fuel className="w-2.5 h-2.5 text-amber-400" />
+                                    <span>~{tripAudit.roundTripRoadKm}km RT (~{tripAudit.expectedLiters}L est.)</span>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           )}
                         </td>
