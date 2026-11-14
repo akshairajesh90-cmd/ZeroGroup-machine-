@@ -57,16 +57,19 @@ export default function SaveLocationButton({ dispatchId }: { dispatchId: string 
       <button
         onClick={handleSaveLocation}
         disabled={loading || success}
-        className="flex items-center justify-center gap-2 w-full py-4 rounded-xl bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 font-black text-sm transition-all active:scale-[0.98]"
+        className="flex flex-col items-center justify-center gap-0.5 w-full py-3.5 px-3 rounded-2xl bg-cyan-600/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 font-black text-sm transition-all active:scale-[0.98] shadow-sm min-h-[52px]"
       >
-        {loading ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : success ? (
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-        ) : (
-          <MapPin className="w-4 h-4" />
-        )}
-        {loading ? "Getting GPS..." : success ? "Location Saved!" : "Pin My Current GPS Location"}
+        <div className="flex items-center gap-2">
+          {loading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : success ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          ) : (
+            <MapPin className="w-4 h-4 text-cyan-400" />
+          )}
+          <span>{loading ? "Getting GPS..." : success ? "Location Saved!" : "Pin My Current GPS Location"}</span>
+        </div>
+        <span className="text-[10px] text-cyan-400/80 font-normal">ഇപ്പോഴത്തെ ലൊക്കേഷൻ സേവ് ചെയ്യുക</span>
       </button>
       {error && <p className="text-red-400 text-[10px] font-bold text-center mt-2">{error}</p>}
     </div>

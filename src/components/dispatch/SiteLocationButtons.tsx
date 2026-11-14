@@ -222,17 +222,20 @@ export function SiteLocationButtons({
         </span>
       )}
 
-      {/* 5. DRIVER VARIANT: Large, accessible, full-width touch targets */}
+      {/* 5. DRIVER VARIANT: Large, accessible, full-width touch targets with Malayalam sub-labels */}
       {variant === "driver" && (
         <div className={`space-y-2 pt-2.5 pb-1 ${className}`}>
           <div className="grid grid-cols-2 gap-2.5">
             <button
               type="button"
               onClick={handleOpenPin}
-              className="w-full py-3.5 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-blue-400 border border-slate-700/80 active:scale-95 transition-all text-xs font-bold flex items-center justify-center gap-2 shadow-sm"
+              className="w-full py-3 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-blue-400 border border-slate-700/80 active:scale-95 transition-all flex flex-col items-center justify-center gap-0.5 shadow-sm min-h-[52px]"
             >
-              <MapPin className="w-4 h-4 text-blue-400 shrink-0" />
-              <span>Inspect GPS Pin</span>
+              <div className="flex items-center gap-1.5 text-xs font-black">
+                <MapPin className="w-4 h-4 text-blue-400 shrink-0" />
+                <span>Inspect GPS Pin</span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-medium">സൈറ്റ് ലൊക്കേഷൻ</span>
             </button>
 
             <a
@@ -240,11 +243,14 @@ export function SiteLocationButtons({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="w-full py-3.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 active:scale-95 transition-all"
+              className="w-full py-3 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white flex flex-col items-center justify-center gap-0.5 shadow-md shadow-emerald-600/25 active:scale-95 transition-all min-h-[52px]"
             >
-              <Navigation className="w-4 h-4 fill-white shrink-0" />
-              <span>Google Maps</span>
-              <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+              <div className="flex items-center gap-1.5 text-xs font-black">
+                <Navigation className="w-4 h-4 fill-white shrink-0" />
+                <span>Google Maps</span>
+                <ExternalLink className="w-3 h-3 opacity-80" />
+              </div>
+              <span className="text-[10px] text-emerald-100 font-medium">വഴി അറിയാൻ</span>
             </a>
           </div>
         </div>

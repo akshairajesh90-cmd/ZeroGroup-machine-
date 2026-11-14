@@ -290,9 +290,10 @@ export default function LiveMap({
         <MapController focusCenter={focusCoords} bounds={mapBounds} />
 
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           className="map-tiles"
+          maxZoom={19}
         />
 
         {/* 1. Route Polylines Connecting Workers to Destination Sites (Following Roads) */}
