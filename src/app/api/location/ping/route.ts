@@ -77,6 +77,18 @@ export async function POST(request: Request) {
     // Determine target employee
     const targetEmployeeId = validPings[0].employeeId || ctx.employeeId;
 
+    // Security & Anti-Spoofing: Field staff (driver, operator, worker) cannot submit pings for other employees
+    const isManagement = ctx.role === "STAFF" || ctx.role === "ADMIN" || ctx.role === "OWNER";
+    if (!isManagement && ctx.employeeId && targetEmployeeId !== ctx.employeeId) {
+      return NextResponse.json(
+        { error: "Forbidden: You may only record location telemetry for your own assigned account." },
+        { status: 403 }
+      );
+    }
+
+    const now = new Date();
+    const maxFutureTime = now.getTime() + 10 * 60 * 1000; // max 10 min clock skew
+
     // 4. ATOMIC TRANSACTION: Ingest pings, update employee live cache, and evaluate forward-only geofence
     const result = await prisma.$transaction(async (tx) => {
       const emp = await tx.employee.findUnique({
@@ -87,20 +99,28 @@ export async function POST(request: Request) {
         throw new Error(`Target employee not found: ${targetEmployeeId}`);
       }
 
-      // Bulk create LocationPing records
-      const pingData = validPings.map((p) => ({
-        employeeId: targetEmployeeId,
-        dispatchId: p.dispatchId || null,
-        latitude: Number(p.latitude),
-        longitude: Number(p.longitude),
-        accuracy: p.accuracy !== undefined && p.accuracy !== null ? Number(p.accuracy) : null,
-        altitude: p.altitude !== undefined && p.altitude !== null ? Number(p.altitude) : null,
-        speed: p.speed !== undefined && p.speed !== null ? Number(p.speed) : null,
-        timestamp: p.timestamp ? new Date(p.timestamp) : new Date(),
-        source: p.source || "BROWSER",
-        sessionId: p.sessionId || null,
-        seq: p.seq !== undefined && p.seq !== null ? Number(p.seq) : null,
-      }));
+      // Bulk create LocationPing records with sanitized timestamps
+      const pingData = validPings.map((p) => {
+        let pingTime = p.timestamp ? new Date(p.timestamp) : now;
+        // Clamp future timestamps to current server time if skewed beyond 10 min
+        if (pingTime.getTime() > maxFutureTime) {
+          pingTime = now;
+        }
+
+        return {
+          employeeId: targetEmployeeId,
+          dispatchId: p.dispatchId || null,
+          latitude: Number(p.latitude),
+          longitude: Number(p.longitude),
+          accuracy: p.accuracy !== undefined && p.accuracy !== null ? Number(p.accuracy) : null,
+          altitude: p.altitude !== undefined && p.altitude !== null ? Number(p.altitude) : null,
+          speed: p.speed !== undefined && p.speed !== null ? Number(p.speed) : null,
+          timestamp: pingTime,
+          source: p.source || "BROWSER",
+          sessionId: p.sessionId || null,
+          seq: p.seq !== undefined && p.seq !== null ? Number(p.seq) : null,
+        };
+      });
 
       await tx.locationPing.createMany({
         data: pingData,
@@ -108,7 +128,10 @@ export async function POST(request: Request) {
 
       // Update employee live coordinates from the latest ping
       const latestPing = validPings[validPings.length - 1];
-      const latestTimestamp = latestPing.timestamp ? new Date(latestPing.timestamp) : new Date();
+      let latestTimestamp = latestPing.timestamp ? new Date(latestPing.timestamp) : now;
+      if (latestTimestamp.getTime() > maxFutureTime) {
+        latestTimestamp = now;
+      }
 
       await tx.employee.update({
         where: { id: targetEmployeeId },
@@ -116,7 +139,7 @@ export async function POST(request: Request) {
           lastLatitude: Number(latestPing.latitude),
           lastLongitude: Number(latestPing.longitude),
           lastLocationUpdate: latestTimestamp,
-          lastSeenAt: new Date(),
+          lastSeenAt: now,
           lastSyncStatus: "ONLINE",
         },
       });
@@ -125,9 +148,13 @@ export async function POST(request: Request) {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
 
+      // Support driver or operator phone for active dispatch geofence tracking
       const activeDispatch = await tx.dailyDispatch.findFirst({
         where: {
-          driverId: targetEmployeeId,
+          OR: [
+            { driverId: targetEmployeeId },
+            { operatorId: targetEmployeeId },
+          ],
           dateOfService: { gte: todayStart },
           isPendingDelete: false,
           status: { in: ["PENDING", "ACCEPTED", "EN_ROUTE", "IN_PROGRESS"] },
@@ -144,8 +171,9 @@ export async function POST(request: Request) {
         // Trigger 1: PENDING / ACCEPTED -> EN_ROUTE (Yard exit > 250m, speed >= 15 km/h)
         if (["PENDING", "ACCEPTED"].includes(currentStatus) && curSpeed >= 15) {
           const settings = await tx.systemSettings.findFirst();
-          const yardLat = settings?.storeLatitude ? Number(settings.storeLatitude) : 9.5916;
-          const yardLng = settings?.storeLongitude ? Number(settings.storeLongitude) : 76.5222;
+          // Pala Depot coordinates fallback (lat 9.7118, lon 76.6853)
+          const yardLat = settings?.storeLatitude ? Number(settings.storeLatitude) : 9.7118;
+          const yardLng = settings?.storeLongitude ? Number(settings.storeLongitude) : 76.6853;
 
           const distFromYard = calculateDistanceMeters(yardLat, yardLng, curLat, curLng);
           if (distFromYard > 250) {

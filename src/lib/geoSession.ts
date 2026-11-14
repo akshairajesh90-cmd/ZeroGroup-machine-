@@ -18,7 +18,9 @@ export function getGeoSessionId(): string {
   }
 
   try {
-    const existing = window.sessionStorage.getItem("ironrent_geo_session_id");
+    const existing =
+      window.localStorage.getItem("ironrent_geo_session_id") ||
+      window.sessionStorage.getItem("ironrent_geo_session_id");
     if (existing) {
       return existing;
     }
@@ -26,7 +28,11 @@ export function getGeoSessionId(): string {
       typeof crypto !== "undefined" && crypto.randomUUID
         ? crypto.randomUUID()
         : `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-    window.sessionStorage.setItem("ironrent_geo_session_id", newId);
+    try {
+      window.localStorage.setItem("ironrent_geo_session_id", newId);
+    } catch {
+      window.sessionStorage.setItem("ironrent_geo_session_id", newId);
+    }
     return newId;
   } catch {
     if (!memorySessionId) {
@@ -43,9 +49,15 @@ export function getNextPingSequence(): number {
   }
 
   try {
-    const storedSeq = window.sessionStorage.getItem("ironrent_geo_seq");
+    const storedSeq =
+      window.localStorage.getItem("ironrent_geo_seq") ||
+      window.sessionStorage.getItem("ironrent_geo_seq");
     const nextSeq = (storedSeq ? parseInt(storedSeq, 10) : 0) + 1;
-    window.sessionStorage.setItem("ironrent_geo_seq", nextSeq.toString());
+    try {
+      window.localStorage.setItem("ironrent_geo_seq", nextSeq.toString());
+    } catch {
+      window.sessionStorage.setItem("ironrent_geo_seq", nextSeq.toString());
+    }
     currentSequence = nextSeq;
     return nextSeq;
   } catch {
