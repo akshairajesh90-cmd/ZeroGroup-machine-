@@ -302,6 +302,7 @@ model DailyDispatch {
   locationUpdatedById   String?
   locationUpdatedAt     DateTime?
   locationOverrideReason String?
+  locationPriority      Int?                    @default(1)
   dateOfService         DateTime                @db.Date
   workType              WorkType                @default(NORMAL)
   status                DispatchStatus          @default(PENDING)
@@ -366,6 +367,7 @@ model DailyDispatch {
   dispatchTools         DispatchTool[]
   siteLeader            Employee?               @relation("SiteLeaderDispatches", fields: [siteLeaderEmployeeId], references: [id], onDelete: SetNull)
   locationPings         LocationPing[]
+  locationCandidates    DispatchLocationCandidate[]
   fieldDiaryLogs        FieldDiaryLog[]
   dispatchPhotos        DispatchPhoto[]
   expenses              Expense[]
@@ -380,6 +382,26 @@ model DailyDispatch {
   @@index([siteBundleId])
   @@index([siteLeaderEmployeeId])
   @@map("daily_dispatches")
+}
+
+model DispatchLocationCandidate {
+  id           String        @id @default(cuid())
+  dispatchId   String
+  source       String        // "STAFF_BOOKING" | "DRIVER_PIN" | "OPERATOR_PIN" | "VERIFIED_CENTROID" | "STAFF_OVERRIDE"
+  weight       Int
+  latitude     Decimal       @db.Decimal(10, 7)
+  longitude    Decimal       @db.Decimal(10, 7)
+  accuracy     Float?
+  capturedAt   DateTime      @default(now())
+  capturedById String?
+  evidenceRef  String?
+  createdAt    DateTime      @default(now())
+  dispatch     DailyDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+
+  @@index([dispatchId])
+  @@index([capturedAt])
+  @@index([weight])
+  @@map("dispatch_location_candidates")
 }
 
 model DispatchMachine {

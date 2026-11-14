@@ -22,13 +22,13 @@ test.describe('Full System Button & Navigation Verification', () => {
     await expect(searchInput).toHaveValue('');
 
     // Category button filter
-    await page.getByRole('button', { name: /Concrete/i }).click();
+    await page.getByRole('button', { name: 'Concrete', exact: true }).click();
     await expect(page.getByText(/Concrete Mixer/i).first()).toBeVisible();
 
     // Back to All Fleet
-    await page.getByRole('button', { name: /All Fleet/i }).click();
+    await page.getByRole('button', { name: 'All Fleet', exact: true }).click();
 
-    // Select for Quotation button
+    // Select for Quotation link
     const selectBtn = page.getByRole('link', { name: /Select for Quotation/i }).first();
     await selectBtn.click();
 
@@ -48,8 +48,8 @@ test.describe('Full System Button & Navigation Verification', () => {
     await page.locator('input[name="email"]').fill('admin@zerogroup.com');
     await page.locator('input[name="password"]').fill('admin123');
     await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
 
-    await page.waitForTimeout(2000);
     await page.goto('/admin/dashboard');
     await expect(page.locator('body')).toBeVisible();
 
@@ -78,8 +78,8 @@ test.describe('Full System Button & Navigation Verification', () => {
     await page.locator('input[name="email"]').fill('staff@zerogroup.com');
     await page.locator('input[name="password"]').fill('password123');
     await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
 
-    await page.waitForTimeout(2000);
     await page.goto('/staff/dashboard');
     await expect(page.locator('body')).toBeVisible();
 
@@ -96,8 +96,8 @@ test.describe('Full System Button & Navigation Verification', () => {
     await page.locator('input[name="email"]').fill('staff@zerogroup.com');
     await page.locator('input[name="password"]').fill('password123');
     await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
 
-    await page.waitForTimeout(2000);
     await page.goto('/staff/orders');
     await expect(page.locator('body')).toBeVisible();
 
@@ -117,8 +117,8 @@ test.describe('Full System Button & Navigation Verification', () => {
     await page.locator('input[name="email"]').fill('staff@zerogroup.com');
     await page.locator('input[name="password"]').fill('password123');
     await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
 
-    await page.waitForTimeout(2000);
     await page.goto('/staff/tools');
     await expect(page.locator('body')).toBeVisible();
 
@@ -148,8 +148,8 @@ test.describe('Full System Button & Navigation Verification', () => {
     await page.locator('input[name="email"]').fill('staff@zerogroup.com');
     await page.locator('input[name="password"]').fill('password123');
     await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
 
-    await page.waitForTimeout(2000);
     await page.goto('/staff/employees');
     await expect(page.locator('body')).toBeVisible();
 
@@ -175,8 +175,8 @@ test.describe('Full System Button & Navigation Verification', () => {
     await page.locator('input[name="email"]').fill('driver@zerogroup.com');
     await page.locator('input[name="password"]').fill('password123');
     await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
 
-    await page.waitForTimeout(2000);
     await page.goto('/driver/home');
     await expect(page.locator('body')).toBeVisible();
 
@@ -204,10 +204,10 @@ test.describe('Full System Button & Navigation Verification', () => {
 
     await page.goto('/login');
     await page.locator('input[name="email"]').fill('owner@zerogroup.com');
-    await page.locator('input[name="password"]').fill('password123');
+    await page.locator('input[name="password"]').fill('admin123');
     await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
 
-    await page.waitForTimeout(2000);
     await page.goto('/owner/dashboard');
     await expect(page.locator('body')).toBeVisible();
 
@@ -230,8 +230,8 @@ test.describe('Full System Button & Navigation Verification', () => {
     await page.locator('input[name="email"]').fill('operator@zerogroup.com');
     await page.locator('input[name="password"]').fill('password123');
     await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
 
-    await page.waitForTimeout(2000);
     await page.goto('/operator/home');
     await expect(page.locator('body')).toBeVisible();
 

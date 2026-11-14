@@ -517,7 +517,7 @@ export default function UnifiedLiveOperationsClient({
     const lng = parseFloat(storeForm.storeLongitude);
 
     if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      setStoreError("Please enter valid decimal coordinates (e.g., 9.5916, 76.5222)");
+      setStoreError("Please enter valid decimal coordinates (e.g. latitude -90 to 90, longitude -180 to 180)");
       return;
     }
 
@@ -658,7 +658,7 @@ export default function UnifiedLiveOperationsClient({
         parsedLng < -180 ||
         parsedLng > 180
       ) {
-        setSiteError("Please enter valid decimal coordinates (e.g., 9.5916, 76.5222)");
+        setSiteError("Please enter valid decimal coordinates (e.g. latitude -90 to 90, longitude -180 to 180)");
         return;
       }
       lat = parsedLat;
@@ -1457,7 +1457,7 @@ export default function UnifiedLiveOperationsClient({
                     type="text"
                     value={storeForm.googleLink}
                     onChange={(e) => handleStoreGoogleUrlChange(e.target.value)}
-                    placeholder="Paste Google Maps URL or '9.5916, 76.5222'..."
+                    placeholder="Paste Google Maps URL or decimal coordinates..."
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-zinc-400 focus:outline-none focus:border-emerald-500 font-mono text-[11px]"
                   />
                   {isResolvingStoreUrl && (
@@ -1518,7 +1518,7 @@ export default function UnifiedLiveOperationsClient({
                     step="any"
                     value={storeForm.storeLatitude}
                     onChange={(e) => setStoreForm({ ...storeForm, storeLatitude: e.target.value })}
-                    placeholder="e.g. 9.591600"
+                    placeholder="e.g. 9.710000"
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-zinc-400 focus:outline-none focus:border-emerald-500 font-mono"
                     required
                   />
@@ -1530,7 +1530,7 @@ export default function UnifiedLiveOperationsClient({
                     step="any"
                     value={storeForm.storeLongitude}
                     onChange={(e) => setStoreForm({ ...storeForm, storeLongitude: e.target.value })}
-                    placeholder="e.g. 76.522200"
+                    placeholder="e.g. 76.680000"
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-zinc-400 focus:outline-none focus:border-emerald-500 font-mono"
                     required
                   />
@@ -1636,7 +1636,7 @@ export default function UnifiedLiveOperationsClient({
                     type="text"
                     value={siteForm.googleLink}
                     onChange={(e) => handleSiteGoogleUrlChange(e.target.value)}
-                    placeholder="Paste Google Maps URL or '9.5916, 76.5222'..."
+                    placeholder="Paste Google Maps URL or decimal coordinates..."
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-zinc-400 focus:outline-none focus:border-amber-500 font-mono text-[11px]"
                   />
                   {isResolvingSiteUrl && (

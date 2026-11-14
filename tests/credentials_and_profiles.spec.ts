@@ -10,7 +10,7 @@ const operatorAuth = path.join(__dirname, '../playwright/.auth/operator.json');
 // ─── 1. CLEAN LOGIN PAGE ──────────────────────────────────────────────────────
 test.describe('Clean Unified Login', () => {
   test('Login page has no role tabs — just email/phone + password', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     // Should NOT show any tab buttons labelled Office/Admin or Field/Driver
     await expect(page.getByRole('tab', { name: /office|admin/i })).not.toBeVisible();
     await expect(page.getByRole('tab', { name: /field|driver/i })).not.toBeVisible();

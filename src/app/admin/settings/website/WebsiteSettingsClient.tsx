@@ -21,6 +21,7 @@ import {
   AllowedIcons,
 } from "@/types/websiteSettings";
 import { updateCorporateWebsiteSettings } from "@/actions/websiteSettings";
+import { PALA_DEPOT_LATITUDE, PALA_DEPOT_LONGITUDE } from "@/lib/gis/yardCoordinates";
 
 interface WebsiteSettingsClientProps {
   initialSettings: CorporateWebsiteSettingsData;
@@ -118,8 +119,8 @@ export default function WebsiteSettingsClient({ initialSettings }: WebsiteSettin
       ...prev,
       storeName: "ZERO GROUP Heavy Machinery & Equipment Rentals",
       storeAddress: "Central Machinery Yard, Pala - Ponkunnam Road, Kottayam, Kerala 686575",
-      storeLatitude: 9.5916,
-      storeLongitude: 76.5222,
+      storeLatitude: PALA_DEPOT_LATITUDE,
+      storeLongitude: PALA_DEPOT_LONGITUDE,
     }));
   };
 

@@ -11,9 +11,9 @@ test.describe('Zero Group Role-Based Integrated Journey Tests', () => {
     await page.locator('input[name="email"]').fill('admin@zerogroup.com');
     await page.locator('input[name="password"]').fill('admin123');
     await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
 
     // 2. Admin Dashboard
-    await page.waitForTimeout(2000);
     await page.goto('/admin/dashboard');
     await expect(page).toHaveURL(/\/admin/);
     await expect(page.locator('body')).toBeVisible();
@@ -36,9 +36,9 @@ test.describe('Zero Group Role-Based Integrated Journey Tests', () => {
     await page.locator('input[name="email"]').fill('staff@zerogroup.com');
     await page.locator('input[name="password"]').fill('password123');
     await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
 
     // 2. Dispatch Board
-    await page.waitForTimeout(2000);
     await page.goto('/staff/dispatch');
     await expect(page).toHaveURL(/\/staff/);
     await expect(page.locator('body')).toBeVisible();
@@ -59,11 +59,11 @@ test.describe('Zero Group Role-Based Integrated Journey Tests', () => {
     // 1. Authenticate as Owner
     await page.goto('/login');
     await page.locator('input[name="email"]').fill('owner@zerogroup.com');
-    await page.locator('input[name="password"]').fill('password123');
+    await page.locator('input[name="password"]').fill('admin123');
     await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
 
     // 2. Owner Dashboard
-    await page.waitForTimeout(2000);
     await page.goto('/owner/dashboard');
     await expect(page).toHaveURL(/\/owner/);
     await expect(page.locator('body')).toBeVisible();
@@ -86,9 +86,9 @@ test.describe('Zero Group Role-Based Integrated Journey Tests', () => {
     await page.locator('input[name="email"]').fill('driver@zerogroup.com');
     await page.locator('input[name="password"]').fill('password123');
     await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
 
     // 2. Driver Mobile Home
-    await page.waitForTimeout(2000);
     await page.goto('/driver/home');
     await expect(page).toHaveURL(/\/driver/);
     await expect(page.locator('body')).toBeVisible();
@@ -107,9 +107,9 @@ test.describe('Zero Group Role-Based Integrated Journey Tests', () => {
     await page.locator('input[name="email"]').fill('operator@zerogroup.com');
     await page.locator('input[name="password"]').fill('password123');
     await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
 
     // 2. Operator Home
-    await page.waitForTimeout(2000);
     await page.goto('/operator/home');
     await expect(page).toHaveURL(/\/operator/);
     await expect(page.locator('body')).toBeVisible();

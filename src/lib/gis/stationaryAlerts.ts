@@ -6,6 +6,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { getYardLocation } from "@/lib/gis/yardLocation";
 import { calculateHaversineMeters } from "./dualPointRouter";
 
 export interface StationaryFleetAlert {
@@ -31,9 +32,9 @@ export async function getStationaryFleetAlerts(
   minDwellMinutes: number = 30
 ): Promise<StationaryFleetAlert[]> {
   try {
-    const settings = await prisma.systemSettings.findFirst();
-    const depotLat = settings?.storeLatitude ? Number(settings.storeLatitude) : 9.7118;
-    const depotLng = settings?.storeLongitude ? Number(settings.storeLongitude) : 76.6853;
+    const yard = await getYardLocation();
+    const depotLat = yard.latitude;
+    const depotLng = yard.longitude;
 
     // Find all active dispatches currently on the road
     const enRouteDispatches = await prisma.dailyDispatch.findMany({

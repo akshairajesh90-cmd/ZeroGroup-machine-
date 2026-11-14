@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/serverAuth";
+import { getYardLocation } from "@/lib/gis/yardLocation";
 import { Role } from "@prisma/client";
 import { notFound } from "next/navigation";
 import MachineDetailClient from "./MachineDetailClient";
@@ -56,8 +57,9 @@ export default async function MachineReportPage({ params }: { params: { id: stri
   const latestDispatch = machine.dispatches[0];
   const latitude = latestDispatch?.latitude ? Number(latestDispatch.latitude) : null;
   const longitude = latestDispatch?.longitude ? Number(latestDispatch.longitude) : null;
-  const depotLatitude = settings?.storeLatitude ? Number(settings.storeLatitude) : 9.5916;
-  const depotLongitude = settings?.storeLongitude ? Number(settings.storeLongitude) : 76.5222;
+  const yard = await getYardLocation();
+  const depotLatitude = yard.latitude;
+  const depotLongitude = yard.longitude;
   const depotName = settings?.storeName || "Zero Group Main Yard & Store";
 
   return (

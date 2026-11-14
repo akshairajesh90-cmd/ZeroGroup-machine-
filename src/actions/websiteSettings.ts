@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/serverAuth";
 import { Role } from "@prisma/client";
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { PALA_DEPOT_LATITUDE, PALA_DEPOT_LONGITUDE } from "@/lib/gis/yardCoordinates";
 export type {
   CorporateWebsiteSettingsData,
   WebsiteCatalogItemData,
@@ -102,8 +103,8 @@ async function fetchWebsiteSettingsFromDb(): Promise<CorporateWebsiteSettingsDat
       storeAddress:
         settings?.storeAddress ||
         "Central Machinery Yard, Pala - Ponkunnam Road, Kottayam, Kerala 686575",
-      storeLatitude: hasLat ? Number(settings!.storeLatitude) : 9.5916,
-      storeLongitude: hasLng ? Number(settings!.storeLongitude) : 76.5222,
+      storeLatitude: hasLat ? Number(settings!.storeLatitude) : PALA_DEPOT_LATITUDE,
+      storeLongitude: hasLng ? Number(settings!.storeLongitude) : PALA_DEPOT_LONGITUDE,
       companyPhone: settings?.companyPhone || "+91 94471 23456",
       whatsappNumber: settings?.whatsappNumber || "919447123456",
       companyEmail: settings?.companyEmail || "operations@zerogroup.in",
@@ -153,8 +154,8 @@ async function fetchWebsiteSettingsFromDb(): Promise<CorporateWebsiteSettingsDat
     return {
       storeName: "ZERO GROUP Heavy Machinery & Equipment Rentals",
       storeAddress: "Central Machinery Yard, Pala - Ponkunnam Road, Kottayam, Kerala 686575",
-      storeLatitude: 9.5916,
-      storeLongitude: 76.5222,
+      storeLatitude: PALA_DEPOT_LATITUDE,
+      storeLongitude: PALA_DEPOT_LONGITUDE,
       companyPhone: "+91 94471 23456",
       whatsappNumber: "919447123456",
       companyEmail: "operations@zerogroup.in",

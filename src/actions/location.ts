@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { evaluateSiteDwellCluster, TelemetryPing } from "@/lib/gis/dwellClusterFilter";
 import { logAudit } from "@/lib/auditLogger";
+import { getYardLocation } from "@/lib/gis/yardLocation";
 import { Role } from "@prisma/client";
 
 function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -146,11 +147,8 @@ export async function updateEmployeeLocation(
     // 5. Stage 3 Kerala GIS: Passive Dwell & Centroid Verification for active jobs
     try {
       if (activeDispatch && !activeDispatch.isCentroidVerified) {
-        const settings = await prisma.systemSettings.findFirst();
-        const yardLat = settings?.storeLatitude ? Number(settings.storeLatitude) : 9.7118;
-        const yardLng = settings?.storeLongitude ? Number(settings.storeLongitude) : 76.6853;
-
-        const distFromYard = calculateDistanceMeters(yardLat, yardLng, latitude, longitude);
+        const yard = await getYardLocation();
+        const distFromYard = calculateDistanceMeters(yard.latitude, yard.longitude, latitude, longitude);
 
         // Guard: Never lock depot/base yard as customer site centroid
         if (distFromYard > 300) {
@@ -280,11 +278,8 @@ export async function updateEmployeeLocation(
       });
 
       if (pendingDispatch && currentSpeed >= 15) {
-        const settings = await prisma.systemSettings.findFirst();
-        const yardLat = settings?.storeLatitude ? Number(settings.storeLatitude) : 9.7118;
-        const yardLng = settings?.storeLongitude ? Number(settings.storeLongitude) : 76.6853;
-
-        const distFromYard = calculateDistanceMeters(yardLat, yardLng, latitude, longitude);
+        const yard = await getYardLocation();
+        const distFromYard = calculateDistanceMeters(yard.latitude, yard.longitude, latitude, longitude);
         if (distFromYard > 250) {
           await prisma.$transaction(async (tx) => {
             await tx.dailyDispatch.update({
@@ -374,29 +369,12 @@ export async function updateEmployeeLocation(
   }
 }
 
-export type LocationSource =
-  | "STAFF_BOOKING"
-  | "DRIVER_PIN"
-  | "OPERATOR_PIN"
-  | "VERIFIED_CENTROID"
-  | "STAFF_OVERRIDE";
-
-export const SOURCE_PRIORITY_WEIGHT: Record<LocationSource, number> = {
-  STAFF_BOOKING: 1,
-  DRIVER_PIN: 2,
-  OPERATOR_PIN: 3,
-  VERIFIED_CENTROID: 4,
-  STAFF_OVERRIDE: 5,
-};
-
-export interface SetDispatchLocationParams {
-  dispatchId: string;
-  latitude: number;
-  longitude: number;
-  accuracy?: number | null;
-  source: LocationSource;
-  overrideReason?: string | null;
-}
+import {
+  LocationSource,
+  SOURCE_PRIORITY_WEIGHT,
+  SetDispatchLocationParams,
+} from "@/types/locationPriority";
+export type { LocationSource, SetDispatchLocationParams };
 
 /**
  * Unified Single Source of Truth for Site Location:

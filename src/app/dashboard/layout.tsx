@@ -33,7 +33,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     ))}
                 </nav>
                 <div className="px-6 py-4 border-t border-slate-800 text-xs text-slate-600">
-                    Pala, Kerala · 9.7117°N 76.6853°E
+                    Pala, Kerala · Central Yard
                 </div>
             </aside>
             {/* Main content */}

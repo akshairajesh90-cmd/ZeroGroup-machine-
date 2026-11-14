@@ -164,6 +164,26 @@ describe("Stationary Filter Cadence, Dwell Cluster Lock, and Anomaly Alerts", ()
         })
       );
     });
+
+    it("measures secondsSinceLastPing from the last INSERTED ping, not intermediate received pings", async () => {
+      const insertedTime = Date.now() - 605 * 1000; // Inserted 10 mins and 5s ago
+
+      // prisma.locationPing.findFirst returns the last INSERTED ping in DB (not intermediate suppressed ping)
+      (prisma.locationPing.findFirst as jest.Mock).mockResolvedValue({
+        latitude: 9.6800,
+        longitude: 76.7800,
+        timestamp: new Date(insertedTime),
+        speed: 0,
+      });
+      (prisma.dailyDispatch.findFirst as jest.Mock).mockResolvedValue(null);
+
+      const now = Date.now();
+      const res = await updateEmployeeLocation(9.68001, 76.78001, 10, "BROWSER", 0, null, now);
+
+      expect(res.success).toBe(true);
+      expect(res.pingInserted).toBe(true);
+      expect(prisma.locationPing.create).toHaveBeenCalled();
+    });
   });
 
   describe("2. Fraud Lock & Autopilot Geofence Arrival", () => {

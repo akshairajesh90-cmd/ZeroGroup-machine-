@@ -12,6 +12,7 @@ import ShiftTracker from "./ShiftTracker";
 import { CollectPaymentButton } from "@/components/shared/CollectPaymentButton";
 import DriverSitePinger from "@/components/driver/DriverSitePinger";
 import SeniorDriverAutopilot from "@/components/driver/SeniorDriverAutopilot";
+import { getYardCoordinatesSync } from "@/lib/gis/yardCoordinates";
 
 export const dynamic = "force-dynamic";
 
@@ -258,8 +259,8 @@ export default async function DriverHomePage() {
           <div className="mt-4 pt-3 border-t border-slate-800">
             <DriverSitePinger
               siteAddress="Central Depot / Standby"
-              siteLatitude={9.5916}
-              siteLongitude={76.5222}
+              siteLatitude={getYardCoordinatesSync().latitude}
+              siteLongitude={getYardCoordinatesSync().longitude}
               lastKnownLat={employee?.lastLatitude ? Number(employee.lastLatitude) : null}
               lastKnownLng={employee?.lastLongitude ? Number(employee.lastLongitude) : null}
               lastPingTime={employee?.lastLocationUpdate}

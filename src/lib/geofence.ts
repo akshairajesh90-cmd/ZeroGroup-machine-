@@ -3,9 +3,13 @@
  * Geofence center: Pala, Kerala — Lat: 9.7117, Lon: 76.6853
  */
 
+import { getYardCoordinatesSync } from "./gis/yardCoordinates";
+
+const defaultYard = getYardCoordinatesSync();
+
 export const GEOFENCE_CENTER = {
-    lat: 9.7117,
-    lon: 76.6853,
+    lat: defaultYard.latitude,
+    lon: defaultYard.longitude,
     label: "Pala, Kerala",
 };
 

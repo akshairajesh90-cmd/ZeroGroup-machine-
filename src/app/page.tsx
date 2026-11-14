@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { getCorporateWebsiteSettings } from "@/actions/websiteSettings";
 import PublicLandingClient from "@/components/public/PublicLandingClient";
+import { PALA_DEPOT_LATITUDE, PALA_DEPOT_LONGITUDE } from "@/lib/gis/yardCoordinates";
 
 // High-Concurrency ISR: Cache page for 60s at Edge CDN, shielding server from 10k+ surges
 export const revalidate = 60;
@@ -60,8 +61,8 @@ export default async function HomePage() {
     },
     geo: {
       "@type": "GeoCoordinates",
-      latitude: settings.storeLatitude || 9.5916,
-      longitude: settings.storeLongitude || 76.5222,
+      latitude: settings.storeLatitude || PALA_DEPOT_LATITUDE,
+      longitude: settings.storeLongitude || PALA_DEPOT_LONGITUDE,
     },
     openingHoursSpecification: [
       {

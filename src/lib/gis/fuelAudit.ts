@@ -6,6 +6,7 @@
  */
 
 import { calculateHaversineMeters } from "./dualPointRouter";
+import { getYardCoordinatesSync } from "./yardCoordinates";
 
 export interface TripDistanceAuditResult {
   oneWayAirKm: number;
@@ -36,8 +37,9 @@ export function auditTripFuelAndDistance(
   loggedLiters?: number | null,
   options: FuelAuditOptions = {}
 ): TripDistanceAuditResult {
-  const depotLat = options.depotLat ?? 9.7118; // Pala Depot
-  const depotLng = options.depotLng ?? 76.6853;
+  const defaultYard = getYardCoordinatesSync();
+  const depotLat = options.depotLat ?? defaultYard.latitude;
+  const depotLng = options.depotLng ?? defaultYard.longitude;
   const terrainFactor = options.terrainFactor ?? 1.35;
   const efficiencyKmPerL = options.averageKmPerLiter ?? 4.0;
   const tolerancePercent = options.tolerancePercent ?? 35;

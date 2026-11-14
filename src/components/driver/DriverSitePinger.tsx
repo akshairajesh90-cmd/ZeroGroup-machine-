@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { pingDriverLocationAction } from "@/app/driver/actions";
 import { captureCurrentPosition } from "@/lib/geoCapture";
+import { PALA_DEPOT_LATITUDE, PALA_DEPOT_LONGITUDE } from "@/lib/gis/yardCoordinates";
 
 interface DriverSitePingerProps {
   dispatchId?: string;
@@ -85,8 +86,8 @@ export default function DriverSitePinger({
         timeout: 10000,
         maximumAge: 30000,
         allowSimulationFallback: true,
-        fallbackLatitude: siteLatitude || currentLat || 9.5916,
-        fallbackLongitude: siteLongitude || currentLng || 76.5222,
+        fallbackLatitude: siteLatitude || currentLat || PALA_DEPOT_LATITUDE,
+        fallbackLongitude: siteLongitude || currentLng || PALA_DEPOT_LONGITUDE,
       });
 
       const res = await pingDriverLocationAction({

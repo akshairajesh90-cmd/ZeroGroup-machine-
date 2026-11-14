@@ -12,6 +12,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { PALA_DEPOT_LATITUDE, PALA_DEPOT_LONGITUDE } from "@/lib/gis/yardCoordinates";
 import {
   MapPin,
   Truck,
@@ -233,7 +234,7 @@ export default function UnifiedMapInner({
     const validDriver = drivers.find((d) => d.lat && d.lng && Math.abs(d.lat) > 1);
     if (validDriver) return [validDriver.lat, validDriver.lng];
 
-    return [9.5916, 76.5222];
+    return [PALA_DEPOT_LATITUDE, PALA_DEPOT_LONGITUDE];
   }, [storeLocation, sites, drivers]);
 
   // Fetch Road-Snapped Driving Navigation Route for active dispatch or first site

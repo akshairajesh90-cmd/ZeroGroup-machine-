@@ -1,4 +1,5 @@
-import { setDispatchLocationWithPriority, SOURCE_PRIORITY_WEIGHT } from "../location";
+import { setDispatchLocationWithPriority } from "../location";
+import { SOURCE_PRIORITY_WEIGHT } from "@/types/locationPriority";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAudit } from "@/lib/auditLogger";

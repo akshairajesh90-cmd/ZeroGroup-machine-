@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuthForApi } from "@/lib/serverAuth";
 import { checkRateLimit } from "@/lib/rate-limiter";
+import { getYardLocation } from "@/lib/gis/yardLocation";
 
 function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000; // Radius of Earth in meters
@@ -170,12 +171,8 @@ export async function POST(request: Request) {
 
         // Trigger 1: PENDING / ACCEPTED -> EN_ROUTE (Yard exit > 250m, speed >= 15 km/h)
         if (["PENDING", "ACCEPTED"].includes(currentStatus) && curSpeed >= 15) {
-          const settings = await tx.systemSettings.findFirst();
-          // Pala Depot coordinates fallback (lat 9.7118, lon 76.6853)
-          const yardLat = settings?.storeLatitude ? Number(settings.storeLatitude) : 9.7118;
-          const yardLng = settings?.storeLongitude ? Number(settings.storeLongitude) : 76.6853;
-
-          const distFromYard = calculateDistanceMeters(yardLat, yardLng, curLat, curLng);
+          const yard = await getYardLocation();
+          const distFromYard = calculateDistanceMeters(yard.latitude, yard.longitude, curLat, curLng);
           if (distFromYard > 250) {
             await tx.dailyDispatch.update({
               where: { id: activeDispatch.id },

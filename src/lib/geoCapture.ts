@@ -334,9 +334,12 @@ export async function captureCurrentPosition(
 /**
  * Provides a verified central Kerala waypoint if hardware GPS fails or runs in a simulator/LAN test
  */
+import { getYardCoordinatesSync } from "./gis/yardCoordinates";
+
 function getSimulatedPosition(fallbackLat?: number, fallbackLng?: number): GeoLocationResult {
-  const baseLat = fallbackLat || 9.7118; // Pala central depot
-  const baseLng = fallbackLng || 76.6853;
+  const yard = getYardCoordinatesSync();
+  const baseLat = fallbackLat || yard.latitude;
+  const baseLng = fallbackLng || yard.longitude;
   const jitterLat = parseFloat((baseLat + (Math.random() - 0.5) * 0.003).toFixed(6));
   const jitterLng = parseFloat((baseLng + (Math.random() - 0.5) * 0.003).toFixed(6));
 

@@ -62,6 +62,8 @@ function MapBoundsUpdater({ bounds }: { bounds: L.LatLngBoundsExpression | null 
   return null;
 }
 
+import { PALA_DEPOT_LATITUDE, PALA_DEPOT_LONGITUDE } from "@/lib/gis/yardCoordinates";
+
 interface AssetMapClientProps {
   latitude?: number | null;
   longitude?: number | null;
@@ -75,8 +77,8 @@ export default function AssetMapClient({
   latitude,
   longitude,
   label = "Customer Job Site",
-  depotLatitude = 9.5916,
-  depotLongitude = 76.5222,
+  depotLatitude = PALA_DEPOT_LATITUDE,
+  depotLongitude = PALA_DEPOT_LONGITUDE,
   depotName = "Zero Group Main Yard & Store",
 }: AssetMapClientProps) {
   const [mounted, setMounted] = useState(false);
@@ -90,8 +92,8 @@ export default function AssetMapClient({
     setMounted(true);
   }, []);
 
-  const originLat = depotLatitude ?? 9.5916;
-  const originLng = depotLongitude ?? 76.5222;
+  const originLat = depotLatitude ?? PALA_DEPOT_LATITUDE;
+  const originLng = depotLongitude ?? PALA_DEPOT_LONGITUDE;
 
   const hasSiteCoords =
     latitude != null &&
