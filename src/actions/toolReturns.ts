@@ -105,28 +105,38 @@ export async function completeDispatchWithToolReturns(formData: unknown) {
       }
 
       // 4. Free up all machines
-      for (const dm of dispatch.dispatchMachines) {
-        await tx.machine.update({
-          where: { id: dm.machineId },
-          data: { status: "AVAILABLE" },
-        });
-      }
-      if (dispatch.machineId) {
-        await tx.machine.update({
-          where: { id: dispatch.machineId },
+      const allMachineIds = [
+        ...dispatch.dispatchMachines.map((dm) => dm.machineId),
+        ...(dispatch.machineId ? [dispatch.machineId] : []),
+      ];
+      if (allMachineIds.length > 0) {
+        await tx.machine.updateMany({
+          where: { id: { in: allMachineIds } },
           data: { status: "AVAILABLE" },
         });
       }
 
-      // 5. Mark dispatch as COMPLETED
+      const returnedToolIds = toolReturns
+        .filter((t) => t.returnStatus === "RETURNED")
+        .map((t) => t.toolId);
+
+      // 5. Mark dispatch as COMPLETED and persist returnedToolIds
       await tx.dailyDispatch.update({
         where: { id: dispatchId },
-        data: { status: "COMPLETED" },
+        data: {
+          status: "COMPLETED",
+          returnedToolIds: Array.from(new Set([...(dispatch.returnedToolIds || []), ...returnedToolIds])),
+        },
       });
+    }, {
+      maxWait: 15000,
+      timeout: 30000,
     });
 
     revalidatePath("/staff/dispatch");
+    revalidatePath("/admin/dispatch");
     revalidatePath("/admin/live-map");
+    revalidatePath("/admin/live/map");
     revalidatePath("/staff/dashboard");
     return { success: true };
   } catch (err: any) {
@@ -350,6 +360,9 @@ export async function submitToolReturn(
       }
 
       return { updatedDt, verificationLog };
+    }, {
+      maxWait: 15000,
+      timeout: 30000,
     });
 
     // 6. Audit Logging

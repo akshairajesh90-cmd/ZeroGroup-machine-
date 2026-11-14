@@ -198,7 +198,7 @@ export async function POST(request: Request) {
           if (distToSite <= 100) {
             await tx.dailyDispatch.update({
               where: { id: activeDispatch.id },
-              data: { status: "IN_PROGRESS", isCentroidVerified: true },
+              data: { status: "IN_PROGRESS" },
             });
 
             await tx.dispatchStatusHistory.create({

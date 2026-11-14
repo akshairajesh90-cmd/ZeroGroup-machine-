@@ -236,33 +236,35 @@ export async function createOrderWithAssets(formData: unknown) {
       });
 
       // 5b. Attach all machines → DispatchMachine + mark RENTED
-      for (const mId of allMachineIds) {
-        await tx.dispatchMachine.create({
-          data: { dispatchId: newDispatch.id, machineId: mId },
+      if (allMachineIds.length > 0) {
+        await tx.dispatchMachine.createMany({
+          data: allMachineIds.map((mId) => ({ dispatchId: newDispatch.id, machineId: mId })),
         });
-        await tx.machine.update({
-          where: { id: mId },
+        await tx.machine.updateMany({
+          where: { id: { in: allMachineIds } },
           data: { status: "RENTED" },
         });
       }
 
       // 5c. Insert internal crew assignments with locked skill roles & wage rates
-      for (const assignment of data.crewAssignments) {
-        if (!assignment.employeeId) continue;
-        await tx.dispatchAssignment.create({
-          data: {
-            dispatchId: newDispatch.id,
-            employeeId: assignment.employeeId,
-            assignedRole: assignment.role,
-            lockedWageRate: assignment.lockedWageRate || Number(operatorDailyRate),
-          },
+      const validCrewAssignments = data.crewAssignments
+        .filter((assignment) => assignment.employeeId)
+        .map((assignment) => ({
+          dispatchId: newDispatch.id,
+          employeeId: assignment.employeeId,
+          assignedRole: assignment.role,
+          lockedWageRate: assignment.lockedWageRate || Number(operatorDailyRate),
+        }));
+      if (validCrewAssignments.length > 0) {
+        await tx.dispatchAssignment.createMany({
+          data: validCrewAssignments,
         });
       }
 
       // 5d. Insert external sub-leader / outside helpers into DispatchLabor
-      for (const helper of data.externalHelpers) {
-        await tx.dispatchLabor.create({
-          data: {
+      if (data.externalHelpers.length > 0) {
+        await tx.dispatchLabor.createMany({
+          data: data.externalHelpers.map((helper) => ({
             dispatchId: newDispatch.id,
             externalWorkerName: helper.name,
             headCount: helper.headCount,
@@ -270,23 +272,29 @@ export async function createOrderWithAssets(formData: unknown) {
             externalHeadCount: helper.headCount,
             isExternalLiability: true,
             notes: helper.notes || null,
-          },
+          })),
         });
       }
 
       // 5e. Attach tools → DispatchTool
-      for (const item of data.toolItems) {
-        await tx.dispatchTool.create({
-          data: {
-            dispatchId: newDispatch.id,
-            toolId: item.toolId,
-            quantity: item.quantity,
-            variant: item.variant || null,
-          },
+      const validTools = data.toolItems
+        .filter((item) => item.toolId)
+        .map((item) => ({
+          dispatchId: newDispatch.id,
+          toolId: item.toolId,
+          quantity: item.quantity,
+          variant: item.variant || null,
+        }));
+      if (validTools.length > 0) {
+        await tx.dispatchTool.createMany({
+          data: validTools,
         });
       }
 
       return newDispatch;
+    }, {
+      maxWait: 15000,
+      timeout: 30000,
     });
 
     // ── 6. Revalidate affected pages ─────────────────────────────────────────

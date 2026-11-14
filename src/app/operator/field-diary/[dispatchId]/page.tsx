@@ -5,9 +5,13 @@ import FieldDiaryClient from "@/components/field/FieldDiaryClient";
 
 export default async function FieldDiaryPage({ params }: { params: { dispatchId: string } }) {
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.employeeId) {
     redirect("/auth/signin");
   }
+
+  const role = session.user.role;
+  const empId = session.user.employeeId;
+  const isAdmin = role === "OWNER" || role === "STAFF" || role === "ADMIN";
 
   const dispatch = await prisma.dailyDispatch.findUnique({
     where: { id: params.dispatchId },
@@ -19,6 +23,15 @@ export default async function FieldDiaryPage({ params }: { params: { dispatchId:
 
   if (!dispatch) {
     return <div>Dispatch not found</div>;
+  }
+
+  const isAssigned =
+    dispatch.operatorId === empId ||
+    dispatch.driverId === empId ||
+    dispatch.crewAssignments.some((ca: any) => ca.employee?.id === empId);
+
+  if (!isAdmin && !isAssigned) {
+    redirect("/operator/home");
   }
 
   const crew = dispatch.crewAssignments.map((ca: any) => ({

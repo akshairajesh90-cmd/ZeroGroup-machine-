@@ -298,6 +298,10 @@ model DailyDispatch {
   isCentroidVerified    Boolean?                @default(false)
   dwellConfidence       Float?
   dwellDurationMins     Float?
+  locationSource        String?                 // "STAFF_BOOKING" | "DRIVER_PIN" | "OPERATOR_PIN" | "VERIFIED_CENTROID" | "STAFF_OVERRIDE"
+  locationUpdatedById   String?
+  locationUpdatedAt     DateTime?
+  locationOverrideReason String?
   dateOfService         DateTime                @db.Date
   workType              WorkType                @default(NORMAL)
   status                DispatchStatus          @default(PENDING)
@@ -838,6 +842,7 @@ model WebsiteCatalogItem {
   idealFor        String
   classification  String
   demandTag       String
+  imageUrl        String?
   sortOrder       Int      @default(0)
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())

@@ -22,7 +22,7 @@ export async function updateDispatchStatus(formData: unknown) {
     return { success: false, error: parsed.error.issues.map(i => i.message).join(", ") };
   }
 
-  const { dispatchId, status, reason, newDateOfService } = parsed.data;
+  const { dispatchId, status, reason, newDateOfService, arrivedOperatorIds, deliveredToolIds, returnedToolIds } = parsed.data;
 
   try {
     let changerEmp = await prisma.employee.findUnique({
@@ -44,13 +44,13 @@ export async function updateDispatchStatus(formData: unknown) {
 
       const oldStatus = dispatch.status;
 
-      if (status === "CANCELLED" || status === "POSTPONED") {
+      if (status && (status === "CANCELLED" || status === "POSTPONED")) {
         if (!reason || !reason.trim() || reason.trim().length < 3) {
           throw new Error(`Mandatory Audit Lock: A clear reason (at least 3 characters) is required to mark job ${status}.`);
         }
       }
 
-      if (changerEmp && oldStatus !== status) {
+      if (changerEmp && status && oldStatus !== status) {
         await tx.dispatchStatusHistory.create({
           data: {
             dispatchId: dispatch.id,
@@ -62,39 +62,97 @@ export async function updateDispatchStatus(formData: unknown) {
         });
       }
 
-      const updateData: any = {
-        status: status as DispatchStatus,
-      };
+      const updateData: any = {};
+
+      if (status) {
+        updateData.status = status as DispatchStatus;
+      }
 
       if (status === "POSTPONED" && newDateOfService) {
         updateData.dateOfService = new Date(newDateOfService);
       }
 
-      await tx.dailyDispatch.update({
-        where: { id: dispatchId },
-        data: updateData,
-      });
+      if (arrivedOperatorIds !== undefined) {
+        updateData.arrivedOperatorIds = arrivedOperatorIds;
+      }
 
-      if (["COMPLETED", "PICKED_UP", "CANCELLED", "POSTPONED"].includes(status)) {
-        for (const dm of dispatch.dispatchMachines) {
-          await tx.machine.update({
-            where: { id: dm.machineId },
-            data: { status: "AVAILABLE" },
+      if (deliveredToolIds !== undefined) {
+        updateData.deliveredToolIds = deliveredToolIds;
+      }
+
+      if (returnedToolIds !== undefined) {
+        updateData.returnedToolIds = returnedToolIds;
+
+        // Sync individual dispatch tool return statuses & free inventory
+        if (returnedToolIds.length > 0) {
+          await tx.dispatchTool.updateMany({
+            where: {
+              dispatchId,
+              toolId: { in: returnedToolIds },
+            },
+            data: {
+              returnStatus: "RETURNED",
+              returnedAt: new Date(),
+            },
           });
-        }
-        if (dispatch.machineId) {
-          await tx.machine.update({
-            where: { id: dispatch.machineId },
-            data: { status: "AVAILABLE" },
-          });
-        }
-        for (const dt of dispatch.dispatchTools) {
-          await tx.tool.update({
-            where: { id: dt.toolId },
+          await tx.tool.updateMany({
+            where: { id: { in: returnedToolIds } },
             data: { status: "AVAILABLE" },
           });
         }
       }
+
+      // If completing, ensure returned tools array and tool statuses are accounted for
+      if (status === "COMPLETED") {
+        const allToolIds = dispatch.dispatchTools.map((dt) => dt.toolId);
+        if (returnedToolIds === undefined && allToolIds.length > 0) {
+          updateData.returnedToolIds = Array.from(new Set([...(dispatch.returnedToolIds || []), ...allToolIds]));
+        }
+        if (allToolIds.length > 0) {
+          await tx.dispatchTool.updateMany({
+            where: { dispatchId },
+            data: {
+              returnStatus: "RETURNED",
+              returnedAt: new Date(),
+            },
+          });
+          await tx.tool.updateMany({
+            where: { id: { in: allToolIds } },
+            data: { status: "AVAILABLE" },
+          });
+        }
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await tx.dailyDispatch.update({
+          where: { id: dispatchId },
+          data: updateData,
+        });
+      }
+
+      if (status && ["COMPLETED", "PICKED_UP", "CANCELLED", "POSTPONED"].includes(status)) {
+        const allMachineIds = [
+          ...dispatch.dispatchMachines.map((dm) => dm.machineId),
+          ...(dispatch.machineId ? [dispatch.machineId] : []),
+        ];
+        if (allMachineIds.length > 0) {
+          await tx.machine.updateMany({
+            where: { id: { in: allMachineIds } },
+            data: { status: "AVAILABLE" },
+          });
+        }
+
+        const allToolIds = dispatch.dispatchTools.map((dt) => dt.toolId);
+        if (allToolIds.length > 0) {
+          await tx.tool.updateMany({
+            where: { id: { in: allToolIds } },
+            data: { status: "AVAILABLE" },
+          });
+        }
+      }
+    }, {
+      maxWait: 15000,
+      timeout: 30000,
     });
 
     await logAudit({
@@ -102,10 +160,11 @@ export async function updateDispatchStatus(formData: unknown) {
       actorRole: session.user.role,
       actionType: "UPDATE_DISPATCH_STATUS",
       modelName: "DailyDispatch",
-      newPayload: { dispatchId, status, reason: reason ?? null },
+      newPayload: { dispatchId, status, reason: reason ?? null, arrivedOperatorIds, deliveredToolIds, returnedToolIds },
     });
 
     if (!process.env.CLI_TEST_ROLE) {
+      revalidatePath("/staff/dispatch");
       revalidatePath("/admin/dispatch");
       revalidatePath("/admin/dashboard");
       revalidatePath("/driver/home");

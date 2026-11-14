@@ -216,7 +216,7 @@ async function main() {
     const u = await prisma.user.create({
       data: {
         email,
-        hashedPassword: role === Role.OWNER ? ADMIN_HASH : HASH,
+        hashedPassword: (role === Role.OWNER || role === Role.ADMIN) ? ADMIN_HASH : HASH,
         role,
       },
     });

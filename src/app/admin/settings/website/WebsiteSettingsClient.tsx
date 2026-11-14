@@ -2,12 +2,14 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { 
   Building2, Phone, Mail, MapPin, Globe, AlertTriangle, 
   CheckCircle2, Save, ExternalLink, RefreshCw, Power, 
   Cog, Gauge, Fuel, Truck, HardHat, Wrench, ShieldCheck, 
   Clock, Plus, Trash2, ArrowUp, ArrowDown, Check, X, 
-  Layers, SlidersHorizontal, Info, RotateCcw, LucideIcon
+  Layers, SlidersHorizontal, Info, RotateCcw, LucideIcon,
+  Image as ImageIcon, Upload
 } from "lucide-react";
 import { 
   CorporateWebsiteSettingsData, 
@@ -35,6 +37,20 @@ const ICON_MAP: Record<string, LucideIcon> = {
   ShieldCheck,
   Clock,
   Phone,
+};
+
+const getMachineFallbackImage = (title?: string, category?: string): string => {
+  const lower = ((title || "") + " " + (category || "")).toLowerCase();
+  if (lower.includes("hoist") || lower.includes("winch") || lower.includes("crane")) {
+    return "/images/machinery/material-hoist.jpg";
+  }
+  if (lower.includes("vibrator") || lower.includes("compactor") || lower.includes("compaction")) {
+    return "/images/machinery/needle-vibrator.jpg";
+  }
+  if (lower.includes("pump") || lower.includes("drainage") || lower.includes("trash")) {
+    return "/images/machinery/trash-pump.jpg";
+  }
+  return "/images/machinery/concrete-mixer.jpg";
 };
 
 type ActiveTab = "hero" | "catalog" | "valueprops" | "yard";
@@ -120,6 +136,7 @@ export default function WebsiteSettingsClient({ initialSettings }: WebsiteSettin
       idealFor: "Commercial Construction Foundations",
       classification: "Commercial Heavy",
       demandTag: "High Demand",
+      imageUrl: "/images/machinery/concrete-mixer.jpg",
       sortOrder: (formData.catalogItems?.length || 0),
       isActive: true,
     };
@@ -671,6 +688,130 @@ export default function WebsiteSettingsClient({ initialSettings }: WebsiteSettin
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
+                          </div>
+                        </div>
+
+                        {/* Machinery Photo & Visual Asset Editor */}
+                        <div className="p-3.5 rounded-lg bg-slate-950/80 border border-slate-800/80 space-y-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/60 pb-2.5">
+                            <div className="flex items-center gap-2">
+                              <ImageIcon className="w-4 h-4 text-amber-500" strokeWidth={1.5} />
+                              <span className="text-xs font-bold text-white uppercase tracking-wider">
+                                Machinery Photo Asset
+                              </span>
+                              {item.imageUrl ? (
+                                <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                                  Custom Photo Active
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-semibold text-slate-400 bg-slate-800 border border-slate-700 px-2 py-0.5 rounded">
+                                  Default Category Asset
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Reset / Clear Button */}
+                            {item.imageUrl && (
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateCatalogItem(itemIdx, "imageUrl", "")}
+                                className="text-[11px] text-slate-400 hover:text-rose-400 flex items-center gap-1 transition-colors cursor-pointer"
+                              >
+                                <RotateCcw className="w-3 h-3" />
+                                <span>Reset Photo</span>
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row gap-4 items-start">
+                            {/* Live Photo Preview */}
+                            <div className="relative h-28 w-44 rounded-lg overflow-hidden bg-slate-900 border border-slate-700/80 shrink-0 shadow-md group/img">
+                              <Image
+                                src={item.imageUrl || getMachineFallbackImage(item.title, item.category)}
+                                alt={item.title || "Machine photo"}
+                                fill
+                                className="object-cover object-center"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent flex items-end p-1.5">
+                                <span className="text-[9px] font-mono text-slate-300 truncate">
+                                  {item.imageUrl ? (item.imageUrl.startsWith("data:") ? "Direct Image Upload" : item.imageUrl) : "Auto-Mapped Image"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Photo Controls: URL input, File Upload, and Presets */}
+                            <div className="flex-1 space-y-2.5 w-full min-w-0">
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                                  Photo Source URL / File Path
+                                </label>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    value={item.imageUrl || ""}
+                                    onChange={(e) => handleUpdateCatalogItem(itemIdx, "imageUrl", e.target.value)}
+                                    placeholder="/images/machinery/concrete-mixer.jpg or https://cdn.../photo.jpg"
+                                    className="flex-1 rounded border border-slate-800 bg-slate-900 px-2.5 py-1.5 text-xs text-white placeholder-slate-500 outline-none focus:border-amber-500 font-mono"
+                                  />
+
+                                  {/* Direct Device Upload Button */}
+                                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 hover:text-white cursor-pointer transition-colors shrink-0">
+                                    <Upload className="w-3.5 h-3.5 text-amber-500" />
+                                    <span>Upload Photo</span>
+                                    <input
+                                      type="file"
+                                      accept="image/jpeg,image/png,image/webp"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          if (file.size > 5 * 1024 * 1024) {
+                                            alert("File size exceeds 5MB limit.");
+                                            return;
+                                          }
+                                          const reader = new FileReader();
+                                          reader.onload = (uploadEvent) => {
+                                            const result = uploadEvent.target?.result as string;
+                                            if (result) {
+                                              handleUpdateCatalogItem(itemIdx, "imageUrl", result);
+                                            }
+                                          };
+                                          reader.readAsDataURL(file);
+                                        }
+                                      }}
+                                    />
+                                  </label>
+                                </div>
+                              </div>
+
+                              {/* Preset Quick-Picks */}
+                              <div>
+                                <span className="text-[10px] text-slate-400 font-medium block mb-1">
+                                  Quick-Pick Verified Fleet Photos:
+                                </span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {[
+                                    { label: "Concrete Mixer", path: "/images/machinery/concrete-mixer.jpg" },
+                                    { label: "Material Hoist", path: "/images/machinery/material-hoist.jpg" },
+                                    { label: "Needle Vibrator", path: "/images/machinery/needle-vibrator.jpg" },
+                                    { label: "Trash Pump", path: "/images/machinery/trash-pump.jpg" },
+                                  ].map((preset) => (
+                                    <button
+                                      key={preset.path}
+                                      type="button"
+                                      onClick={() => handleUpdateCatalogItem(itemIdx, "imageUrl", preset.path)}
+                                      className={`text-[10px] px-2 py-1 rounded border transition-colors cursor-pointer ${
+                                        item.imageUrl === preset.path
+                                          ? "bg-amber-500/20 border-amber-500/50 text-amber-300 font-bold"
+                                          : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700"
+                                      }`}
+                                    >
+                                      {preset.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
 

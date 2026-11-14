@@ -50,9 +50,12 @@ export const dispatchSchema = z.object({
 
 export const updateStatusSchema = z.object({
   dispatchId: z.string().min(1, "Dispatch ID required"),
-  status: z.enum(["PENDING", "EN_ROUTE", "IN_PROGRESS", "DELIVERED", "PICKED_UP", "COMPLETED", "CANCELLED", "POSTPONED"]),
+  status: z.enum(["PENDING", "EN_ROUTE", "IN_PROGRESS", "DELIVERED", "PICKED_UP", "COMPLETED", "CANCELLED", "POSTPONED"]).optional(),
   reason: z.string().optional(),
   newDateOfService: z.string().optional(),
+  arrivedOperatorIds: z.array(z.string()).optional(),
+  deliveredToolIds: z.array(z.string()).optional(),
+  returnedToolIds: z.array(z.string()).optional(),
 });
 
 export const reportIncidentSchema = z.object({

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { setDispatchLocationWithPriority } from "@/actions/location";
 
 export async function logFuelAction(formData: FormData) {
   const session = await auth();
@@ -84,14 +85,24 @@ export async function updateDispatchMapLinkAction(dispatchId: string, mapLink: s
   const session = await auth();
   if (!session?.user?.employeeId) throw new Error("Unauthorized");
 
-  await prisma.dailyDispatch.update({
-    where: { id: dispatchId },
-    data: { 
-      mapLink,
-      latitude: lat ? Number(lat) : null,
-      longitude: lng ? Number(lng) : null
-    },
-  });
+  if (lat != null && lng != null && !isNaN(Number(lat)) && !isNaN(Number(lng))) {
+    const res = await setDispatchLocationWithPriority({
+      dispatchId,
+      latitude: Number(lat),
+      longitude: Number(lng),
+      source: "DRIVER_PIN",
+    });
+
+    if (!res.success) {
+      throw new Error(res.error || "Failed to update location");
+    }
+  } else {
+    // If no coordinates provided, only update the text link
+    await prisma.dailyDispatch.update({
+      where: { id: dispatchId },
+      data: { mapLink },
+    });
+  }
 
   revalidatePath(`/driver/orders/${dispatchId}`);
   revalidatePath("/staff/live");

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
+import { prisma } from '../src/lib/prisma';
 
 const adminAuth = path.join(__dirname, '../playwright/.auth/admin.json');
 const artifactDir = 'C:/Users/AKSHAI RAJESH/.gemini/antigravity/brain/a2fe56fd-4ea1-4a7c-8e56-03c86a01ba92';
@@ -81,7 +82,7 @@ test.describe('Full Dispatch Editing, Status Transitions & Billing Overhaul', ()
     // Tab 3: Machines & Fleet
     await page.getByRole('button', { name: /3\. Machines & Fleet/i }).click();
     await expect(page.getByText(/Primary Concrete Machine/i)).toBeVisible();
-    await expect(page.getByText(/Fleet Driver/i)).toBeVisible();
+    await expect(page.getByText('Fleet Driver', { exact: true })).toBeVisible();
     await page.screenshot({ path: path.join(artifactDir, 'proof_edit_modal_tab3_fleet.png') });
 
     // Tab 4: Dynamic Crew & Workers
@@ -117,7 +118,12 @@ test.describe('Full Dispatch Editing, Status Transitions & Billing Overhaul', ()
   });
 
   test('4. Billing page loads with Machine Rent & Tools ONLY (No Operator or Worker Wages)', async ({ page }) => {
-    await page.goto('/staff/billing/cmv5kd6w003n7wsvk2z6u5x1h');
+    const targetDispatch = await prisma.dailyDispatch.findFirst({
+      where: { hasTrollyBench: true },
+      select: { id: true },
+    });
+    const dispatchId = targetDispatch?.id || 'cmwfq4qnn006rxcvkzrniharw';
+    await page.goto(`/staff/billing/${dispatchId}`);
 
     // Verify billing page loaded with NO redirect to '/'
     await expect(page.getByRole('heading', { name: /Generate Invoice/i })).toBeVisible();

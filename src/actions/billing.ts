@@ -190,9 +190,13 @@ export async function generateAndCollectBill(formData: unknown) {
       });
 
       return invoice.id;
+    }, {
+      maxWait: 15000,
+      timeout: 30000,
     });
 
     revalidatePath("/staff/dispatch");
+    revalidatePath("/admin/dispatch");
     revalidatePath("/admin/billing");
     return { success: true, invoiceId };
   } catch (err: any) {
@@ -268,6 +272,9 @@ export async function deductAdvanceFromInvoice(invoiceId: string) {
       // Mark advances as settled against this invoice (link via settlementId is not available directly;
       // we create an internal audit note instead)
       return inv;
+    }, {
+      maxWait: 15000,
+      timeout: 30000,
     });
 
     // Audit log

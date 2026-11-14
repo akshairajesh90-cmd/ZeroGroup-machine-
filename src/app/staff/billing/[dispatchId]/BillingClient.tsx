@@ -273,10 +273,10 @@ export default function BillingClient({ dispatch, defaultItems, collectorId }: P
                     />
                     <input 
                       type="number" 
-                      value={exp.amount} 
-                      onChange={(e) => updateExpense(idx, "amount", Number(e.target.value))}
+                      value={exp.amount === 0 ? "" : exp.amount} 
+                      onChange={(e) => updateExpense(idx, "amount", e.target.value === "" ? 0 : Number(e.target.value))}
                       placeholder="₹ Amount"
-                      className="w-24 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-amber-400 font-bold text-right outline-none"
+                      className="w-24 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-amber-400 font-bold text-right outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                     <button onClick={() => removeExpense(idx)} className="text-zinc-600 hover:text-rose-400 p-2">
                       <Trash2 className="w-4 h-4" />
@@ -306,9 +306,10 @@ export default function BillingClient({ dispatch, defaultItems, collectorId }: P
                     <span className="text-zinc-500 font-bold">₹</span>
                     <input 
                       type="number" 
-                      value={p.amount} 
-                      onChange={(e) => updatePayment(idx, "amount", Number(e.target.value))}
-                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-2 py-1.5 text-white font-bold outline-none focus:border-emerald-500 text-lg"
+                      value={p.amount === 0 ? "" : p.amount} 
+                      placeholder="0"
+                      onChange={(e) => updatePayment(idx, "amount", e.target.value === "" ? 0 : Number(e.target.value))}
+                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-2 py-1.5 text-white font-bold outline-none focus:border-emerald-500 text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                   <input 
@@ -347,9 +348,10 @@ export default function BillingClient({ dispatch, defaultItems, collectorId }: P
                 <span className="text-zinc-500 font-bold">₹</span>
                 <input 
                   type="number" 
-                  value={discountAmount} 
-                  onChange={(e) => setDiscountAmount(Number(e.target.value))}
-                  className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-2 py-1.5 text-white font-bold outline-none focus:border-amber-500 text-lg"
+                  value={discountAmount === 0 ? "" : discountAmount} 
+                  placeholder="0"
+                  onChange={(e) => setDiscountAmount(e.target.value === "" ? 0 : Number(e.target.value))}
+                  className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-2 py-1.5 text-white font-bold outline-none focus:border-amber-500 text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
             </div>

@@ -1,9 +1,37 @@
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { getCorporateWebsiteSettings } from "@/actions/websiteSettings";
 import PublicLandingClient from "@/components/public/PublicLandingClient";
 
 // High-Concurrency ISR: Cache page for 60s at Edge CDN, shielding server from 10k+ surges
 export const revalidate = 60;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getCorporateWebsiteSettings();
+  const title =
+    settings.storeName || "ZERO GROUP — Heavy Machinery & Construction Plant Rentals | Kerala";
+  const description =
+    settings.heroSubheadline ||
+    "Commercial concrete mixers, vertical material hoists, needle vibrator rigs, and de-watering pumps on hire across Kerala.";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      locale: "en_IN",
+      siteName: "ZERO GROUP Machinery Rentals",
+      url: "https://zero-group-machine.vercel.app",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
 
 export default async function HomePage() {
   const [session, settings] = await Promise.all([

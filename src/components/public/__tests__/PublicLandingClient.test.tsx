@@ -199,4 +199,108 @@ describe("PublicLandingClient Component", () => {
       expect(screen.getByText(/Inquiry prepared/i)).toBeInTheDocument();
     });
   });
+
+  describe("Cinematic Atmospheric Enhancements & Metrics Ticker", () => {
+    it("renders horizontal operational metrics ticker bar with key fleet metrics", () => {
+      render(<PublicLandingClient settings={mockSettings} />);
+
+      expect(screen.getByText(/Kerala Districts Covered/i)).toBeInTheDocument();
+      expect(screen.getByText(/Certified Fleet Units/i)).toBeInTheDocument();
+      expect(screen.getByText(/Rapid Mobilization Speed/i)).toBeInTheDocument();
+      expect(screen.getByText(/Operator Certified & Safe/i)).toBeInTheDocument();
+    });
+  });
+
+  describe("Quick-Spec Inspection Modal / Drawer", () => {
+    it("opens spec modal on 'View Specs' click and displays technical details", () => {
+      render(<PublicLandingClient settings={mockSettings} />);
+
+      const viewSpecsButtons = screen.getAllByRole("button", { name: /View Specs/i });
+      expect(viewSpecsButtons.length).toBeGreaterThan(0);
+
+      fireEvent.click(viewSpecsButtons[0]);
+
+      const modal = screen.getByRole("dialog");
+      expect(modal).toBeInTheDocument();
+      expect(screen.getByText(/Full Engineering & Operational Specs/i)).toBeInTheDocument();
+      expect(screen.getByText(/Zero Group Certified Operator Protocol/i)).toBeInTheDocument();
+
+      // Close modal
+      const closeBtn = screen.getByRole("button", { name: /Close specification modal/i });
+      fireEvent.click(closeBtn);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("closes modal on Escape key press", () => {
+      render(<PublicLandingClient settings={mockSettings} />);
+
+      const viewSpecsButtons = screen.getAllByRole("button", { name: /View Specs/i });
+      fireEvent.click(viewSpecsButtons[0]);
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+      fireEvent.keyDown(window, { key: "Escape", code: "Escape" });
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("selects machine for quotation directly from inside the spec modal", () => {
+      const scrollIntoViewMock = jest.fn();
+      window.HTMLElement.prototype.scrollIntoView = scrollIntoViewMock;
+
+      render(<PublicLandingClient settings={mockSettings} />);
+
+      const viewSpecsButtons = screen.getAllByRole("button", { name: /View Specs/i });
+      fireEvent.click(viewSpecsButtons[0]);
+
+      const modal = screen.getByRole("dialog");
+      expect(modal).toBeInTheDocument();
+
+      const selectBtnInModal = screen.getByRole("button", { name: /Select for Quotation/i });
+      fireEvent.click(selectBtnInModal);
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(scrollIntoViewMock).toHaveBeenCalled();
+    });
+  });
+
+  describe("Interactive Rental Estimator Widget", () => {
+    it("renders estimator with duration slider and operator toggle", () => {
+      render(<PublicLandingClient settings={mockSettings} />);
+
+      expect(screen.getByText(/Interactive Rental & Mobilization Estimator/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Rental duration in days/i)).toBeInTheDocument();
+      expect(screen.getByText(/With Certified Operator/i)).toBeInTheDocument();
+      expect(screen.getByText(/Dry Lease \(Machinery Only\)/i)).toBeInTheDocument();
+    });
+
+    it("updates duration and reflects in inquiry form when preset chips are clicked", () => {
+      render(<PublicLandingClient settings={mockSettings} />);
+
+      const oneMonthPreset = screen.getByRole("button", { name: /1 Month \+ \(Contract\)/i });
+      fireEvent.click(oneMonthPreset);
+
+      const durationSelect = screen.getByDisplayValue(/1 Month or Long Term/i);
+      expect(durationSelect).toBeInTheDocument();
+    });
+
+    it("toggles operator mode and includes selection in WhatsApp payload", () => {
+      render(<PublicLandingClient settings={mockSettings} />);
+
+      // Switch to Dry Lease
+      const dryLeaseCard = screen.getByText(/Dry Lease \(Machinery Only\)/i);
+      fireEvent.click(dryLeaseCard);
+
+      const contractorInput = screen.getByPlaceholderText(/Thomas Mathew/i);
+      const phoneInput = screen.getByPlaceholderText(/10-digit mobile number/i);
+      fireEvent.change(contractorInput, { target: { value: "Mathew George" } });
+      fireEvent.change(phoneInput, { target: { value: "9847999888" } });
+
+      const submitBtn = screen.getByRole("button", { name: /Submit Quotation Request via WhatsApp Desk/i });
+      fireEvent.click(submitBtn);
+
+      const openedUrl = (window.open as jest.Mock).mock.calls[0][0];
+      expect(openedUrl).toContain("NO (Machinery Only)");
+      expect(openedUrl).toContain("Mathew George");
+      expect(openedUrl).toContain("Within 2 Hours");
+    });
+  });
 });

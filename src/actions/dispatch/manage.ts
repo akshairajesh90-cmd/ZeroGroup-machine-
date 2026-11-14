@@ -115,44 +115,60 @@ export async function createDailyDispatch(formData: unknown) {
         },
       });
 
-      for (const mId of allMachineIds) {
-        await tx.dispatchMachine.create({
-          data: { dispatchId: newDispatch.id, machineId: mId },
+      if (allMachineIds.length > 0) {
+        await tx.dispatchMachine.createMany({
+          data: allMachineIds.map((mId) => ({ dispatchId: newDispatch.id, machineId: mId })),
         });
-        await tx.machine.update({
-          where: { id: mId },
+        await tx.machine.updateMany({
+          where: { id: { in: allMachineIds } },
           data: { status: "RENTED" },
         });
       }
 
-      for (const opId of allOperatorIds) {
-        await tx.dispatchAssignment.create({
-          data: { dispatchId: newDispatch.id, employeeId: opId, assignedRole: "MIXER_OPERATOR", lockedWageRate: operatorDailyRate || 1000 },
-        });
-      }
+      const initialAssignments = [
+        ...allOperatorIds.map((opId) => ({
+          dispatchId: newDispatch.id,
+          employeeId: opId,
+          assignedRole: "MIXER_OPERATOR" as const,
+          lockedWageRate: operatorDailyRate || 1000,
+        })),
+        ...allWorkerIds.map((wId) => ({
+          dispatchId: newDispatch.id,
+          employeeId: wId,
+          assignedRole: "HELPER" as const,
+          lockedWageRate: 800,
+        })),
+      ];
 
-      for (const wId of allWorkerIds) {
-        await tx.dispatchAssignment.create({
-          data: { dispatchId: newDispatch.id, employeeId: wId, assignedRole: "HELPER", lockedWageRate: 800 },
+      if (initialAssignments.length > 0) {
+        await tx.dispatchAssignment.createMany({
+          data: initialAssignments,
         });
       }
 
       const itemsToLink = data.toolItems && data.toolItems.length > 0
         ? data.toolItems
-        : data.toolIds.map(tId => ({ toolId: tId, quantity: 1, variant: undefined }));
+        : (data.toolIds || []).map(tId => ({ toolId: tId, quantity: 1, variant: undefined }));
 
-      for (const item of itemsToLink) {
-        await tx.dispatchTool.create({
-          data: {
-            dispatchId: newDispatch.id,
-            toolId: item.toolId,
-            quantity: item.quantity,
-            variant: item.variant || null,
-          },
+      const validToolItems = itemsToLink
+        .filter((item) => item.toolId)
+        .map((item) => ({
+          dispatchId: newDispatch.id,
+          toolId: item.toolId,
+          quantity: item.quantity,
+          variant: item.variant || null,
+        }));
+
+      if (validToolItems.length > 0) {
+        await tx.dispatchTool.createMany({
+          data: validToolItems,
         });
       }
 
       return newDispatch;
+    }, {
+      maxWait: 15000,
+      timeout: 30000,
     });
 
     const actorEmp = await prisma.employee.findFirst({ where: { userId: (await import("@/lib/auth").then(m => m.auth()))?.user?.id ?? "" } }).catch(() => null);
@@ -242,15 +258,26 @@ export async function updateDailyDispatch(formData: unknown) {
         ...(data.machineIds || []).filter(id => id !== "INDEPENDENT"),
       ]));
 
-      await tx.dispatchMachine.deleteMany({ where: { dispatchId } });
-      await tx.dispatchAssignment.deleteMany({ where: { dispatchId } });
-      await tx.dispatchTool.deleteMany({ where: { dispatchId } });
+      await Promise.all([
+        tx.dispatchMachine.deleteMany({ where: { dispatchId } }),
+        tx.dispatchAssignment.deleteMany({ where: { dispatchId } }),
+        tx.dispatchTool.deleteMany({ where: { dispatchId } }),
+      ]);
 
-      for (const dm of current.dispatchMachines) {
-        await tx.machine.update({ where: { id: dm.machineId }, data: { status: "AVAILABLE" } });
+      const machineIdsToFree = current.dispatchMachines.map((dm) => dm.machineId);
+      if (machineIdsToFree.length > 0) {
+        await tx.machine.updateMany({
+          where: { id: { in: machineIdsToFree } },
+          data: { status: "AVAILABLE" },
+        });
       }
-      for (const dt of current.dispatchTools) {
-        await tx.tool.update({ where: { id: dt.toolId }, data: { status: "AVAILABLE" } });
+
+      const toolIdsToFree = current.dispatchTools.map((dt) => dt.toolId);
+      if (toolIdsToFree.length > 0) {
+        await tx.tool.updateMany({
+          where: { id: { in: toolIdsToFree } },
+          data: { status: "AVAILABLE" },
+        });
       }
 
       const oldStatus = current.status;
@@ -310,24 +337,29 @@ export async function updateDailyDispatch(formData: unknown) {
       });
 
       const isEquipmentActive = !["CANCELLED", "POSTPONED"].includes(targetStatus);
-      for (const mId of allMachineIds) {
-        await tx.dispatchMachine.create({ data: { dispatchId, machineId: mId } });
+      if (allMachineIds.length > 0) {
+        await tx.dispatchMachine.createMany({
+          data: allMachineIds.map((mId) => ({ dispatchId, machineId: mId })),
+        });
         if (isEquipmentActive) {
-          await tx.machine.update({ where: { id: mId }, data: { status: "RENTED" } });
+          await tx.machine.updateMany({
+            where: { id: { in: allMachineIds } },
+            data: { status: "RENTED" },
+          });
         }
       }
 
       if (data.crewAssignments && data.crewAssignments.length > 0) {
-        for (const ca of data.crewAssignments) {
-          if (!ca.employeeId) continue;
-          await tx.dispatchAssignment.create({
-            data: {
-              dispatchId,
-              employeeId: ca.employeeId,
-              assignedRole: ca.assignedRole as any,
-              lockedWageRate: ca.lockedWageRate || 1000,
-            },
-          });
+        const validAssignments = data.crewAssignments
+          .filter((ca) => ca.employeeId)
+          .map((ca) => ({
+            dispatchId,
+            employeeId: ca.employeeId,
+            assignedRole: ca.assignedRole as any,
+            lockedWageRate: ca.lockedWageRate || 1000,
+          }));
+        if (validAssignments.length > 0) {
+          await tx.dispatchAssignment.createMany({ data: validAssignments });
         }
       } else {
         const allOperatorIds = Array.from(new Set([
@@ -335,31 +367,27 @@ export async function updateDailyDispatch(formData: unknown) {
           ...(data.multiOperatorIds || [])
         ])).filter(Boolean);
 
-        for (const opId of allOperatorIds) {
-          await tx.dispatchAssignment.create({
-            data: {
-              dispatchId,
-              employeeId: opId,
-              assignedRole: "MIXER_OPERATOR",
-              lockedWageRate: current.operatorDailyRate || 1000
-            }
-          });
-        }
-
         const allWorkerIds = Array.from(new Set([
           ...(data.workerId ? [data.workerId] : []),
           ...(data.multiWorkerIds || [])
         ])).filter(Boolean);
 
-        for (const wId of allWorkerIds) {
-          await tx.dispatchAssignment.create({
-            data: {
-              dispatchId,
-              employeeId: wId,
-              assignedRole: "HELPER",
-              lockedWageRate: 800
-            }
-          });
+        const assignments = [
+          ...allOperatorIds.map((opId) => ({
+            dispatchId,
+            employeeId: opId,
+            assignedRole: "MIXER_OPERATOR" as const,
+            lockedWageRate: current.operatorDailyRate || 1000
+          })),
+          ...allWorkerIds.map((wId) => ({
+            dispatchId,
+            employeeId: wId,
+            assignedRole: "HELPER" as const,
+            lockedWageRate: 800
+          }))
+        ];
+        if (assignments.length > 0) {
+          await tx.dispatchAssignment.createMany({ data: assignments });
         }
       }
 
@@ -367,10 +395,18 @@ export async function updateDailyDispatch(formData: unknown) {
         ? data.toolItems
         : (data.toolIds || []).map(tId => ({ toolId: tId, quantity: 1, variant: undefined }));
 
-      for (const item of itemsToLink) {
-        if (!item.toolId) continue;
-        await tx.dispatchTool.create({
-          data: { dispatchId, toolId: item.toolId, quantity: item.quantity, variant: item.variant || null },
+      const validToolLinks = itemsToLink
+        .filter((item) => item.toolId)
+        .map((item) => ({
+          dispatchId,
+          toolId: item.toolId,
+          quantity: item.quantity,
+          variant: item.variant || null,
+        }));
+
+      if (validToolLinks.length > 0) {
+        await tx.dispatchTool.createMany({
+          data: validToolLinks,
         });
       }
 
@@ -388,6 +424,9 @@ export async function updateDailyDispatch(formData: unknown) {
       });
 
       return updated;
+    }, {
+      maxWait: 15000,
+      timeout: 30000,
     });
 
     if (!process.env.CLI_TEST_ROLE) {

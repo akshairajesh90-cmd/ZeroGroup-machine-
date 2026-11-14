@@ -24,6 +24,7 @@ export const CatalogItemSchema = z.object({
   idealFor: z.string().min(2, "Ideal application is required").max(160),
   classification: z.string().min(1, "Classification is required").max(60),
   demandTag: z.string().min(1, "Demand tag is required").max(50),
+  imageUrl: z.string().max(5000000).optional().nullable(),
   sortOrder: z.number().int().min(0).default(0),
   isActive: z.boolean().default(true),
 });
@@ -84,6 +85,7 @@ export interface WebsiteCatalogItemData {
   idealFor: string;
   classification: string;
   demandTag: string;
+  imageUrl?: string | null;
   sortOrder: number;
   isActive: boolean;
 }
@@ -198,6 +200,7 @@ export const DEFAULT_CATALOG_ITEMS: WebsiteCatalogItemData[] = [
     idealFor: "Commercial Slabs, Foundations, Rafts & Infrastructure",
     classification: "Commercial Heavy",
     demandTag: "High Demand",
+    imageUrl: "/images/machinery/concrete-mixer.jpg",
     sortOrder: 0,
     isActive: true,
   },
@@ -216,6 +219,7 @@ export const DEFAULT_CATALOG_ITEMS: WebsiteCatalogItemData[] = [
     idealFor: "Residential Projects, Retaining Walls & Column Pours",
     classification: "Commercial Heavy",
     demandTag: "Fuel Efficient",
+    imageUrl: "/images/machinery/concrete-mixer.jpg",
     sortOrder: 1,
     isActive: true,
   },
@@ -234,6 +238,7 @@ export const DEFAULT_CATALOG_ITEMS: WebsiteCatalogItemData[] = [
     idealFor: "Multi-Storey Concrete, Masonry Blocks & Reinforcement Steel",
     classification: "Certified High-Rise",
     demandTag: "100+ Ft Certified",
+    imageUrl: "/images/machinery/material-hoist.jpg",
     sortOrder: 2,
     isActive: true,
   },
@@ -251,6 +256,7 @@ export const DEFAULT_CATALOG_ITEMS: WebsiteCatalogItemData[] = [
     idealFor: "Roof-Top Concreting, Finishing Materials & Interior Shifting",
     classification: "Rapid Setup",
     demandTag: "Roof Mounted",
+    imageUrl: "/images/machinery/material-hoist.jpg",
     sortOrder: 3,
     isActive: true,
   },
@@ -269,6 +275,7 @@ export const DEFAULT_CATALOG_ITEMS: WebsiteCatalogItemData[] = [
     idealFor: "Dense RCC Slabs, Heavy Beams, Columns & Retaining Structures",
     classification: "Structural Essential",
     demandTag: "Honda Driven",
+    imageUrl: "/images/machinery/needle-vibrator.jpg",
     sortOrder: 4,
     isActive: true,
   },
@@ -287,6 +294,7 @@ export const DEFAULT_CATALOG_ITEMS: WebsiteCatalogItemData[] = [
     idealFor: "Sub-Base Compaction, Trench Backfills & Interlocking Pavers",
     classification: "Earthwork",
     demandTag: "3.5T Force",
+    imageUrl: "/images/machinery/needle-vibrator.jpg",
     sortOrder: 5,
     isActive: true,
   },
@@ -305,6 +313,7 @@ export const DEFAULT_CATALOG_ITEMS: WebsiteCatalogItemData[] = [
     idealFor: "Monsoon Foundation Flooding, Deep Basement Excavations & Pits",
     classification: "Site Drainage",
     demandTag: "1400 L/min",
+    imageUrl: "/images/machinery/trash-pump.jpg",
     sortOrder: 6,
     isActive: true,
   },

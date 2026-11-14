@@ -108,11 +108,13 @@ export default function DispatchBoardClient({
     const term = searchTerm.toLowerCase();
     const loc = (d.location || "").toLowerCase();
     const cust = (d.customer?.name || "").toLowerCase();
+    const phone = (d.customer?.phone || "").toLowerCase();
     const mach = (d.machine?.machineId || "").toLowerCase();
     const driv = (d.driver?.name || "").toLowerCase();
     const op = (d.operator?.name || "").toLowerCase();
     const idStr = (d.id || "").toLowerCase();
-    return loc.includes(term) || cust.includes(term) || mach.includes(term) || driv.includes(term) || op.includes(term) || idStr.includes(term);
+    const dispNo = (d.dispatchNo?.toString() || "").toLowerCase();
+    return loc.includes(term) || cust.includes(term) || phone.includes(term) || mach.includes(term) || driv.includes(term) || op.includes(term) || idStr.includes(term) || dispNo.includes(term);
   });
 
   const localizer = dateFnsLocalizer({
@@ -887,9 +889,19 @@ export default function DispatchBoardClient({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search dispatches by Job Site, Customer, Machine, or Driver name..."
-              className="w-full rounded-2xl border border-zinc-800 bg-slate-900 pl-11 pr-4 py-3.5 text-sm text-white placeholder-zinc-500 focus:border-amber-500/50 focus:outline-none focus:ring-1 focus:ring-amber-500/20 transition-all shadow-xl"
+              placeholder="Search dispatches by Job Site, Customer, Phone, Machine, or Driver name..."
+              className="w-full rounded-2xl border border-zinc-800 bg-slate-900 pl-11 pr-10 py-3.5 text-sm text-white placeholder-zinc-500 focus:border-amber-500/50 focus:outline-none focus:ring-1 focus:ring-amber-500/20 transition-all shadow-xl"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white p-1 rounded-lg"
+                title="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           {filteredDispatches.length === 0 ? (

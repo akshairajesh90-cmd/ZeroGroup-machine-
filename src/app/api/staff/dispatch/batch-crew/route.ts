@@ -70,19 +70,25 @@ export async function POST(request: Request) {
                         where: { dispatchId },
                     });
 
-                    for (const toolItem of dispatchTools) {
-                        if (!toolItem.toolId) continue;
-                        await tx.dispatchTool.create({
-                            data: {
-                                dispatchId,
-                                toolId: toolItem.toolId,
-                                quantity: Number(toolItem.quantity) || 1,
-                                variant: toolItem.variant || null,
-                            },
+                    const validTools = dispatchTools
+                        .filter((toolItem: any) => toolItem.toolId)
+                        .map((toolItem: any) => ({
+                            dispatchId,
+                            toolId: toolItem.toolId,
+                            quantity: Number(toolItem.quantity) || 1,
+                            variant: toolItem.variant || null,
+                        }));
+
+                    if (validTools.length > 0) {
+                        await tx.dispatchTool.createMany({
+                            data: validTools,
                         });
                     }
                 }
             }
+        }, {
+            maxWait: 15000,
+            timeout: 30000,
         });
 
         return NextResponse.json({

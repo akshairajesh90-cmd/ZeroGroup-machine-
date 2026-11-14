@@ -7,9 +7,9 @@ test.describe('Full System Button & Navigation Verification', () => {
     await page.goto('/');
 
     // Verify company branding (Amber industrial palette)
-    await expect(page.getByText('ZERO GROUP')).toBeVisible();
+    await expect(page.getByText('ZERO GROUP').first()).toBeVisible();
     await expect(page.getByText('MACHINERY').first()).toBeVisible();
-    await expect(page.getByText(/HEAVY CONSTRUCTION PLANT RENTALS/i).first()).toBeVisible();
+    await expect(page.getByText(/Heavy Construction Equipment/i).first()).toBeVisible();
 
     // Verify live machinery search
     const searchInput = page.getByPlaceholder(/Search machinery/i);

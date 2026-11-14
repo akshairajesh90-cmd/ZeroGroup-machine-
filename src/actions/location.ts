@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { evaluateSiteDwellCluster, TelemetryPing } from "@/lib/gis/dwellClusterFilter";
+import { logAudit } from "@/lib/auditLogger";
+import { Role } from "@prisma/client";
 
 function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000; // Radius of the Earth in meters
@@ -70,19 +72,9 @@ export async function updateEmployeeLocation(
       secondsSinceLastPing = (now.getTime() - lastPing.timestamp.getTime()) / 1000;
     }
 
-    // 2. Jitter & Spike Filter:
-    // Drop fake GPS bounce if displacement is under 5m and speed is under 3 km/h
     const currentSpeed = speed !== undefined && speed !== null ? Number(speed) : 0;
-    if (lastPing && displacementMeters < 5 && currentSpeed < 3 && secondsSinceLastPing < 120) {
-      // Just refresh online status without database bloat
-      await prisma.employee.update({
-        where: { id: employee.id },
-        data: { lastSeenAt: now, lastSyncStatus: "ONLINE" },
-      });
-      return { success: true, filtered: true, reason: "JITTER_FILTER" };
-    }
 
-    // Drop impossible GPS jumps (teleportation > 140 km/h)
+    // 2. Drop impossible GPS jumps (teleportation > 140 km/h)
     if (lastPing && secondsSinceLastPing > 1 && secondsSinceLastPing < 60) {
       const calculatedSpeedKmH = (displacementMeters / secondsSinceLastPing) * 3.6;
       if (calculatedSpeedKmH > 140) {
@@ -91,13 +83,36 @@ export async function updateEmployeeLocation(
       }
     }
 
-    // Determine if this ping should be inserted into historical LocationPing
-    // Rule: First ping, OR displacement >= 35m, OR >= 120 seconds elapsed, OR major speed change
-    const shouldInsertPing =
-      !lastPing ||
-      displacementMeters >= 35 ||
-      secondsSinceLastPing >= 120 ||
-      (currentSpeed > 10 && secondsSinceLastPing >= 30);
+    // 3. Always update live Employee location in-place
+    // Live Map reads employee.lastLatitude/lastLongitude so stationary workers never vanish or show stale
+    await prisma.employee.update({
+      where: { id: employee.id },
+      data: {
+        lastLatitude: latitude,
+        lastLongitude: longitude,
+        lastLocationUpdate: now,
+        lastSeenAt: now,
+        lastSyncStatus: "ONLINE",
+      },
+    });
+
+    // 4. Stationary Filter with 10-Minute Cadence (User Decision Q2):
+    // In rubber estates/rural Kerala, tree canopy GPS jitter is 5-25m.
+    // When stationary (displacement < 25m and speed < 3 km/h), insert 1 LocationPing every 10 mins (600s).
+    const isStationary = lastPing && displacementMeters < 25 && currentSpeed < 3;
+    let shouldInsertPing = false;
+
+    if (!lastPing) {
+      shouldInsertPing = true;
+    } else if (isStationary) {
+      shouldInsertPing = secondsSinceLastPing >= 600;
+    } else {
+      // In transit: record if moved >= 35m, or >= 120s elapsed, or moving fast (> 10 km/h with >= 30s)
+      shouldInsertPing =
+        displacementMeters >= 35 ||
+        secondsSinceLastPing >= 120 ||
+        (currentSpeed > 10 && secondsSinceLastPing >= 30);
+    }
 
     // Fetch active dispatch to link if available
     const activeDispatch = await prisma.dailyDispatch.findFirst({
@@ -108,104 +123,139 @@ export async function updateEmployeeLocation(
           { siteLeaderEmployeeId: employee.id },
         ],
         status: { in: ["EN_ROUTE", "IN_PROGRESS", "DELIVERED"] },
+        isPendingDelete: false,
       },
       orderBy: { updatedAt: "desc" },
     });
 
-    // 3. ATOMIC TRANSACTION: In-place Employee Live state + Conditional LocationPing
-    await prisma.$transaction(async (tx) => {
-      await tx.employee.update({
-        where: { id: employee.id },
+    if (shouldInsertPing) {
+      await prisma.locationPing.create({
         data: {
-          lastLatitude: latitude,
-          lastLongitude: longitude,
-          lastLocationUpdate: now,
-          lastSeenAt: now,
-          lastSyncStatus: "ONLINE",
+          employeeId: employee.id,
+          dispatchId: activeDispatch?.id || null,
+          latitude,
+          longitude,
+          accuracy: accuracy ? Number(accuracy) : null,
+          speed: currentSpeed > 0 ? currentSpeed : null,
+          source: source || "BROWSER",
+          timestamp: now,
         },
       });
+    }
 
-      if (shouldInsertPing) {
-        await tx.locationPing.create({
-          data: {
-            employeeId: employee.id,
-            dispatchId: activeDispatch?.id || null,
-            latitude,
-            longitude,
-            accuracy: accuracy ? Number(accuracy) : null,
-            speed: currentSpeed > 0 ? currentSpeed : null,
-            source: source || "BROWSER",
-            timestamp: now,
-          },
-        });
-      }
-    });
-
-    // 3. Stage 3 Kerala GIS: Passive Dwell & Centroid Verification for active jobs
+    // 5. Stage 3 Kerala GIS: Passive Dwell & Centroid Verification for active jobs
     try {
-      const activeDispatch = await prisma.dailyDispatch.findFirst({
-        where: {
-          OR: [
-            { driverId: employee.id },
-            { operatorId: employee.id },
-            { siteLeaderEmployeeId: employee.id },
-          ],
-          status: { in: ["EN_ROUTE", "IN_PROGRESS", "DELIVERED"] },
-          isCentroidVerified: false,
-        },
-        orderBy: { updatedAt: "desc" },
-      });
+      if (activeDispatch && !activeDispatch.isCentroidVerified) {
+        const settings = await prisma.systemSettings.findFirst();
+        const yardLat = settings?.storeLatitude ? Number(settings.storeLatitude) : 9.7118;
+        const yardLng = settings?.storeLongitude ? Number(settings.storeLongitude) : 76.6853;
 
-      if (activeDispatch) {
-        // Query recent telemetry pings within the last 20 minutes
-        const twentyMinsAgo = new Date(Date.now() - 20 * 60 * 1000);
-        const recentPings = await prisma.locationPing.findMany({
-          where: {
-            employeeId: employee.id,
-            timestamp: { gte: twentyMinsAgo },
-          },
-          orderBy: { timestamp: "asc" },
-        });
+        const distFromYard = calculateDistanceMeters(yardLat, yardLng, latitude, longitude);
 
-        if (recentPings.length >= 3) {
-          const telemetryPings: TelemetryPing[] = recentPings.map((p) => ({
-            latitude: Number(p.latitude),
-            longitude: Number(p.longitude),
-            timestamp: p.timestamp,
-            accuracy: p.accuracy ? Number(p.accuracy) : null,
-          }));
+        // Guard: Never lock depot/base yard as customer site centroid
+        if (distFromYard > 300) {
+          let distToSite = 999999;
+          if (activeDispatch.latitude && activeDispatch.longitude) {
+            distToSite = calculateDistanceMeters(
+              Number(activeDispatch.latitude),
+              Number(activeDispatch.longitude),
+              latitude,
+              longitude
+            );
+          }
 
-          const evalResult = evaluateSiteDwellCluster(telemetryPings, {
-            isOperationallyActive: ["IN_PROGRESS", "DELIVERED"].includes(activeDispatch.status),
+          const isOperationallyActive =
+            ["IN_PROGRESS", "DELIVERED"].includes(activeDispatch.status) ||
+            (activeDispatch.status === "EN_ROUTE" && (!activeDispatch.latitude || distToSite <= 300));
+
+          const crewEmployeeIds = [
+            activeDispatch.driverId,
+            activeDispatch.operatorId,
+            activeDispatch.siteLeaderEmployeeId,
+            employee.id,
+          ].filter(Boolean) as string[];
+
+          // Query recent telemetry pings from this dispatch or assigned crew within the last 30 minutes
+          const thirtyMinsAgo = new Date(now.getTime() - 30 * 60 * 1000);
+          const recentPings = await prisma.locationPing.findMany({
+            where: {
+              OR: [
+                { dispatchId: activeDispatch.id },
+                { employeeId: { in: crewEmployeeIds }, timestamp: { gte: thirtyMinsAgo } },
+              ],
+              timestamp: { gte: thirtyMinsAgo },
+            },
+            orderBy: { timestamp: "asc" },
           });
 
-          if (evalResult.isVerified && evalResult.centroid) {
-            const [cLat, cLng] = evalResult.centroid;
-            await prisma.dailyDispatch.update({
-              where: { id: activeDispatch.id },
-              data: {
-                latitude: cLat,
-                longitude: cLng,
-                mapLink: `https://www.google.com/maps/search/?api=1&query=${cLat},${cLng}`,
-                isCentroidVerified: true,
-                dwellConfidence: evalResult.confidence,
-                dwellDurationMins: evalResult.durationMinutes,
-              },
+          if (recentPings && recentPings.length >= 2) {
+            const telemetryPings: TelemetryPing[] = recentPings.map((p) => ({
+              latitude: Number(p.latitude),
+              longitude: Number(p.longitude),
+              timestamp: p.timestamp,
+              accuracy: p.accuracy ? Number(p.accuracy) : null,
+              speed: p.speed != null ? Number(p.speed) / 3.6 : 0, // km/h to m/s
+            }));
+
+            const evalResult = evaluateSiteDwellCluster(telemetryPings, {
+              minDurationMinutes: 10,
+              maxClusterRadiusMeters: 30, // 30m accommodates tree canopy drift
+              maxSpeedThresholdMs: 1.0,   // ~3.6 km/h
+              isOperationallyActive,
             });
 
-            await prisma.siteDwellCluster.create({
-              data: {
-                dispatchId: activeDispatch.id,
-                employeeId: employee.id,
-                latitude: cLat,
-                longitude: cLng,
-                clusterRadiusM: evalResult.clusterRadiusMeters,
-                durationMins: evalResult.durationMinutes,
-                pingCount: evalResult.pingCount,
-                confidence: evalResult.confidence,
-                isVerified: true,
-              },
-            });
+            if (evalResult.isVerified && evalResult.centroid) {
+              const [cLat, cLng] = evalResult.centroid;
+              await prisma.$transaction(async (tx) => {
+                await tx.dailyDispatch.update({
+                  where: { id: activeDispatch.id },
+                  data: {
+                    latitude: cLat,
+                    longitude: cLng,
+                    mapLink: `https://www.google.com/maps/search/?api=1&query=${cLat},${cLng}`,
+                    isCentroidVerified: true,
+                    dwellConfidence: evalResult.confidence,
+                    dwellDurationMins: evalResult.durationMinutes,
+                    locationSource: "VERIFIED_CENTROID",
+                    locationUpdatedById: employee.id,
+                    locationUpdatedAt: now,
+                  },
+                });
+
+                await tx.siteDwellCluster.create({
+                  data: {
+                    dispatchId: activeDispatch.id,
+                    employeeId: employee.id,
+                    latitude: cLat,
+                    longitude: cLng,
+                    clusterRadiusM: evalResult.clusterRadiusMeters,
+                    durationMins: evalResult.durationMinutes,
+                    pingCount: evalResult.pingCount,
+                    confidence: evalResult.confidence,
+                    isVerified: true,
+                  },
+                });
+
+                await tx.auditLog.create({
+                  data: {
+                    actorId: employee.id,
+                    actorRole: employee.role,
+                    action: "SITE_CENTROID_VERIFIED",
+                    targetEntity: "DailyDispatch",
+                    targetId: activeDispatch.id,
+                    meta: {
+                      latitude: cLat,
+                      longitude: cLng,
+                      confidence: evalResult.confidence,
+                      durationMinutes: evalResult.durationMinutes,
+                      clusterRadiusMeters: evalResult.clusterRadiusMeters,
+                      pingCount: evalResult.pingCount,
+                      reason: "10-minute stationary dwell cluster mathematically verified",
+                    },
+                  },
+                });
+              });
+            }
           }
         }
       }
@@ -213,7 +263,7 @@ export async function updateEmployeeLocation(
       console.warn("[KeralaGIS] Dwell cluster check non-blocking error:", gisErr);
     }
 
-    // 4. Zero-Click Autopilot Geofence Automation Engine
+    // 6. Zero-Click Autopilot Geofence Automation Engine
     try {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
@@ -231,8 +281,8 @@ export async function updateEmployeeLocation(
 
       if (pendingDispatch && currentSpeed >= 15) {
         const settings = await prisma.systemSettings.findFirst();
-        const yardLat = settings?.storeLatitude ? Number(settings.storeLatitude) : 9.5916;
-        const yardLng = settings?.storeLongitude ? Number(settings.storeLongitude) : 76.5222;
+        const yardLat = settings?.storeLatitude ? Number(settings.storeLatitude) : 9.7118;
+        const yardLng = settings?.storeLongitude ? Number(settings.storeLongitude) : 76.6853;
 
         const distFromYard = calculateDistanceMeters(yardLat, yardLng, latitude, longitude);
         if (distFromYard > 250) {
@@ -295,10 +345,11 @@ export async function updateEmployeeLocation(
 
         if (distToSite <= 100) {
           // If within 100m of customer site, auto-advance to IN_PROGRESS
+          // Fraud Lock: isCentroidVerified is NOT set here (must be verified by dwell cluster or explicit priority pin)
           await prisma.$transaction(async (tx) => {
             await tx.dailyDispatch.update({
               where: { id: enRouteDispatch.id },
-              data: { status: "IN_PROGRESS", isCentroidVerified: true },
+              data: { status: "IN_PROGRESS" },
             });
             await tx.dispatchStatusHistory.create({
               data: {
@@ -316,51 +367,216 @@ export async function updateEmployeeLocation(
       console.warn("[Autopilot Geofence Engine] Non-blocking evaluation error:", geofenceErr);
     }
 
-    return { success: true };
+    return { success: true, pingInserted: shouldInsertPing, filtered: !shouldInsertPing };
   } catch (err: any) {
     console.error("Failed to update employee location:", err);
     return { success: false, error: err.message };
   }
 }
 
-export async function updateDispatchLocation(
-  dispatchId: string,
-  latitude: number,
-  longitude: number,
-  accuracy?: number
-) {
+export type LocationSource =
+  | "STAFF_BOOKING"
+  | "DRIVER_PIN"
+  | "OPERATOR_PIN"
+  | "VERIFIED_CENTROID"
+  | "STAFF_OVERRIDE";
+
+export const SOURCE_PRIORITY_WEIGHT: Record<LocationSource, number> = {
+  STAFF_BOOKING: 1,
+  DRIVER_PIN: 2,
+  OPERATOR_PIN: 3,
+  VERIFIED_CENTROID: 4,
+  STAFF_OVERRIDE: 5,
+};
+
+export interface SetDispatchLocationParams {
+  dispatchId: string;
+  latitude: number;
+  longitude: number;
+  accuracy?: number | null;
+  source: LocationSource;
+  overrideReason?: string | null;
+}
+
+/**
+ * Unified Single Source of Truth for Site Location:
+ * Enforces priority hierarchy, prevents unauthorized overwrites,
+ * logs all mutations to AuditLog, and records auxiliary driver check-ins.
+ */
+export async function setDispatchLocationWithPriority({
+  dispatchId,
+  latitude,
+  longitude,
+  accuracy,
+  source,
+  overrideReason,
+}: SetDispatchLocationParams) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return { success: false, error: "Unauthorized" };
     }
 
-    const mapLink = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
-    const now = new Date();
-
-    // 1. Update Dispatch coordinates and Google Maps link
-    await prisma.dailyDispatch.update({
-      where: { id: dispatchId },
-      data: {
-        latitude,
-        longitude,
-        mapLink,
-      },
-    });
-
-    // 2. Also update the reporting employee's coordinates (they are physically at the site)
     const empId = session.user.employeeId;
     const employee = await prisma.employee.findFirst({
       where: {
         OR: [
           ...(empId ? [{ id: empId }] : []),
           { userId: session.user.id },
+          ...(session.user.email ? [{ user: { email: session.user.email } }] : []),
         ],
       },
     });
 
-    if (employee) {
-      await prisma.employee.update({
+    if (!employee) {
+      return { success: false, error: "No employee profile found for user" };
+    }
+
+    const dispatch = await prisma.dailyDispatch.findUnique({
+      where: { id: dispatchId },
+      include: {
+        crewAssignments: true,
+      },
+    });
+
+    if (!dispatch) {
+      return { success: false, error: "Dispatch not found" };
+    }
+
+    const role = session.user.role as Role;
+    const isStaffOrAdmin = role === "OWNER" || role === "ADMIN" || role === "STAFF";
+
+    const isAssignedDriver =
+      dispatch.driverId === employee.id ||
+      dispatch.crewAssignments?.some((ca) => ca.employeeId === employee.id && ca.assignedRole === "DRIVER");
+
+    const isAssignedOperator =
+      dispatch.operatorId === employee.id ||
+      dispatch.crewAssignments?.some(
+        (ca) =>
+          ca.employeeId === employee.id &&
+          (ca.assignedRole === "MIXER_OPERATOR" || ca.assignedRole === "LIFT_OPERATOR")
+      );
+
+    const isAssignedCrew = isAssignedDriver || isAssignedOperator;
+
+    // 1. Role Authorization Check
+    if (!isStaffOrAdmin && !isAssignedCrew) {
+      return { success: false, error: "You are not assigned to this dispatch" };
+    }
+
+    const now = new Date();
+    const mapLink = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+
+    // 2. Verified Centroid Protection Guard
+    if (dispatch.isCentroidVerified) {
+      if (isStaffOrAdmin) {
+        // Staff/Admin can override a verified centroid ONLY if an explicit reason is supplied
+        if (!overrideReason || !overrideReason.trim()) {
+          return {
+            success: false,
+            error: "This site location is already verified on-site. Please provide a reason to override.",
+          };
+        }
+      } else {
+        // Drivers or Operators on-site cannot overwrite a mathematically verified centroid.
+        // Instead, log their arrival/verification passively.
+        await logAudit({
+          actorId: employee.id,
+          actorRole: role,
+          actionType: role === "DRIVER" ? "DRIVER_SITE_VERIFICATION" : "OPERATOR_SITE_VERIFICATION",
+          modelName: "DailyDispatch",
+          oldPayload: {
+            dispatchId,
+            latitude: dispatch.latitude ? Number(dispatch.latitude) : null,
+            longitude: dispatch.longitude ? Number(dispatch.longitude) : null,
+            isCentroidVerified: true,
+          },
+          newPayload: {
+            actorLat: latitude,
+            actorLng: longitude,
+            accuracy: accuracy || null,
+            note: "Site coordinates already verified on-site. Crew check-in recorded.",
+          },
+        });
+
+        // Still update employee's own position
+        await prisma.employee.update({
+          where: { id: employee.id },
+          data: {
+            lastLatitude: latitude,
+            lastLongitude: longitude,
+            lastLocationUpdate: now,
+            lastSeenAt: now,
+            lastSyncStatus: "ONLINE",
+          },
+        });
+
+        await prisma.locationPing.create({
+          data: {
+            employeeId: employee.id,
+            dispatchId,
+            latitude,
+            longitude,
+            accuracy: accuracy ? Number(accuracy) : null,
+            source: source || "BROWSER",
+            timestamp: now,
+          },
+        });
+
+        return {
+          success: true,
+          verified: true,
+          message: "Site location was already confirmed by on-site crew. Your arrival was logged.",
+        };
+      }
+    }
+
+    // 3. Priority Hierarchy Guard
+    // Priority: STAFF_BOOKING (1) < DRIVER_PIN (2) < OPERATOR_PIN (3) < VERIFIED_CENTROID (4) < STAFF_OVERRIDE (5)
+    const currentSource = (dispatch.locationSource as LocationSource) || (dispatch.isCentroidVerified ? "VERIFIED_CENTROID" : "STAFF_BOOKING");
+    const currentWeight = SOURCE_PRIORITY_WEIGHT[currentSource] || 1;
+    const incomingWeight = SOURCE_PRIORITY_WEIGHT[source] || 1;
+
+    if (!isStaffOrAdmin && incomingWeight < currentWeight) {
+      // Driver cannot downgrade an Operator pin; secondary driver records arrival check-in
+      await logAudit({
+        actorId: employee.id,
+        actorRole: role,
+        actionType: "AUXILIARY_SITE_CHECKIN",
+        modelName: "DailyDispatch",
+        newPayload: {
+          dispatchId,
+          incomingSource: source,
+          currentSource,
+          actorLat: latitude,
+          actorLng: longitude,
+          note: "Lower-priority source check-in recorded without overwriting site coordinates.",
+        },
+      });
+
+      return {
+        success: true,
+        message: `Site location was already set by ${currentSource}. Your check-in was logged.`,
+      };
+    }
+
+    // 4. Atomic Execution: Update DailyDispatch, Employee Live State, and LocationPing
+    await prisma.$transaction(async (tx) => {
+      await tx.dailyDispatch.update({
+        where: { id: dispatchId },
+        data: {
+          latitude,
+          longitude,
+          mapLink,
+          locationSource: source,
+          locationUpdatedById: employee.id,
+          locationUpdatedAt: now,
+          locationOverrideReason: overrideReason || null,
+        },
+      });
+
+      await tx.employee.update({
         where: { id: employee.id },
         data: {
           lastLatitude: latitude,
@@ -371,24 +587,77 @@ export async function updateDispatchLocation(
         },
       });
 
-      await prisma.locationPing.create({
+      await tx.locationPing.create({
         data: {
           employeeId: employee.id,
           dispatchId,
           latitude,
           longitude,
           accuracy: accuracy ? Number(accuracy) : null,
-          source: "SITE_UPDATE",
+          source: source || "BROWSER",
           timestamp: now,
         },
       });
-    }
+    });
+
+    // 5. Audit Log Entry
+    await logAudit({
+      actorId: employee.id,
+      actorRole: role,
+      actionType: "UPDATE_SITE_LOCATION",
+      modelName: "DailyDispatch",
+      oldPayload: {
+        latitude: dispatch.latitude ? Number(dispatch.latitude) : null,
+        longitude: dispatch.longitude ? Number(dispatch.longitude) : null,
+        locationSource: dispatch.locationSource,
+        isCentroidVerified: dispatch.isCentroidVerified,
+      },
+      newPayload: {
+        dispatchId,
+        latitude,
+        longitude,
+        source,
+        overrideReason: overrideReason || null,
+      },
+    });
+
+    revalidatePath(`/driver/orders/${dispatchId}`);
+    revalidatePath(`/staff/dispatch`);
+    revalidatePath(`/admin/dispatch`);
+    revalidatePath(`/staff/live/map`);
+    revalidatePath(`/admin/live/map`);
 
     return { success: true, mapLink };
   } catch (err: any) {
-    console.error("Failed to update dispatch location:", err);
-    return { success: false, error: err.message };
+    console.error("Failed to set dispatch location with priority:", err);
+    return { success: false, error: err.message || "Failed to update location" };
   }
+}
+
+export async function updateDispatchLocation(
+  dispatchId: string,
+  latitude: number,
+  longitude: number,
+  accuracy?: number
+) {
+  const session = await auth();
+  const role = session?.user?.role as Role;
+  const isStaffOrAdmin = role === "OWNER" || role === "ADMIN" || role === "STAFF";
+
+  const source: LocationSource = isStaffOrAdmin
+    ? "STAFF_OVERRIDE"
+    : role === "OPERATOR"
+    ? "OPERATOR_PIN"
+    : "DRIVER_PIN";
+
+  return setDispatchLocationWithPriority({
+    dispatchId,
+    latitude,
+    longitude,
+    accuracy,
+    source,
+    overrideReason: isStaffOrAdmin ? "Manual location update" : undefined,
+  });
 }
 
 export async function adminPingEmployeeLocation(
