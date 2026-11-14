@@ -254,6 +254,7 @@ export default function DriverSitePinger({
             <>
               <Radio className="w-4 h-4" />
               <span>Ping GPS Location to Site</span>
+              <span className="text-[10px] text-slate-900/80 font-medium ml-1">(സൈറ്റിലേക്ക് ജി.പി.എസ് അയക്കുക)</span>
             </>
           )}
         </button>
