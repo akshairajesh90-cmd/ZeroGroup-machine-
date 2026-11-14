@@ -4,6 +4,7 @@ import {
 } from "../websiteSettings";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/serverAuth";
+import { PALA_DEPOT_LATITUDE, PALA_DEPOT_LONGITUDE } from "@/lib/gis/yardCoordinates";
 
 jest.mock("@/lib/serverAuth", () => ({
   requireAuth: jest.fn(),
@@ -58,8 +59,8 @@ describe("Website Settings Server Action Suite", () => {
 
       expect(settings).toBeDefined();
       expect(settings.storeName).toContain("ZERO GROUP");
-      expect(settings.storeLatitude).toBe(9.5916);
-      expect(settings.storeLongitude).toBe(76.5222);
+      expect(settings.storeLatitude).toBe(PALA_DEPOT_LATITUDE);
+      expect(settings.storeLongitude).toBe(PALA_DEPOT_LONGITUDE);
       expect(settings.gstinNumber).toBe("32AAAAZ0000A1Z5");
       expect(settings.catalogItems?.length).toBeGreaterThan(0);
       expect(settings.valueProps?.length).toBeGreaterThan(0);

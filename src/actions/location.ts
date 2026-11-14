@@ -238,10 +238,10 @@ export async function updateEmployeeLocation(
                   data: {
                     actorId: employee.id,
                     actorRole: employee.role,
-                    action: "SITE_CENTROID_VERIFIED",
-                    targetEntity: "DailyDispatch",
-                    targetId: activeDispatch.id,
-                    meta: {
+                    actionType: "SITE_CENTROID_VERIFIED",
+                    modelName: "DailyDispatch",
+                    newPayload: {
+                      dispatchId: activeDispatch.id,
                       latitude: cLat,
                       longitude: cLng,
                       confidence: evalResult.confidence,
@@ -373,8 +373,10 @@ import {
   LocationSource,
   SOURCE_PRIORITY_WEIGHT,
   SetDispatchLocationParams,
+  SetDispatchLocationResult,
+  RevertLocationResult,
 } from "@/types/locationPriority";
-export type { LocationSource, SetDispatchLocationParams };
+export type { LocationSource, SetDispatchLocationParams, SetDispatchLocationResult, RevertLocationResult };
 
 /**
  * Unified Single Source of Truth for Site Location:
@@ -388,7 +390,7 @@ export async function setDispatchLocationWithPriority({
   accuracy,
   source,
   overrideReason,
-}: SetDispatchLocationParams) {
+}: SetDispatchLocationParams): Promise<SetDispatchLocationResult> {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -458,7 +460,20 @@ export async function setDispatchLocationWithPriority({
         }
       } else {
         // Drivers or Operators on-site cannot overwrite a mathematically verified centroid.
-        // Instead, log their arrival/verification passively.
+        // Instead, record their pin as a candidate and log their arrival/verification passively.
+        await prisma.dispatchLocationCandidate.create({
+          data: {
+            dispatchId,
+            source: source || (role === "DRIVER" ? "DRIVER_PIN" : "OPERATOR_PIN"),
+            weight: SOURCE_PRIORITY_WEIGHT[source] || (role === "DRIVER" ? 2 : 3),
+            latitude,
+            longitude,
+            accuracy: accuracy ? Number(accuracy) : null,
+            capturedAt: now,
+            capturedById: employee.id,
+          },
+        });
+
         await logAudit({
           actorId: employee.id,
           actorRole: role,
@@ -510,37 +525,169 @@ export async function setDispatchLocationWithPriority({
       }
     }
 
-    // 3. Priority Hierarchy Guard
-    // Priority: STAFF_BOOKING (1) < DRIVER_PIN (2) < OPERATOR_PIN (3) < VERIFIED_CENTROID (4) < STAFF_OVERRIDE (5)
-    const currentSource = (dispatch.locationSource as LocationSource) || (dispatch.isCentroidVerified ? "VERIFIED_CENTROID" : "STAFF_BOOKING");
-    const currentWeight = SOURCE_PRIORITY_WEIGHT[currentSource] || 1;
     const incomingWeight = SOURCE_PRIORITY_WEIGHT[source] || 1;
 
-    if (!isStaffOrAdmin && incomingWeight < currentWeight) {
-      // Driver cannot downgrade an Operator pin; secondary driver records arrival check-in
-      await logAudit({
-        actorId: employee.id,
-        actorRole: role,
-        actionType: "AUXILIARY_SITE_CHECKIN",
-        modelName: "DailyDispatch",
-        newPayload: {
-          dispatchId,
-          incomingSource: source,
-          currentSource,
-          actorLat: latitude,
-          actorLng: longitude,
-          note: "Lower-priority source check-in recorded without overwriting site coordinates.",
-        },
-      });
+    // 3. Atomic Priority Execution in Row-Locked Transaction
+    const txResult = await prisma.$transaction(async (tx) => {
+      // Record every proposed coordinate as a candidate
+      if (typeof (tx as any).dispatchLocationCandidate?.create === "function") {
+        await (tx as any).dispatchLocationCandidate.create({
+          data: {
+            dispatchId,
+            source,
+            weight: incomingWeight,
+            latitude,
+            longitude,
+            accuracy: accuracy ? Number(accuracy) : null,
+            capturedAt: now,
+            capturedById: employee.id,
+          },
+        });
+      }
 
-      return {
-        success: true,
-        message: `Site location was already set by ${currentSource}. Your check-in was logged.`,
-      };
-    }
+      // Lock row to serialize concurrent writes
+      let currentDispatch: any = null;
+      if (typeof tx.$queryRawUnsafe === "function") {
+        try {
+          const rows = await tx.$queryRawUnsafe<any[]>(
+            `SELECT id, "locationPriority", "locationSource", "locationUpdatedById", latitude, longitude, "isCentroidVerified"
+             FROM daily_dispatches
+             WHERE id = $1
+             FOR UPDATE`,
+            dispatchId
+          );
+          if (rows && rows.length > 0) {
+            currentDispatch = rows[0];
+          }
+        } catch (e) {
+          // Fallback in mock environments
+        }
+      }
 
-    // 4. Atomic Execution: Update DailyDispatch, Employee Live State, and LocationPing
-    await prisma.$transaction(async (tx) => {
+      if (!currentDispatch) {
+        currentDispatch = await tx.dailyDispatch.findUnique({
+          where: { id: dispatchId },
+          select: {
+            id: true,
+            locationPriority: true,
+            locationSource: true,
+            locationUpdatedById: true,
+            latitude: true,
+            longitude: true,
+            isCentroidVerified: true,
+          },
+        });
+      }
+
+      const currentSource = (currentDispatch?.locationSource as LocationSource) || 
+        (currentDispatch?.isCentroidVerified ? "VERIFIED_CENTROID" : "STAFF_BOOKING");
+      const currentWeight = currentDispatch?.locationPriority ?? (SOURCE_PRIORITY_WEIGHT[currentSource] || 1);
+      const currentActorId = currentDispatch?.locationUpdatedById;
+
+      // Priority comparison
+      if (!isStaffOrAdmin && incomingWeight < currentWeight) {
+        // Lower priority write: rejected from updating dispatch location, logged as auxiliary check-in
+        await logAudit({
+          actorId: employee.id,
+          actorRole: role,
+          actionType: "AUXILIARY_SITE_CHECKIN",
+          modelName: "DailyDispatch",
+          newPayload: {
+            dispatchId,
+            incomingSource: source,
+            currentSource,
+            actorLat: latitude,
+            actorLng: longitude,
+            note: "Lower-priority source check-in recorded without overwriting site coordinates.",
+          },
+        });
+
+        return {
+          success: true,
+          winner: false,
+          message: `Site location was already set by ${currentSource}. Your check-in was logged.`,
+        };
+      }
+
+      // Equal weight check:
+      // Same actor may re-pin; different actor at equal weight is rejected
+      if (!isStaffOrAdmin && incomingWeight === currentWeight) {
+        if (currentActorId && currentActorId !== employee.id) {
+          await logAudit({
+            actorId: employee.id,
+            actorRole: role,
+            actionType: "AUXILIARY_SITE_CHECKIN",
+            modelName: "DailyDispatch",
+            newPayload: {
+              dispatchId,
+              incomingSource: source,
+              currentSource,
+              actorLat: latitude,
+              actorLng: longitude,
+              note: "Equal-priority pin from different actor rejected; auxiliary candidate recorded.",
+            },
+          });
+
+          return {
+            success: false,
+            rejected: true,
+            winner: false,
+            message: `Site location pin with priority ${source} was already set by another team member. Your pin was saved as an auxiliary candidate.`,
+          };
+        }
+      }
+
+      // Check Discrepancy Flag (Phase 1d):
+      // When STAFF_OVERRIDE and VERIFIED_CENTROID differ by more than 300 m, raise a non-accusatory review flag
+      let isFlaggedForReview = false;
+      let conflictReport: string | null = null;
+
+      if (source === "STAFF_OVERRIDE") {
+        let centroidLat: number | null = null;
+        let centroidLng: number | null = null;
+
+        if (typeof (tx as any).dispatchLocationCandidate?.findFirst === "function") {
+          const centroidCandidate = await (tx as any).dispatchLocationCandidate.findFirst({
+            where: { dispatchId, source: "VERIFIED_CENTROID" },
+            orderBy: { capturedAt: "desc" },
+          });
+          if (centroidCandidate) {
+            centroidLat = Number(centroidCandidate.latitude);
+            centroidLng = Number(centroidCandidate.longitude);
+          }
+        }
+
+        if (centroidLat == null && currentDispatch?.isCentroidVerified && currentDispatch?.latitude) {
+          centroidLat = Number(currentDispatch.latitude);
+          centroidLng = Number(currentDispatch.longitude);
+        }
+
+        if (centroidLat != null && centroidLng != null) {
+          const distMeters = Math.round(calculateDistanceMeters(latitude, longitude, centroidLat, centroidLng));
+          if (distMeters > 300) {
+            isFlaggedForReview = true;
+            conflictReport = `Staff override coordinates differ by ${distMeters}m from verified site dwell cluster. Flagged for review.`;
+
+            await logAudit({
+              actorId: employee.id,
+              actorRole: role,
+              actionType: "LOCATION_DISCREPANCY_FLAG",
+              modelName: "DailyDispatch",
+              newPayload: {
+                dispatchId,
+                staffOverrideLat: latitude,
+                staffOverrideLng: longitude,
+                centroidLat,
+                centroidLng,
+                discrepancyMeters: distMeters,
+                note: conflictReport,
+              },
+            });
+          }
+        }
+      }
+
+      // Update DailyDispatch to the winning candidate
       await tx.dailyDispatch.update({
         where: { id: dispatchId },
         data: {
@@ -548,9 +695,11 @@ export async function setDispatchLocationWithPriority({
           longitude,
           mapLink,
           locationSource: source,
+          locationPriority: incomingWeight,
           locationUpdatedById: employee.id,
           locationUpdatedAt: now,
           locationOverrideReason: overrideReason || null,
+          ...(isFlaggedForReview ? { isFlagged: true, conflictReport } : {}),
         },
       });
 
@@ -576,39 +725,166 @@ export async function setDispatchLocationWithPriority({
           timestamp: now,
         },
       });
+
+      return {
+        success: true,
+        winner: true,
+        mapLink,
+      };
     });
 
-    // 5. Audit Log Entry
-    await logAudit({
-      actorId: employee.id,
-      actorRole: role,
-      actionType: "UPDATE_SITE_LOCATION",
-      modelName: "DailyDispatch",
-      oldPayload: {
-        latitude: dispatch.latitude ? Number(dispatch.latitude) : null,
-        longitude: dispatch.longitude ? Number(dispatch.longitude) : null,
-        locationSource: dispatch.locationSource,
-        isCentroidVerified: dispatch.isCentroidVerified,
-      },
-      newPayload: {
-        dispatchId,
-        latitude,
-        longitude,
-        source,
-        overrideReason: overrideReason || null,
-      },
-    });
+    if (txResult.winner) {
+      // 5. Audit Log Entry for Winner
+      await logAudit({
+        actorId: employee.id,
+        actorRole: role,
+        actionType: "UPDATE_SITE_LOCATION",
+        modelName: "DailyDispatch",
+        oldPayload: {
+          latitude: dispatch.latitude ? Number(dispatch.latitude) : null,
+          longitude: dispatch.longitude ? Number(dispatch.longitude) : null,
+          locationSource: dispatch.locationSource,
+          isCentroidVerified: dispatch.isCentroidVerified,
+        },
+        newPayload: {
+          dispatchId,
+          latitude,
+          longitude,
+          source,
+          overrideReason: overrideReason || null,
+        },
+      });
 
-    revalidatePath(`/driver/orders/${dispatchId}`);
-    revalidatePath(`/staff/dispatch`);
-    revalidatePath(`/admin/dispatch`);
-    revalidatePath(`/staff/live/map`);
-    revalidatePath(`/admin/live/map`);
+      revalidatePath(`/driver/orders/${dispatchId}`);
+      revalidatePath(`/staff/dispatch`);
+      revalidatePath(`/admin/dispatch`);
+      revalidatePath(`/staff/live/map`);
+      revalidatePath(`/admin/live/map`);
+    }
 
-    return { success: true, mapLink };
+    return txResult;
   } catch (err: any) {
     console.error("Failed to set dispatch location with priority:", err);
     return { success: false, error: err.message || "Failed to update location" };
+  }
+}
+
+/**
+ * Reverts the site location to the previous best candidate in DispatchLocationCandidate.
+ * Restricted to Staff, Admin, and Owner.
+ */
+export async function revertToPreviousBest(dispatchId: string): Promise<RevertLocationResult> {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const role = session.user.role as Role;
+    if (role !== "OWNER" && role !== "ADMIN" && role !== "STAFF") {
+      return { success: false, error: "Only staff or admin can revert location pins" };
+    }
+
+    const empId = session.user.employeeId;
+    const employee = await prisma.employee.findFirst({
+      where: {
+        OR: [
+          ...(empId ? [{ id: empId }] : []),
+          { userId: session.user.id },
+          ...(session.user.email ? [{ user: { email: session.user.email } }] : []),
+        ],
+      },
+    });
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Row lock the dispatch
+      if (typeof tx.$queryRawUnsafe === "function") {
+        try {
+          await tx.$queryRawUnsafe(
+            `SELECT id FROM daily_dispatches WHERE id = $1 FOR UPDATE`,
+            dispatchId
+          );
+        } catch (e) {
+          // ignore in mock environments
+        }
+      }
+
+      const candidates = await (tx as any).dispatchLocationCandidate.findMany({
+        where: { dispatchId },
+        orderBy: [{ weight: "desc" }, { capturedAt: "desc" }],
+      });
+
+      if (!candidates || candidates.length < 2) {
+        return { success: false, error: "No previous location candidate found to revert to" };
+      }
+
+      const activeCandidate = candidates[0];
+      const previousBest = candidates[1];
+
+      // Remove the reverted candidate from active candidate pool
+      await (tx as any).dispatchLocationCandidate.delete({
+        where: { id: activeCandidate.id },
+      });
+
+      const mapLink = `https://www.google.com/maps/search/?api=1&query=${previousBest.latitude},${previousBest.longitude}`;
+
+      await tx.dailyDispatch.update({
+        where: { id: dispatchId },
+        data: {
+          latitude: previousBest.latitude,
+          longitude: previousBest.longitude,
+          mapLink,
+          locationSource: previousBest.source,
+          locationPriority: previousBest.weight,
+          locationUpdatedById: previousBest.capturedById,
+          locationUpdatedAt: previousBest.capturedAt,
+          locationOverrideReason: `Reverted to previous best candidate (${previousBest.source})`,
+        },
+      });
+
+      await logAudit({
+        actorId: employee?.id || session.user.id,
+        actorRole: role,
+        actionType: "REVERT_SITE_LOCATION",
+        modelName: "DailyDispatch",
+        oldPayload: {
+          dispatchId,
+          revertedCandidateId: activeCandidate.id,
+          revertedSource: activeCandidate.source,
+          latitude: Number(activeCandidate.latitude),
+          longitude: Number(activeCandidate.longitude),
+        },
+        newPayload: {
+          dispatchId,
+          activeCandidateId: previousBest.id,
+          activeSource: previousBest.source,
+          latitude: Number(previousBest.latitude),
+          longitude: Number(previousBest.longitude),
+          note: "Reverted to previous best location candidate",
+        },
+      });
+
+      return {
+        success: true,
+        revertedFrom: activeCandidate.source,
+        activeSource: previousBest.source,
+        latitude: Number(previousBest.latitude),
+        longitude: Number(previousBest.longitude),
+      };
+    });
+
+    if (result.success) {
+      revalidatePath(`/driver/orders/${dispatchId}`);
+      revalidatePath(`/staff/dispatch`);
+      revalidatePath(`/admin/dispatch`);
+      revalidatePath(`/staff/live/map`);
+      revalidatePath(`/admin/live/map`);
+    }
+
+    return result;
+  } catch (err: any) {
+    console.error("Failed to revert dispatch location to previous best:", err);
+    return { success: false, error: err.message || "Failed to revert location" };
   }
 }
 

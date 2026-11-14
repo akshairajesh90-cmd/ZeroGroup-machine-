@@ -263,8 +263,10 @@ describe("Stationary Filter Cadence, Dwell Cluster Lock, and Anomaly Alerts", ()
       expect(mockTx.auditLog.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            action: "SITE_CENTROID_VERIFIED",
-            targetId: "disp-active-1",
+            actionType: "SITE_CENTROID_VERIFIED",
+            newPayload: expect.objectContaining({
+              dispatchId: "disp-active-1",
+            }),
           }),
         })
       );

@@ -20,4 +20,24 @@ export interface SetDispatchLocationParams {
   accuracy?: number | null;
   source: LocationSource;
   overrideReason?: string | null;
+  evidenceRef?: string | null;
+}
+
+export interface SetDispatchLocationResult {
+  success: boolean;
+  error?: string;
+  message?: string;
+  winner?: boolean;
+  rejected?: boolean;
+  verified?: boolean;
+  mapLink?: string;
+}
+
+export interface RevertLocationResult {
+  success: boolean;
+  error?: string;
+  revertedFrom?: string;
+  activeSource?: string;
+  latitude?: number;
+  longitude?: number;
 }

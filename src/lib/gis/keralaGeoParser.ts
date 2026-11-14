@@ -117,7 +117,7 @@ export function parseKeralaLocation(input: string): ParsedKeralaLocation {
 
   // 1. Identify if a broad high-range panchayat is mentioned
   let matchedBroadTown: string | null = null;
-  let broadMeta: { name: string; approxAreaSqKm: number; sampleWards: string[] } | null = null;
+  let broadMeta: LocalBodyMeta | null = null;
 
   for (const [key, meta] of Object.entries(BROAD_KERALA_PANCHAYATS)) {
     const regex = new RegExp(`\\b${key}\\b`, "i");
