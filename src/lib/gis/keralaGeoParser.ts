@@ -13,44 +13,70 @@ export interface ParsedKeralaLocation {
   normalizedAddress: string;
 }
 
-// Known broad panchayats spanning large geographical areas (>20 - 40 sq km)
-export const BROAD_KERALA_PANCHAYATS: Record<string, { name: string; approxAreaSqKm: number; sampleWards: string[] }> = {
+// Official Kerala Local Self Government (LSGD) classification
+export type LocalBodyType = "GRAMA_PANCHAYAT" | "MUNICIPALITY";
+
+export interface LocalBodyMeta {
+  name: string;
+  type: LocalBodyType;
+  approxAreaSqKm: number;
+  sampleWards: string[];
+}
+
+// Broad local bodies in Central Kerala rubber estate belts (Kottayam / Idukki borders)
+export const BROAD_KERALA_LOCAL_BODIES: Record<string, LocalBodyMeta> = {
   poonjar: {
     name: "Poonjar",
-    approxAreaSqKm: 38,
-    sampleWards: ["Panackapalam", "Erumapra", "Adivaram", "Perunilam", "Thekkekara", "Vadakkekara"],
+    type: "GRAMA_PANCHAYAT",
+    approxAreaSqKm: 35.4,
+    sampleWards: ["Panackapalam", "Erumapra", "Adivaram", "Perunilam", "Poonjar Thekkekara", "Payyappady"],
   },
   teekoy: {
     name: "Teekoy",
-    approxAreaSqKm: 32,
-    sampleWards: ["Mankombu", "Vellikulam", "Aanikkadu", "Mangalagiri"],
+    type: "GRAMA_PANCHAYAT",
+    approxAreaSqKm: 27.8,
+    sampleWards: ["Mavady", "Vellikulam", "Aanikkadu", "Mangalagiri", "Thalanadu Road"],
   },
   melukavu: {
     name: "Melukavu",
-    approxAreaSqKm: 28,
-    sampleWards: ["Melukavumattom", "Kollappally", "Konnakkad"],
+    type: "GRAMA_PANCHAYAT",
+    approxAreaSqKm: 29.1,
+    sampleWards: ["Melukavumattom", "Kollappally", "Konnakkad", "Edamaruku"],
   },
   erattupetta: {
     name: "Erattupetta",
-    approxAreaSqKm: 22,
-    sampleWards: ["Nadakkal", "Aruvithura", "Thekkekara", "Vattakkulam"],
+    type: "MUNICIPALITY", // Officially a Municipality (Nagarasabha)
+    approxAreaSqKm: 8.3,
+    sampleWards: ["Nadakkal", "Aruvithura", "Vattakkulam", "Murikkumpuzha", "Town Ward"],
   },
   mundakkayam: {
     name: "Mundakkayam",
-    approxAreaSqKm: 42,
-    sampleWards: ["Punchavayal", "Vandiperiyar Road", "Yendayar", "Koottickal"],
+    type: "GRAMA_PANCHAYAT",
+    approxAreaSqKm: 37.2,
+    sampleWards: ["Punchavayal", "Vencode", "Yendayar", "Koottickal", "Amaravathy"],
   },
   kanjirappally: {
     name: "Kanjirappally",
-    approxAreaSqKm: 35,
-    sampleWards: ["Anakkallu", "Thampalakkadu", "Mannarakkayam"],
+    type: "GRAMA_PANCHAYAT",
+    approxAreaSqKm: 32.4,
+    sampleWards: ["Anakkallu", "Thampalakkadu", "Mannarakkayam", "Ponkunnam Border"],
   },
   pala: {
     name: "Pala",
-    approxAreaSqKm: 18,
-    sampleWards: ["Mutholy", "Lalam", "Kannadiurumpu", "Puliyannoor"],
+    type: "MUNICIPALITY", // Officially a Municipality (Nagarasabha)
+    approxAreaSqKm: 15.9,
+    sampleWards: ["Lalam", "Kannadiurumpu", "Puliyannoor", "Moonani", "Kizhathadiyoor"],
+  },
+  mutholy: {
+    name: "Mutholy",
+    type: "GRAMA_PANCHAYAT",
+    approxAreaSqKm: 12.2,
+    sampleWards: ["Kadaplamattom Border", "Thekkummuri", "Mutholy Town"],
   },
 };
+
+// Backward-compatibility alias
+export const BROAD_KERALA_PANCHAYATS = BROAD_KERALA_LOCAL_BODIES;
 
 // Structural micro-anchor keywords commonly found in rural Kerala
 const ANCHOR_PATTERNS = [
@@ -136,7 +162,8 @@ export function parseKeralaLocation(input: string): ParsedKeralaLocation {
     if (!hasSpecificDetails || trimmed.length <= matchedBroadTown.length + 3) {
       isAmbiguous = true;
       const sampleSuggestions = broadMeta.sampleWards.slice(0, 3).join(", ");
-      warningMessage = `⚠️ High-Range Panchayat Ambiguity: "${matchedBroadTown}" covers >${broadMeta.approxAreaSqKm} km². Please specify Sub-locality/Ward (e.g. ${sampleSuggestions}) and Landmark Anchor (e.g. Bridge, Temple, Ration Shop).`;
+      const bodyLabel = broadMeta.type === "MUNICIPALITY" ? "Municipality" : "Grama Panchayat";
+      warningMessage = `⚠️ Broad Location Ambiguity: "${matchedBroadTown}" (${bodyLabel}) covers ~${broadMeta.approxAreaSqKm} km². Please specify Sub-locality/Ward (e.g. ${sampleSuggestions}) and Landmark Anchor (e.g. Bridge, Temple, Ration Shop).`;
     }
   }
 

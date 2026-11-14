@@ -400,6 +400,19 @@ export function SiteLocationPinModal({
               <ExternalLink className="w-3.5 h-3.5 ml-0.5 opacity-80" />
             </a>
 
+            {accessLatitude != null && accessLongitude != null && (
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${Number(accessLatitude)},${Number(accessLongitude)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 px-4 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md active:scale-[0.99]"
+              >
+                <Compass className="w-4 h-4 text-amber-400" />
+                <span>Navigate to Highway Turnoff (PWD Road Exit)</span>
+                <ExternalLink className="w-3.5 h-3.5 ml-0.5 opacity-80" />
+              </a>
+            )}
+
             {mapLink && (
               <a
                 href={mapLink}

@@ -243,10 +243,16 @@ export default function PublicLandingClient({ sessionUser, settings }: PublicLan
 
   // Dynamic calculated mobilization timeline based on district
   const calculatedTimeline = useMemo(() => {
-    if (CENTRAL_KERALA_DISTRICTS.has(district)) {
-      return "Within 2 Hours (Central Depot Priority Dispatch)";
+    if (district === "Kottayam") {
+      return "Estimated Within 2 Hours (Pala Central Depot Priority Dispatch)";
     }
-    return "Same-Day Direct Flatbed Mobilization (3-5 Hours)";
+    if (district === "Idukki") {
+      return "Estimated 3–5 Hours (High-Range Ghat Transit)";
+    }
+    if (["Ernakulam", "Alappuzha", "Pathanamthitta"].includes(district)) {
+      return "Estimated 2–3 Hours (Direct Flatbed Transit)";
+    }
+    return "Same-Day Direct Flatbed Mobilization (3–6+ Hours)";
   }, [district]);
 
   const generateWhatsAppUrl = () => {
@@ -984,7 +990,10 @@ export default function PublicLandingClient({ sessionUser, settings }: PublicLan
                     {calculatedTimeline}
                   </p>
                   <p className="text-xs text-slate-400">
-                    Deploying to <strong className="text-slate-200">{district} District</strong> via Central Machinery Yard flatbed carrier.
+                    Deploying to <strong className="text-slate-200">{district} District</strong> via Pala Depot flatbed carrier.
+                  </p>
+                  <p className="text-[11px] text-slate-500 italic mt-0.5">
+                    * Estimates subject to machine availability and terrain/traffic. Final delivery schedule confirmed upon booking.
                   </p>
                 </div>
 
