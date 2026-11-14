@@ -153,7 +153,7 @@ export default function IntervalLocationTracker({
         const pos = await captureCurrentPosition({
           timeout: 10000,
           maximumAge: 15000,
-          allowSimulationFallback: true,
+          allowSimulationFallback: false,
           applyJitterFilter: true,
         });
 

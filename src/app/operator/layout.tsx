@@ -83,7 +83,12 @@ export default function OperatorLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-slate-100 font-sans pb-24">
-      <IntervalLocationTracker intervalMs={300000} />
+      <IntervalLocationTracker
+        intervalMs={60000}
+        movingIntervalMs={30000}
+        idleIntervalMs={180000}
+        employeeId={(session?.user as any)?.employeeId || session?.user?.id}
+      />
       <AdminReturnBanner userRole={session?.user?.role || "OPERATOR"} />
       {(session as any)?.isImpersonating && (
         <div className="bg-rose-600 px-4 py-2 flex items-center justify-between sticky top-0 z-50">

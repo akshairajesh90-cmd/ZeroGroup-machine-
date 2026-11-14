@@ -27,7 +27,7 @@ export default function UpdateSiteLocationButton({
       const pos = await captureCurrentPosition({
         timeout: 10000,
         maximumAge: 30000,
-        allowSimulationFallback: true,
+        allowSimulationFallback: false,
       });
 
       const res = await updateDispatchLocation(dispatchId, pos.latitude, pos.longitude, pos.accuracy);

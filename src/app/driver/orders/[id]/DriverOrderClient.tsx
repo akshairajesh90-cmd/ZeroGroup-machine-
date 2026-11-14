@@ -405,6 +405,19 @@ export default function DriverOrderClient({ dispatch: initialDispatch, userRole,
       {/* PRE-FLIGHT SAFETY CHECKLIST */}
       {dispatch.status === "EN_ROUTE" && (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+          {/* Active Navigation & Screen Wake Guidance */}
+          <div className="p-4 bg-amber-500/15 border-2 border-amber-500/40 rounded-2xl flex items-start gap-3 shadow-lg">
+            <Clock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
+            <div className="space-y-1">
+              <p className="text-xs font-black text-amber-300 uppercase tracking-wide">
+                📱 Keep Screen On While Driving
+              </p>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Background GPS pauses when your screen locks. Keep this page open on your dashboard for live route tracking and automatic arrival detection.
+              </p>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="font-bold text-white text-sm flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />

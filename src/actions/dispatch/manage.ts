@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { DispatchStatus, WorkType, MachineType } from "@prisma/client";
 import { logAudit } from "@/lib/auditLogger";
 import { dispatchSchema, updateDailyDispatchSchema } from "./schemas";
+import { parseGoogleMapsUrl } from "@/lib/geo";
+import { resolveGoogleMapsLink } from "@/lib/geo-server";
 
 /**
  * 1. Create a Daily Dispatch (Site-Job Model V15.0 — Equipment, Tools & Multi-Crew)
@@ -75,6 +77,27 @@ export async function createDailyDispatch(formData: unknown) {
     const operatorDailyRate = rateRow?.payoutRate ?? (machineType === "INDEPENDENT" ? 800 : 750);
     const customerCharge = rateRow?.customerCharge ?? (machineType === "INDEPENDENT" ? 1500 : 2300);
 
+    // Resolve coordinates from mapLink BEFORE entering Prisma transaction (Rule 11)
+    let initialLat: number | null = null;
+    let initialLng: number | null = null;
+    if (data.mapLink && data.mapLink.trim()) {
+      try {
+        const directCoords = parseGoogleMapsUrl(data.mapLink);
+        if (directCoords) {
+          initialLat = directCoords.lat;
+          initialLng = directCoords.lng;
+        } else if (/goo\.gl|maps\.app\.goo\.gl/i.test(data.mapLink)) {
+          const resolved = await resolveGoogleMapsLink(data.mapLink);
+          if (resolved) {
+            initialLat = resolved.lat;
+            initialLng = resolved.lng;
+          }
+        }
+      } catch (linkErr) {
+        console.warn("[createDailyDispatch] Non-blocking map link resolution notice:", linkErr);
+      }
+    }
+
     const dispatch = await prisma.$transaction(async (tx) => {
       const newDispatch = await tx.dailyDispatch.create({
         data: {
@@ -90,6 +113,10 @@ export async function createDailyDispatch(formData: unknown) {
           helperCount: data.helperCount || 0,
           trollyWorkerCount: data.trollyWorkerCount || 0,
           location: data.location,
+          latitude: initialLat,
+          longitude: initialLng,
+          locationSource: initialLat ? "STAFF_BOOKING" : null,
+          locationUpdatedAt: initialLat ? new Date() : null,
           mapLink: data.mapLink || null,
           subLocality: data.subLocality || null,
           structuralAnchor: data.structuralAnchor || null,
@@ -245,6 +272,27 @@ export async function updateDailyDispatch(formData: unknown) {
   try {
     const dispatchId = data.id;
 
+    // Resolve coordinates from mapLink BEFORE entering Prisma transaction (Rule 11)
+    let updatedLat: number | null = null;
+    let updatedLng: number | null = null;
+    if (data.mapLink && data.mapLink.trim()) {
+      try {
+        const directCoords = parseGoogleMapsUrl(data.mapLink);
+        if (directCoords) {
+          updatedLat = directCoords.lat;
+          updatedLng = directCoords.lng;
+        } else if (/goo\.gl|maps\.app\.goo\.gl/i.test(data.mapLink)) {
+          const resolved = await resolveGoogleMapsLink(data.mapLink);
+          if (resolved) {
+            updatedLat = resolved.lat;
+            updatedLng = resolved.lng;
+          }
+        }
+      } catch (linkErr) {
+        console.warn("[updateDailyDispatch] Non-blocking map link resolution notice:", linkErr);
+      }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       const current = await tx.dailyDispatch.findUnique({
         where: { id: dispatchId },
@@ -314,6 +362,14 @@ export async function updateDailyDispatch(formData: unknown) {
           trollyWorkerCount: data.trollyWorkerCount || 0,
           location: data.location,
           mapLink: data.mapLink || null,
+          ...(updatedLat !== null && updatedLng !== null && !current.isCentroidVerified
+            ? {
+                latitude: updatedLat,
+                longitude: updatedLng,
+                locationSource: "STAFF_BOOKING",
+                locationUpdatedAt: new Date(),
+              }
+            : {}),
           subLocality: data.subLocality || null,
           structuralAnchor: data.structuralAnchor || null,
           accessLatitude: data.accessLatitude != null ? data.accessLatitude : null,

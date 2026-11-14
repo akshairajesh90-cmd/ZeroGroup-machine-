@@ -214,7 +214,7 @@ export async function captureCurrentPosition(
   const {
     timeout = 10000,
     maximumAge = 30000,
-    allowSimulationFallback = true,
+    allowSimulationFallback = false,
     fallbackLatitude,
     fallbackLongitude,
     applyJitterFilter = false,
@@ -335,8 +335,8 @@ export async function captureCurrentPosition(
  * Provides a verified central Kerala waypoint if hardware GPS fails or runs in a simulator/LAN test
  */
 function getSimulatedPosition(fallbackLat?: number, fallbackLng?: number): GeoLocationResult {
-  const baseLat = fallbackLat || 9.5916; // Kottayam/Pala central depot
-  const baseLng = fallbackLng || 76.5222;
+  const baseLat = fallbackLat || 9.7118; // Pala central depot
+  const baseLng = fallbackLng || 76.6853;
   const jitterLat = parseFloat((baseLat + (Math.random() - 0.5) * 0.003).toFixed(6));
   const jitterLng = parseFloat((baseLng + (Math.random() - 0.5) * 0.003).toFixed(6));
 

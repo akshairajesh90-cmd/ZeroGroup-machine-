@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { captureCurrentPosition } from "@/lib/geoCapture";
+import { offlineDb } from "@/lib/offlineDb";
 
 let globalLastAutoPingTime = 0;
 let isAutoPingingInProgress = false;
@@ -23,7 +24,8 @@ export default function AutoPinger({
       if (isAutoPingingInProgress) return;
 
       const now = Date.now();
-      if (globalLastAutoPingTime > 0 && now - globalLastAutoPingTime < 300000) {
+      // Cadence guard: 60s
+      if (globalLastAutoPingTime > 0 && now - globalLastAutoPingTime < 60000) {
         return;
       }
 
@@ -32,38 +34,35 @@ export default function AutoPinger({
         const pos = await captureCurrentPosition({
           timeout: 10000,
           maximumAge: 30000,
-          allowSimulationFallback: true,
+          allowSimulationFallback: false,
         });
 
-        const requestBody = JSON.stringify({
+        const pingPayload = {
           employeeId: employeeId,
           dispatchId: dispatchId,
           latitude: pos.latitude,
           longitude: pos.longitude,
           accuracy: pos.accuracy,
-          source: pos.source,
-          timestamp: pos.timestamp,
-        });
+          speed: pos.speed ?? undefined,
+          heading: pos.heading ?? undefined,
+          source: pos.source || "OPERATOR_AUTOPING",
+          timestamp: pos.timestamp || Date.now(),
+        };
 
         if (navigator.onLine) {
           const res = await fetch("/api/location/ping", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: requestBody,
+            body: JSON.stringify(pingPayload),
           });
           if (res.ok) {
             globalLastAutoPingTime = Date.now();
           }
         } else {
-          const { offlineDb } = await import("@/lib/offlineDb");
-          await offlineDb.queuedRequests.add({
-            url: "/api/location/ping",
-            method: "POST",
-            body: requestBody,
-            headers: { "Content-Type": "application/json" },
-            createdAt: Date.now(),
-            retries: 0,
-            tag: "location-ping-auto",
+          // Store directly in offlineDb locationPings queue
+          await offlineDb.locationPings.add({
+            ...pingPayload,
+            synced: false,
           });
           globalLastAutoPingTime = Date.now();
         }
@@ -74,13 +73,14 @@ export default function AutoPinger({
       }
     };
 
-    // First auto-ping after 4 seconds to stagger network requests
+    // First auto-ping after 3 seconds
     const now = Date.now();
-    if (globalLastAutoPingTime === 0 || now - globalLastAutoPingTime >= 300000) {
-      timeoutRef.current = setTimeout(pingLocation, 4000);
+    if (globalLastAutoPingTime === 0 || now - globalLastAutoPingTime >= 60000) {
+      timeoutRef.current = setTimeout(pingLocation, 3000);
     }
 
-    intervalRef.current = setInterval(pingLocation, 300000);
+    // Interval every 60 seconds
+    intervalRef.current = setInterval(pingLocation, 60000);
 
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
