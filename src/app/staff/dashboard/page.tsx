@@ -1,7 +1,23 @@
 import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay, subDays } from "date-fns";
 import nextDynamic from "next/dynamic";
-const DashboardClient = nextDynamic(() => import("./DashboardClient"), { ssr: false });
+const DashboardClient = nextDynamic(() => import("./DashboardClient"), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 md:p-8 space-y-8 animate-pulse max-w-7xl mx-auto">
+      <div className="h-24 bg-slate-900/60 rounded-2xl border border-slate-800 flex items-center px-6">
+        <span className="text-slate-500 text-sm font-medium">Loading operations dashboard...</span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="h-28 bg-slate-900/60 rounded-2xl border border-slate-800" />
+        <div className="h-28 bg-slate-900/60 rounded-2xl border border-slate-800" />
+        <div className="h-28 bg-slate-900/60 rounded-2xl border border-slate-800" />
+        <div className="h-28 bg-slate-900/60 rounded-2xl border border-slate-800" />
+      </div>
+      <div className="h-72 bg-slate-900/60 rounded-2xl border border-slate-800" />
+    </div>
+  ),
+});
 import { requireAuth } from "@/lib/serverAuth";
 import { Role, CashDepositStatus, DispatchStatus, MachineStatus, VehicleStatus } from "@prisma/client";
 

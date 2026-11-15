@@ -39,7 +39,17 @@ export default defineConfig({
 
   projects: [
     {
+      name: 'setup',
+      testMatch: /auth_setup\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        channel: 'chrome',
+      },
+    },
+    {
       name: 'Google Chrome',
+      dependencies: ['setup'],
+      testIgnore: /auth_setup\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         channel: 'chrome', 
@@ -51,7 +61,7 @@ export default defineConfig({
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: false,
+    reuseExistingServer: true,
     timeout: 120 * 1000,
     env: {
       ...testEnv,

@@ -136,7 +136,25 @@ export default async function ToolsInventoryPage() {
                           <ToolDeploymentsModal
                             toolName={tool.name}
                             totalDeployed={deployedCount}
-                            deployments={tool.dispatchTools as any}
+                            deployments={tool.dispatchTools.map((dt) => ({
+                              id: dt.id,
+                              quantity: dt.quantity,
+                              dispatch: {
+                                id: dt.dispatch.id,
+                                dateOfService: dt.dispatch.dateOfService ? new Date(dt.dispatch.dateOfService).toISOString() : "",
+                                status: dt.dispatch.status,
+                                location: dt.dispatch.location || "",
+                                latitude: dt.dispatch.latitude ? Number(dt.dispatch.latitude) : null,
+                                longitude: dt.dispatch.longitude ? Number(dt.dispatch.longitude) : null,
+                                mapLink: dt.dispatch.mapLink || null,
+                                deliveredAt: dt.dispatch.deliveredAt ? new Date(dt.dispatch.deliveredAt).toISOString() : null,
+                                customer: dt.dispatch.customer ? { name: dt.dispatch.customer.name, phone: dt.dispatch.customer.phone } : null,
+                                driver: dt.dispatch.driver ? { fullName: (dt.dispatch.driver as any).fullName || (dt.dispatch.driver as any).name || "", phone: dt.dispatch.driver.phone } : null,
+                                operator: dt.dispatch.operator ? { fullName: (dt.dispatch.operator as any).fullName || (dt.dispatch.operator as any).name || "", phone: dt.dispatch.operator.phone } : null,
+                                vehicle: dt.dispatch.vehicle ? { licensePlate: dt.dispatch.vehicle.licensePlate, modelName: (dt.dispatch.vehicle as any).modelName || dt.dispatch.vehicle.type || "" } : null,
+                                machine: dt.dispatch.machine ? { name: (dt.dispatch.machine as any).name || dt.dispatch.machine.machineId || "" } : null,
+                              }
+                            }))}
                           />
                         ) : (
                           <span className="text-zinc-600 font-medium">0 Deployed</span>

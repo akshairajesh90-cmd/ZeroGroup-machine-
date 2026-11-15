@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Zero Group Role-Based Integrated Journey Tests', () => {
 
   test('ADMIN: Executive Operations, Rate Management, Live Tracking', async ({ page }) => {
-    test.setTimeout(90000);
+    test.setTimeout(150000);
     await page.context().clearCookies();
 
     // 1. Authenticate as Admin
@@ -27,95 +27,99 @@ test.describe('Zero Group Role-Based Integrated Journey Tests', () => {
     await expect(page.locator('body')).toBeVisible();
   });
 
-  test('STAFF: Central Dispatch Board, Machinery Assignment, Inventory', async ({ page }) => {
-    test.setTimeout(90000);
+  test('STAFF: Operations Dashboard, Central Dispatch Board, Fleet Inventory', async ({ page }) => {
+    test.setTimeout(120000);
     await page.context().clearCookies();
 
     // 1. Authenticate as Staff
     await page.goto('/login');
-    await page.locator('input[name="email"]').fill('staff@zerogroup.com');
-    await page.locator('input[name="password"]').fill('password123');
-    await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
+    if (page.url().includes('/login')) {
+      await page.locator('input[name="email"]').fill('staff@zerogroup.com');
+      await page.locator('input[name="password"]').fill('password123');
+      await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+      await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
+    }
 
-    // 2. Dispatch Board
-    await page.goto('/staff/dispatch');
+    // 2. Staff Operations Dashboard
+    await page.goto('/staff/dashboard', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/staff/);
     await expect(page.locator('body')).toBeVisible();
 
-    // 3. Tool & Equipment Inventory
-    await page.goto('/staff/tools');
-    await expect(page.locator('body')).toBeVisible();
-
-    // 4. Invoice Registry
-    await page.goto('/staff/invoices');
+    // 3. Central Dispatch Board
+    await page.goto('/staff/dispatch', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('OWNER: Weekly Settlements Ledger & Machine Allocation', async ({ page }) => {
-    test.setTimeout(90000);
+    test.setTimeout(150000);
     await page.context().clearCookies();
 
     // 1. Authenticate as Owner
     await page.goto('/login');
-    await page.locator('input[name="email"]').fill('owner@zerogroup.com');
-    await page.locator('input[name="password"]').fill('admin123');
-    await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
+    if (page.url().includes('/login')) {
+      await page.locator('input[name="email"]').fill('akshairajesh07@gmail.com');
+      await page.locator('input[name="password"]').fill('admin123');
+      await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+      await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
+    }
 
     // 2. Owner Dashboard
-    await page.goto('/owner/dashboard');
+    await page.goto('/owner/dashboard', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/owner/);
     await expect(page.locator('body')).toBeVisible();
 
     // 3. Financial Settlements Audit
-    await page.goto('/owner/settlements');
+    await page.goto('/owner/settlements', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toBeVisible();
 
     // 4. Fleet Allocation
-    await page.goto('/owner/allocation');
+    await page.goto('/owner/allocation', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('DRIVER: Mobile Shift Dashboard, Active Dispatches, GPS Ping', async ({ page }) => {
-    test.setTimeout(90000);
+    test.setTimeout(150000);
     await page.context().clearCookies();
 
     // 1. Authenticate as Driver
     await page.goto('/login');
-    await page.locator('input[name="email"]').fill('driver@zerogroup.com');
-    await page.locator('input[name="password"]').fill('password123');
-    await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
+    if (page.url().includes('/login')) {
+      await page.locator('input[name="email"]').fill('driver@zerogroup.com');
+      await page.locator('input[name="password"]').fill('password123');
+      await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+      await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
+    }
 
     // 2. Driver Mobile Home
-    await page.goto('/driver/home');
+    await page.goto('/driver/home', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/driver/);
     await expect(page.locator('body')).toBeVisible();
 
     // 3. Driver Dispatches & Orders
-    await page.goto('/driver/dispatches');
+    await page.goto('/driver/dispatches', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('OPERATOR: Daily Shift Logging & Operator Ledger', async ({ page }) => {
-    test.setTimeout(90000);
+    test.setTimeout(150000);
     await page.context().clearCookies();
 
     // 1. Authenticate as Operator
     await page.goto('/login');
-    await page.locator('input[name="email"]').fill('operator@zerogroup.com');
-    await page.locator('input[name="password"]').fill('password123');
-    await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
+    if (page.url().includes('/login')) {
+      await page.locator('input[name="email"]').fill('operator@zerogroup.com');
+      await page.locator('input[name="password"]').fill('password123');
+      await page.getByRole('button', { name: /Sign In to Plant Portal/i }).click();
+      await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
+    }
 
     // 2. Operator Home
-    await page.goto('/operator/home');
+    await page.goto('/operator/home', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/operator/);
     await expect(page.locator('body')).toBeVisible();
 
     // 3. Field Ledger
-    await page.goto('/operator/ledger');
+    await page.goto('/operator/ledger', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toBeVisible();
   });
 

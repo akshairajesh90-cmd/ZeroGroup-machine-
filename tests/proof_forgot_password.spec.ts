@@ -12,7 +12,7 @@ test('Capture Proof: Login Forgot Password multi-role operator selection', async
   // Select multiple operator equipment roles
   const mixerBtn = page.getByRole('button', { name: /Concrete Mixer Operator/i });
   const liftBtn = page.getByRole('button', { name: /Lift \/ Hoist Operator/i });
-  const vibratorBtn = page.getByRole('button', { name: /⚡ Vibrator Operator/i });
+  const vibratorBtn = page.getByRole('button', { name: /Vibrator Operator/i }).first();
 
   await mixerBtn.click();
   await liftBtn.click();

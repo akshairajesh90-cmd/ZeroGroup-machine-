@@ -16,8 +16,8 @@ test.describe('Milestone 3: Geolocation Accuracy, GPS Error Preservation & Link 
     await expect(modalDialog).toBeVisible();
 
     // Fill in pre-existing coordinates
-    const latInput = modalDialog.locator('input[placeholder="e.g. 9.591600"]');
-    const lngInput = modalDialog.locator('input[placeholder="e.g. 76.522200"]');
+    const latInput = modalDialog.locator('input[placeholder*="9."]').first();
+    const lngInput = modalDialog.locator('input[placeholder*="76."]').first();
     await latInput.fill('9.591600');
     await lngInput.fill('76.522200');
 
@@ -67,8 +67,8 @@ test.describe('Milestone 3: Geolocation Accuracy, GPS Error Preservation & Link 
     await expect(modalDialog).toBeVisible();
 
     // Fill in pre-existing coordinates
-    const latInput = modalDialog.locator('input[placeholder="e.g. 9.591600"]');
-    const lngInput = modalDialog.locator('input[placeholder="e.g. 76.522200"]');
+    const latInput = modalDialog.locator('input[placeholder*="9."]').first();
+    const lngInput = modalDialog.locator('input[placeholder*="76."]').first();
     await latInput.fill('9.591600');
     await lngInput.fill('76.522200');
 
@@ -117,8 +117,8 @@ test.describe('Milestone 3: Geolocation Accuracy, GPS Error Preservation & Link 
     const modalDialog = page.locator('[role="dialog"]');
     await expect(modalDialog).toBeVisible();
 
-    const latInput = modalDialog.locator('input[placeholder="e.g. 9.591600"]');
-    const lngInput = modalDialog.locator('input[placeholder="e.g. 76.522200"]');
+    const latInput = modalDialog.locator('input[placeholder*="9."]').first();
+    const lngInput = modalDialog.locator('input[placeholder*="76."]').first();
     await latInput.fill('10.000000');
     await lngInput.fill('77.000000');
 
@@ -184,8 +184,8 @@ test.describe('Milestone 3: Geolocation Accuracy, GPS Error Preservation & Link 
     const modalDialog = page.locator('[role="dialog"]');
     await expect(modalDialog).toBeVisible();
 
-    const latInput = modalDialog.locator('input[placeholder="e.g. 9.591600"]');
-    const lngInput = modalDialog.locator('input[placeholder="e.g. 76.522200"]');
+    const latInput = modalDialog.locator('input[placeholder*="9."]').first();
+    const lngInput = modalDialog.locator('input[placeholder*="76."]').first();
 
     // Mock high-accuracy GPS (accuracy: 12m <= 50m threshold)
     await page.evaluate(() => {
@@ -235,8 +235,8 @@ test.describe('Milestone 3: Geolocation Accuracy, GPS Error Preservation & Link 
     await expect(modalDialog).toBeVisible();
 
     const linkInput = modalDialog.locator('input[placeholder*="Paste Google Maps URL"]');
-    const latInput = modalDialog.locator('input[placeholder="e.g. 9.591600"]');
-    const lngInput = modalDialog.locator('input[placeholder="e.g. 76.522200"]');
+    const latInput = modalDialog.locator('input[placeholder*="9."]').first();
+    const lngInput = modalDialog.locator('input[placeholder*="76."]').first();
 
     // Modern Google Maps URL having both @viewport (9.7, 76.6) and !3d..!4d.. pin (9.591600, 76.522200)
     const modernUrl =

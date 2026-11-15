@@ -9,6 +9,12 @@ test.describe('Tools & Asset Inventory Management', () => {
   test.setTimeout(90000);
   test.use({ storageState: adminAuth });
 
+  test.beforeEach(async () => {
+    await prisma.tool.deleteMany({
+      where: { toolId: { in: ['TL-TR-99', 'ty-test-ui'] } }
+    });
+  });
+
   test.afterAll(async () => {
     // Cleanup any created test tools
     await prisma.tool.deleteMany({
