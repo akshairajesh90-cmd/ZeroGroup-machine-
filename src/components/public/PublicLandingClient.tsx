@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, lazy, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { 
@@ -18,6 +18,10 @@ import {
   WebsiteCatalogItemData
 } from "@/types/websiteSettings";
 import { useInView } from "@/hooks/useInView";
+
+// Lazy-loaded pro interactive sections (zero SSR bundle cost)
+const YardTelemetryRadar = lazy(() => import("./interactive/YardTelemetryRadar"));
+const ConcretePourCalculator = lazy(() => import("./interactive/ConcretePourCalculator"));
 
 interface PublicLandingProps {
   sessionUser?: {
@@ -465,6 +469,24 @@ export default function PublicLandingClient({ sessionUser, settings }: PublicLan
         {/* Layer 3: Fine Industrial Grain / Noise */}
         <div className="absolute inset-0 industrial-noise pointer-events-none opacity-40" />
 
+        {/* Layer 4: Animated dot particle field */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+          {[...Array(18)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full bg-[#fa5402]"
+              style={{
+                width: `${1 + (i % 3)}px`,
+                height: `${1 + (i % 3)}px`,
+                left: `${5 + (i * 5.5) % 90}%`,
+                top: `${10 + (i * 7.3) % 80}%`,
+                opacity: 0.15 + (i % 5) * 0.07,
+                animation: `particleDrift ${4 + (i % 5)}s ease-in-out ${i * 0.4}s infinite`,
+              }}
+            />
+          ))}
+        </div>
+
         {/* Top & Bottom Precision Accent Lines */}
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#fa5402]/25 to-transparent" />
         <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-slate-700/40 to-transparent" />
@@ -625,6 +647,15 @@ export default function PublicLandingClient({ sessionUser, settings }: PublicLan
           </div>
         </div>
       </section>
+
+      {/* ── 4B. YARD LOGISTICS TELEMETRY RADAR ─────────────────────────── */}
+      <Suspense fallback={
+        <div className="py-20 flex items-center justify-center bg-[#070d16] border-b border-slate-800">
+          <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }>
+        <YardTelemetryRadar />
+      </Suspense>
 
       {/* ── 5. MACHINERY INVENTORY WITH VISUAL SHOWCASE & LIVE SEARCH ────── */}
       <section 
@@ -1015,6 +1046,22 @@ export default function PublicLandingClient({ sessionUser, settings }: PublicLan
         </div>
       </section>
 
+      {/* ── 6B. CONCRETE POUR & FLEET CALCULATOR ─────────────────────────── */}
+      <Suspense fallback={
+        <div className="py-16 flex items-center justify-center bg-slate-950 border-b border-slate-800">
+          <div className="w-8 h-8 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }>
+        <ConcretePourCalculator
+          onApplyToInquiry={({ machine, duration, notes }) => {
+            setSelectedMachine(machine);
+            setDuration(duration.includes("Week") ? "1 Week" : duration.includes("Month") ? "1 Month or Long Term" : "1 to 3 Days");
+            setNotes(notes);
+            scrollToId("inquiry");
+          }}
+        />
+      </Suspense>
+
       {/* ── 7. COMMERCIAL HIRE INQUIRY FORM ────────────────────────────── */}
       <section 
         id="inquiry" 
@@ -1198,6 +1245,7 @@ export default function PublicLandingClient({ sessionUser, settings }: PublicLan
         </div>
       </section>
 
+
       {/* ── 8. REGIONAL COVERAGE (100% RESPONSIVE NO-OVERFLOW GRID) ─────── */}
       <section 
         ref={coverageRef}
@@ -1221,22 +1269,22 @@ export default function PublicLandingClient({ sessionUser, settings }: PublicLan
           </div>
 
           {/* Responsive adaptive grid that accommodates long names like Thiruvananthapuram without clipping */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2.5 sm:gap-3">
             {activeDistricts.map((dist, dIdx) => {
               const isCentral = CENTRAL_KERALA_DISTRICTS.has(dist);
               return (
                 <div 
                   key={dIdx}
-                  className={`p-3 rounded-xl border text-center transition-all min-w-0 overflow-hidden flex flex-col justify-between ${
+                  className={`p-2.5 sm:p-3 rounded-xl border text-center transition-all min-w-0 w-full overflow-hidden flex flex-col justify-between items-center ${
                     isCentral 
                       ? "bg-slate-950/90 border-[#fa5402]/40 text-orange-300 shadow-sm shadow-[#fa5402]/5 hover:border-[#fa5402]"
                       : "bg-slate-950/50 border-slate-800/90 text-slate-300 hover:border-slate-700 hover:text-white"
                   }`}
                 >
-                  <p className="text-xs font-bold text-white truncate px-0.5" title={dist}>
+                  <p className="text-[11px] sm:text-xs font-bold text-white truncate w-full px-0.5 block" title={dist}>
                     {dist}
                   </p>
-                  <p className="text-[10px] text-slate-400 mt-1 whitespace-nowrap">
+                  <p className="text-[10px] text-slate-400 mt-1 truncate w-full block">
                     {isCentral ? "⚡ < 2 Hr Transit" : "Scheduled Direct"}
                   </p>
                 </div>

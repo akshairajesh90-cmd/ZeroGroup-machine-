@@ -240,6 +240,49 @@ html, body {
   }
 }
 
+@keyframes float3d {
+  0%, 100% { transform: translateY(0px) rotateX(0deg); }
+  25%       { transform: translateY(-6px) rotateX(1deg); }
+  75%       { transform: translateY(3px) rotateX(-0.5deg); }
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(250,84,2,0.2), 0 0 40px rgba(250,84,2,0.05); }
+  50%       { box-shadow: 0 0 30px rgba(250,84,2,0.45), 0 0 60px rgba(250,84,2,0.15); }
+}
+
+@keyframes radarSweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes particleDrift {
+  0%   { opacity: 0; transform: translateY(0) translateX(0) scale(0.5); }
+  20%  { opacity: 0.6; }
+  80%  { opacity: 0.4; }
+  100% { opacity: 0; transform: translateY(-80px) translateX(20px) scale(1.2); }
+}
+
+@keyframes borderDraw {
+  from { stroke-dashoffset: 1000; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes typewriter {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0% 0 0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.92); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
 /* Hero Stagger Delays with cubic-bezier(0.16, 1, 0.3, 1) */
 .hero-stagger-1 {
   animation: heroEntrance 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
@@ -255,6 +298,28 @@ html, body {
 
 .hero-stagger-4 {
   animation: heroEntrance 1.0s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both;
+}
+
+/* 3D Floating animation for section cards */
+.float-3d {
+  animation: float3d 6s ease-in-out infinite;
+}
+
+/* Glow pulse for key CTA elements */
+.glow-pulse {
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+/* Shimmer loading effect for skeleton loaders */
+.shimmer {
+  background: linear-gradient(90deg, transparent 25%, rgba(250,84,2,0.1) 50%, transparent 75%);
+  background-size: 400% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Scale-in for modal/card reveal */
+.scale-in {
+  animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Atmospheric Grids & Spotlight Meshes */
@@ -348,4 +413,150 @@ input[type="range"].estimator-slider::-moz-range-thumb {
   box-shadow: 0 0 14px rgba(250, 84, 2, 0.65);
   border: 2px solid #0f172a;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   3D VIEWPORT CANVAS — Full-bleed, touch-action isolated
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.machinery-3d-canvas {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   3D HOTSPOT PINS — Animated spatial markers
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes hotspotPing {
+  0%   { transform: scale(1); opacity: 0.7; }
+  70%  { transform: scale(2.2); opacity: 0; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.hotspot-ping {
+  animation: hotspotPing 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SECTION ENTRANCE CHOREOGRAPHY — scroll-driven reveals
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.section-enter {
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.section-enter-hidden {
+  opacity: 0;
+  transform: translateY(32px);
+}
+
+.section-enter-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   INDUSTRIAL GRID GRADIENTS — Extended for new sections
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.section-gradient-dark {
+  background: linear-gradient(to bottom, #030810, #070d16, #030810);
+}
+
+.section-gradient-slate {
+  background: linear-gradient(to bottom, #0f172a, #020617);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RADAR CANVAS — Responsive scaling
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.radar-canvas-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+@media (min-width: 1024px) {
+  .radar-canvas-container {
+    max-width: 100%;
+    aspect-ratio: auto;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MACHINE SELECTOR TABS — Touch-friendly with active indicator
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.machine-tab-active {
+  background: #fa5402;
+  color: #ffffff;
+  border-color: #fa5402;
+  box-shadow: 0 4px 16px rgba(250, 84, 2, 0.3);
+}
+
+.machine-tab-inactive {
+  background: #0f172a;
+  color: #94a3b8;
+  border-color: #1e293b;
+}
+
+.machine-tab-inactive:hover {
+  border-color: rgba(250, 84, 2, 0.4);
+  color: #ffffff;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CREW MEMBER CARD — Expand/Collapse animation
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes cardExpand {
+  from { max-height: 0; opacity: 0; }
+  to   { max-height: 500px; opacity: 1; }
+}
+
+.crew-card-expanded-content {
+  animation: cardExpand 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  overflow: hidden;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MOBILE RESPONSIVE — Ensure no horizontal overflow
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .machinery-3d-viewport {
+    height: 300px !important;
+  }
+  
+  .radar-district-label {
+    font-size: 8px !important;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) {
+  .equipment-card-lift:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  
+  .equipment-card-lift:active {
+    transform: translateY(-3px);
+  }
+}
+
+/* High-DPI screens */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .machinery-3d-canvas {
+    image-rendering: -webkit-optimize-contrast;
+  }
 }

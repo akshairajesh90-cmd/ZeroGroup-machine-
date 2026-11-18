@@ -318,3 +318,67 @@ export const DEFAULT_CATALOG_ITEMS: WebsiteCatalogItemData[] = [
     isActive: true,
   },
 ];
+
+export interface CrewMemberData {
+  id: string;
+  nameEn: string;
+  nameMal: string;
+  role: string;
+  spec: string;
+  years: number;
+  cert: string;
+  zones: string[];
+  bio: string;
+  stat1Label: string;
+  stat1Value: string;
+  stat2Label: string;
+  stat2Value: string;
+  phone: string;
+  color: string;
+  avatar: string;
+  isActive: boolean;
+}
+
+export interface CaseStudyData {
+  id: string;
+  title: string;
+  location: string;
+  date: string;
+  machine: string;
+  outcome: string;
+  icon: string;
+  color: string;
+  isActive: boolean;
+}
+
+export interface WebsiteInteractiveSettingsData {
+  showcase3dEnabled: boolean;
+  showcase3dHeading: string;
+  showcase3dSubheading: string;
+  showcase3dDefaultMachine: "mixer" | "hoist" | "vibrator" | "pump";
+  showcase3dDefaultViewMode: "solid" | "wireframe";
+
+  radarEnabled: boolean;
+  radarHeading: string;
+  radarSubheading: string;
+  radarCentralHubRadiusKm: number;
+
+  calculatorEnabled: boolean;
+  calculatorHeading: string;
+  calculatorSubheading: string;
+  calculatorMixerDailyRate: number;
+  calculatorVibratorDailyRate: number;
+  calculatorHoistDailyRate: number;
+  calculatorPumpDailyRate: number;
+
+  crewEnabled: boolean;
+  crewHeading: string;
+  crewSubheading: string;
+  yardmasterDirectPhone: string;
+  yardmasterDirectWhatsapp: string;
+  yardmasterDeskTitle: string;
+  yardmasterDeskSubtitle: string;
+  crewMembers: CrewMemberData[];
+  caseStudies: CaseStudyData[];
+}
+
