@@ -25,6 +25,10 @@ export default async function MaintenancePage() {
   });
 
   return (
-    <MaintenanceClient tickets={tickets} vehicles={vehicles} machines={machines} />
+    <MaintenanceClient
+      tickets={JSON.parse(JSON.stringify(tickets))}
+      vehicles={JSON.parse(JSON.stringify(vehicles))}
+      machines={JSON.parse(JSON.stringify(machines))}
+    />
   );
 }

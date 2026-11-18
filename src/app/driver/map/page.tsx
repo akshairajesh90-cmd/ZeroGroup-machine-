@@ -18,14 +18,11 @@ const LiveMap = nextDynamic(() => import("@/components/LiveMap"), {
 });
 
 export default async function DriverLiveMapPage() {
-  const { role, employeeId } = await requireAuth();
+  const { role, employeeId } = await requireAuth({
+    allowedRoles: ["DRIVER", "OPERATOR", "STAFF", "OWNER", "ADMIN"],
+  });
 
-  // For security, only allow drivers or staff/owners
-  if (role !== "DRIVER" && role !== "STAFF" && role !== "OWNER" && role !== "ADMIN") {
-    redirect("/");
-  }
-
-  const isGodMode = ["ADMIN", "OWNER"].includes(role);
+  const isGodMode = ["ADMIN", "OWNER", "STAFF"].includes(role);
   const todayStart = startOfDay(new Date());
   const todayEnd = endOfDay(new Date());
 
@@ -78,7 +75,7 @@ export default async function DriverLiveMapPage() {
       
       {/* Map Container */}
       <div className="h-[calc(100dvh-18rem)] min-h-[380px] w-full rounded-2xl overflow-hidden border border-slate-800 shadow-xl">
-        <LiveMap sites={sites} />
+        <LiveMap sites={JSON.parse(JSON.stringify(sites))} />
       </div>
 
       {/* Ordered Route Stop Cards */}

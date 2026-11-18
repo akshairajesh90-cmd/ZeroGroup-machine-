@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export default async function DriverProfilePage() {
-  await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN, Role.DRIVER, Role.STAFF] });
+  await requireAuth({ allowedRoles: [Role.OWNER, Role.ADMIN, Role.DRIVER, Role.OPERATOR, Role.STAFF] });
   const res = await getOwnProfile();
 
   if (!res.success || !res.data) {

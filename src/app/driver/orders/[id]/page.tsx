@@ -98,7 +98,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
 
   return (
     <div className="p-4 md:p-6 max-w-lg mx-auto pb-44">
-      <DriverOrderClient dispatch={dispatch} userRole={role} groupAggregate={groupAggregate} />
+      <DriverOrderClient dispatch={JSON.parse(JSON.stringify(dispatch))} userRole={role} groupAggregate={groupAggregate} />
       <div className="mt-4">
         <DriverSitePinger
           dispatchId={dispatch.id}

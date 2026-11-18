@@ -6,7 +6,7 @@ import { Wallet, Info, Receipt, Clock } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function DriverPayPage() {
-  const { employeeId } = await requireAuth({ allowedRoles: ["DRIVER", "OWNER", "STAFF"] });
+  const { employeeId } = await requireAuth({ allowedRoles: ["DRIVER", "OPERATOR", "STAFF", "OWNER", "ADMIN"] });
 
   // ONLY fetch pending advances and shift logs without any wage data attached.
   const pendingAdvances = await prisma.salaryAdvance.findMany({

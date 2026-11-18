@@ -18,7 +18,9 @@ import AutoPinger from "@/components/operator/AutoPinger";
 export const dynamic = "force-dynamic";
 
 export default async function OperatorHomePage() {
-  const { employeeId, role } = await requireAuth();
+  const { employeeId, role } = await requireAuth({
+    allowedRoles: ["OPERATOR", "DRIVER", "STAFF", "OWNER", "ADMIN"],
+  });
 
   const employee = await prisma.employee.findUnique({
     where: { id: employeeId },

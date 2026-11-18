@@ -7,11 +7,7 @@ import { startOfDay, endOfDay, addDays } from "date-fns";
 export const dynamic = "force-dynamic";
 
 export default async function JobPoolPage() {
-  const { employeeId, role } = await requireAuth();
-
-  if (!["DRIVER", "OWNER", "ADMIN"].includes(role)) {
-    redirect("/");
-  }
+  const { employeeId, role } = await requireAuth({ allowedRoles: ["DRIVER", "OPERATOR", "STAFF", "OWNER", "ADMIN"] });
 
   const todayStart = startOfDay(new Date());
   const tomorrowEnd = endOfDay(addDays(new Date(), 1));

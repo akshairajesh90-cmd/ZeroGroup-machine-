@@ -84,12 +84,26 @@ export async function getInvoices(filter?: string) {
     });
 
     const formatted = invoices.map(inv => {
-      const totalPaid = Number(inv.paidCash) + Number(inv.paidUpi) + Number(inv.paidBank) + Number(inv.paidCheque) + Number(inv.advanceDeducted);
+      const paidCash = Number(inv.paidCash || 0);
+      const paidUpi = Number(inv.paidUpi || 0);
+      const paidBank = Number(inv.paidBank || 0);
+      const paidCheque = Number(inv.paidCheque || 0);
+      const advanceDeducted = Number(inv.advanceDeducted || 0);
+      const totalPaid = paidCash + paidUpi + paidBank + paidCheque + advanceDeducted;
       return {
         ...inv,
-        totalAmount: Number(inv.totalAmount),
-        discountAmount: Number(inv.discountAmount),
-        totalPaid
+        totalAmount: Number(inv.totalAmount || 0),
+        discountAmount: Number(inv.discountAmount || 0),
+        paidCash,
+        paidUpi,
+        paidBank,
+        paidCheque,
+        advanceDeducted,
+        totalPaid,
+        issuedDate: inv.issuedDate instanceof Date ? inv.issuedDate.toISOString() : String(inv.issuedDate),
+        dueDate: inv.dueDate instanceof Date ? inv.dueDate.toISOString() : String(inv.dueDate),
+        createdAt: inv.createdAt instanceof Date ? inv.createdAt.toISOString() : String(inv.createdAt),
+        updatedAt: inv.updatedAt instanceof Date ? inv.updatedAt.toISOString() : String(inv.updatedAt),
       };
     });
 

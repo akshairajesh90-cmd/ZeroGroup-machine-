@@ -6,7 +6,7 @@ import FieldDiaryClient from "@/components/field/FieldDiaryClient";
 export default async function FieldDiaryPage({ params }: { params: { dispatchId: string } }) {
   const session = await auth();
   if (!session?.user?.employeeId) {
-    redirect("/auth/signin");
+    redirect("/login");
   }
 
   const role = session.user.role;

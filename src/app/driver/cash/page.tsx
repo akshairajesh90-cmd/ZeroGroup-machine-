@@ -37,7 +37,7 @@ export default async function CashCollectionPage() {
         </p>
       </div>
 
-      <CashFormClient dispatches={dispatches} />
+      <CashFormClient dispatches={JSON.parse(JSON.stringify(dispatches))} />
     </div>
   );
 }

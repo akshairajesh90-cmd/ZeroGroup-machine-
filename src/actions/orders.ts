@@ -408,7 +408,10 @@ export async function getOrderFormData() {
           wagePerDay: Number(rr.wagePerDay),
         })),
       })),
-      tools: tools.map((t) => ({ ...t })),
+      tools: tools.map((t) => ({
+        ...t,
+        dailyRate: Number(t.dailyRate || 0),
+      })),
       workTypeRates: workTypeRates.map((r) => ({
         ...r,
         payoutRate: Number(r.payoutRate),

@@ -30,7 +30,7 @@ export const pool =
     connectionString: rawConnectionString,
     ssl: isCloud ? { rejectUnauthorized: false } : undefined,
     connectionTimeoutMillis: 15000,
-    idleTimeoutMillis: 10000, // Recycle idle connections faster under load
+    idleTimeoutMillis: process.env.NODE_ENV === "production" ? 10000 : 60000, // Keep connection warm in dev to eliminate cold-start delays
     max: poolMax,
   });
 

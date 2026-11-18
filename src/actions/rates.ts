@@ -7,9 +7,16 @@ import { revalidatePath } from "next/cache";
 // WorkTypeRate actions
 export async function getWorkTypeRates() {
   await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
-  return await prisma.workTypeRate.findMany({
+  const rates = await prisma.workTypeRate.findMany({
     orderBy: [{ machineType: "asc" }, { workType: "asc" }]
   });
+  return rates.map((r) => ({
+    ...r,
+    payoutRate: Number(r.payoutRate),
+    customerCharge: r.customerCharge ? Number(r.customerCharge) : null,
+    createdAt: r.createdAt ? (r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt)) : new Date().toISOString(),
+    updatedAt: r.updatedAt ? (r.updatedAt instanceof Date ? r.updatedAt.toISOString() : String(r.updatedAt)) : new Date().toISOString(),
+  }));
 }
 
 export async function upsertWorkTypeRate(data: { machineType: any, workType: any, payoutRate: number, customerCharge: number }) {
@@ -42,8 +49,20 @@ export async function upsertWorkTypeRate(data: { machineType: any, workType: any
 
 export async function getEmployeeRoleRates() {
   await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
-  return await prisma.employeeRoleRate.findMany({
+  const rates = await prisma.employeeRoleRate.findMany({
     include: { employee: true },
     orderBy: { crewRole: "asc" }
   });
+  return rates.map((r) => ({
+    id: r.id,
+    crewRole: r.crewRole,
+    wagePerDay: Number(r.wagePerDay || 0),
+    employeeId: r.employeeId,
+    employee: {
+      id: r.employee?.id ?? "",
+      name: r.employee?.name ?? "",
+      role: (r.employee?.role as any) ?? "OPERATOR",
+      phone: r.employee?.phone ?? null,
+    },
+  }));
 }

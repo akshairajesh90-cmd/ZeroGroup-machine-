@@ -7,7 +7,10 @@ import ChatClient from "./ChatClient";
 export const dynamic = "force-dynamic";
 
 export default async function DriverChatPage() {
-  const currentUser = await requireAuth();
+  const currentUser = await requireAuth({
+    allowedRoles: ["DRIVER", "OPERATOR", "STAFF", "OWNER", "ADMIN"],
+  });
+
   const currentEmployeeId = await resolveValidSenderId(
     currentUser.employeeId,
     currentUser.userId,

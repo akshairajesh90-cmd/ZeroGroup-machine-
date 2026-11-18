@@ -5,7 +5,9 @@ import { Wallet, Info, IndianRupee } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function OperatorPayPage() {
-  const { employeeId } = await requireAuth();
+  const { employeeId } = await requireAuth({
+    allowedRoles: ["OPERATOR", "DRIVER", "STAFF", "OWNER", "ADMIN"],
+  });
 
   // ONLY fetch pending advances. NO wages, NO hourly rates.
   const pendingAdvances = await prisma.salaryAdvance.findMany({

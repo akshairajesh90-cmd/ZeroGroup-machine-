@@ -58,18 +58,54 @@ export async function requireAuth(options?: { allowedRoles?: Role[]; redirectOnF
   });
 
   if (!currentUser) {
-    if (shouldRedirect) redirect("/api/auth/force-logout");
+    if (shouldRedirect) redirect("/login?error=SessionExpired");
     throw new AuthError(401, "User not found in database");
   }
 
   if (!currentUser.employee && !["OWNER", "ADMIN"].includes(currentUser.role)) {
-    if (shouldRedirect) redirect("/api/auth/force-logout");
-    throw new AuthError(401, "No employee profile linked to user");
+    // Attempt self-healing resolution before rejecting the session
+    const existingEmployee = await prisma.employee.findFirst({
+      where: {
+        OR: [
+          { userId: currentUser.id },
+          ...(currentUser.email ? [{ phone: currentUser.email }] : []),
+        ],
+      },
+    });
+
+    if (existingEmployee) {
+      currentUser.employee = existingEmployee;
+    } else {
+      try {
+        const autoEmployee = await prisma.employee.create({
+          data: {
+            userId: currentUser.id,
+            name: currentUser.email ? currentUser.email.split("@")[0].toUpperCase() : "DRIVER",
+            role: currentUser.role,
+            phone: null,
+            operatorType: "INTERNAL",
+          },
+        });
+        currentUser.employee = autoEmployee;
+      } catch (provisionErr) {
+        console.warn("[serverAuth] Failed to auto-provision employee profile:", provisionErr);
+      }
+    }
+
+    if (!currentUser.employee) {
+      if (shouldRedirect) redirect("/login?error=SessionExpired");
+      throw new AuthError(401, "No employee profile linked to user");
+    }
   }
 
   if (options?.allowedRoles && options.allowedRoles.length > 0) {
     if (!options.allowedRoles.includes(currentUser.role)) {
-      if (shouldRedirect) redirect("/admin/dashboard");
+      if (shouldRedirect) {
+        if (currentUser.role === "DRIVER") redirect("/driver/home");
+        if (currentUser.role === "OPERATOR") redirect("/operator/home");
+        if (currentUser.role === "STAFF") redirect("/staff/dashboard");
+        redirect("/admin/dashboard");
+      }
       throw new AuthError(403, "Insufficient role");
     }
   }

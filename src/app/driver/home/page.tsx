@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { requireAuth } from "@/lib/serverAuth";
 import Link from "next/link";
 import { startOfDay, endOfDay, startOfWeek, format } from "date-fns";
 import {
@@ -32,22 +31,19 @@ function getGreeting() {
 }
 
 export default async function DriverHomePage() {
-  const session = await auth();
-  if (!session?.user) redirect("/");
+  const currentUser = await requireAuth({ allowedRoles: ["DRIVER", "OPERATOR", "STAFF", "OWNER", "ADMIN"] });
+  const empId = currentUser.employeeId || "";
 
-  const empId = session.user.employeeId;
-  if (!empId) redirect("/");
-
-  const employee = await prisma.employee.findUnique({
+  const employee = empId ? await prisma.employee.findUnique({
     where: { id: empId },
     select: { name: true, role: true, lastLatitude: true, lastLongitude: true, lastLocationUpdate: true },
-  });
+  }) : null;
 
   const todayStart = startOfDay(new Date());
   const todayEnd   = endOfDay(new Date());
   const weekStart  = startOfWeek(new Date(), { weekStartsOn: 1 });
 
-  const isGodMode = ["ADMIN", "OWNER"].includes(employee?.role ?? session?.user?.role ?? "");
+  const isGodMode = ["ADMIN", "OWNER", "STAFF"].includes(currentUser.role);
 
   const [todayDispatches, weekDispatches, recentDispatches, activeShift, availableVehicles] = await Promise.all([
     prisma.dailyDispatch.findMany({

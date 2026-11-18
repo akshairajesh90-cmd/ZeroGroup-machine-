@@ -184,7 +184,7 @@ export default async function BillingPage({
   return (
     <div className="min-h-screen bg-black">
       <BillingClient 
-        dispatch={dispatch} 
+        dispatch={JSON.parse(JSON.stringify(dispatch))} 
         defaultItems={defaultItems} 
         collectorId={collectorId || ""}
       />

@@ -21,7 +21,7 @@ export default async function StaffEmployeesPage() {
     email: emp.email,
     phone: emp.phone ?? null,
     role: emp.role,
-    fixedSalary: emp.fixedSalary || 0,
+    fixedSalary: emp.fixedSalary ? Number(emp.fixedSalary) : 0,
     isActive: emp.isActive ?? true,
     createdAt: emp.createdAt.toISOString(),
   }));

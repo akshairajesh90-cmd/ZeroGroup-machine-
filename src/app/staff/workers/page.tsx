@@ -21,9 +21,13 @@ export default async function StaffWorkersPage() {
     name: w.name,
     phone: w.phone ?? null,
     role: w.role,
-    baseDailyWage: w.baseDailyWage || 0,
+    baseDailyWage: w.baseDailyWage ? Number(w.baseDailyWage) : 0,
     capableRoles: w.capableRoles || [],
-    roleRates: w.roleRates || [],
+    roleRates: (w.roleRates || []).map((rr: any) => ({
+      id: rr.id,
+      crewRole: rr.crewRole,
+      wagePerDay: Number(rr.wagePerDay),
+    })),
     isActive: w.isActive ?? true,
     createdAt: w.createdAt.toISOString(),
   }));

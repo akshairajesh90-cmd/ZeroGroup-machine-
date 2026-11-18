@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { requireAuth } from "@/lib/serverAuth";
 import Link from "next/link";
 import { format, isToday, isThisWeek, subDays } from "date-fns";
 import { ChevronRight, MapPin, Wrench, Zap, Layers, Cpu } from "lucide-react";
@@ -23,16 +22,10 @@ function MachineIcon({ type }: { type?: string | null }) {
 }
 
 export default async function DispatchesPage() {
-  const session = await auth();
-  if (!session?.user?.employeeId) redirect("/");
-  const empId = session.user.employeeId;
+  const currentUser = await requireAuth({ allowedRoles: ["DRIVER", "OPERATOR", "STAFF", "OWNER", "ADMIN"] });
+  const empId = currentUser.employeeId;
 
-  const employee = await prisma.employee.findUnique({
-    where: { id: empId },
-    select: { role: true },
-  });
-
-  const isGodMode = ["ADMIN", "OWNER"].includes(employee?.role ?? session?.user?.role ?? "");
+  const isGodMode = ["ADMIN", "OWNER", "STAFF"].includes(currentUser.role);
 
   const dispatches = await prisma.dailyDispatch.findMany({
     where: {

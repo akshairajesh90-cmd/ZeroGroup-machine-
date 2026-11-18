@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { requireAuth } from "@/lib/serverAuth";
 import { format } from "date-fns";
 import { Wrench, CalendarDays, Clock } from "lucide-react";
 import BreakdownForm from "./BreakdownForm";
@@ -8,9 +7,8 @@ import BreakdownForm from "./BreakdownForm";
 export const dynamic = "force-dynamic";
 
 export default async function PortalPage() {
-  const session = await auth();
-  if (!session?.user?.employeeId) redirect("/");
-  const empId = session.user.employeeId;
+  const currentUser = await requireAuth({ allowedRoles: ["DRIVER", "OPERATOR", "STAFF", "OWNER", "ADMIN"] });
+  const empId = currentUser.employeeId;
 
   const [machines, shiftLogs, openTickets] = await Promise.all([
     prisma.machine.findMany({

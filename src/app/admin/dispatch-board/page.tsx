@@ -45,7 +45,10 @@ export default async function DispatchBoardPage({
         </p>
       </div>
 
-      <CalendarBoard initialDispatches={dispatches} machines={machines} />
+      <CalendarBoard
+        initialDispatches={JSON.parse(JSON.stringify(dispatches))}
+        machines={JSON.parse(JSON.stringify(machines))}
+      />
     </div>
   );
 }

@@ -27,8 +27,8 @@ export default async function RatesPage() {
       </div>
       
       <RatesClient 
-        initialWorkTypeRates={workTypeRates} 
-        initialEmployeeRoleRates={employeeRoleRates}
+        initialWorkTypeRates={JSON.parse(JSON.stringify(workTypeRates))} 
+        initialEmployeeRoleRates={JSON.parse(JSON.stringify(employeeRoleRates))}
         machineTypes={machineTypes}
         workTypes={workTypes}
         crewRoles={crewRoles}

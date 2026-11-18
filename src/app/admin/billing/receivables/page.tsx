@@ -21,7 +21,7 @@ export default async function ReceivablesPage() {
         <p className="text-slate-500 mt-2">Manage all invoices, track outstanding balances, and log delayed payments.</p>
       </div>
 
-      <ReceivablesClient initialInvoices={invoices} />
+      <ReceivablesClient initialInvoices={JSON.parse(JSON.stringify(invoices))} />
     </div>
   );
 }

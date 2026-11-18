@@ -42,8 +42,8 @@ export default async function AdminStaffPage() {
 
       <StaffPortalClient 
         currentUserRole={currentUser.role} 
-        employees={employees} 
-        auditLogs={auditLogs} 
+        employees={JSON.parse(JSON.stringify(employees))} 
+        auditLogs={JSON.parse(JSON.stringify(auditLogs))} 
       />
     </div>
   );

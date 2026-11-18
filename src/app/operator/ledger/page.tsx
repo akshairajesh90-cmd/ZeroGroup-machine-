@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 export default async function OperatorLedgerPage() {
   const session = await auth();
   if (!session?.user?.employeeId) {
-    redirect("/auth/signin");
+    redirect("/login");
   }
 
   // Fetch the last 30 days of data by default
