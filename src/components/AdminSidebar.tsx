@@ -199,16 +199,14 @@ export default function AdminSidebar({ userName, userEmail, role }: AdminSidebar
       >
         {/* Logo */}
         <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-800 px-6 pt-4 lg:pt-0 pl-16 lg:pl-6">
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-800/90 border border-slate-700/80 overflow-hidden p-0.5 shadow-sm">
-            <Image
-              src="/logo.png"
-              alt="ZERO GROUP Logo"
-              width={40}
-              height={40}
-              className="h-full w-full object-contain"
-              priority
-            />
-          </div>
+          <Image
+            src="/logo.png"
+            alt="ZERO GROUP Logo"
+            width={40}
+            height={40}
+            className="h-10 w-10 object-contain shrink-0 drop-shadow-[0_0_6px_rgba(250,84,2,0.5)]"
+            priority
+          />
           <div>
             <h2 className="font-bold tracking-tight text-white text-base">ZERO GROUP</h2>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-400">

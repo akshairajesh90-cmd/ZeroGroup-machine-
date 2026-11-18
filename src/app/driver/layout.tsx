@@ -39,16 +39,14 @@ export default async function DriverLayout({
       {/* PWA Mobile Top Header */}
       <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-800/80 bg-slate-900/90 px-4 backdrop-blur-xl">
         <div className="flex items-center gap-2.5">
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-800 border border-slate-700/80 overflow-hidden p-0.5 shadow-sm">
-            <Image
-              src="/logo.png"
-              alt="ZERO GROUP Logo"
-              width={40}
-              height={40}
-              className="h-full w-full object-contain"
-              priority
-            />
-          </div>
+          <Image
+            src="/logo.png"
+            alt="ZERO GROUP Logo"
+            width={40}
+            height={40}
+            className="h-10 w-10 object-contain shrink-0 drop-shadow-[0_0_6px_rgba(250,84,2,0.5)]"
+            priority
+          />
           <div>
             <h1 className="text-sm font-black tracking-tight text-white">ZERO GROUP</h1>
             <p className="text-[10px] font-bold text-cyan-400">Driver & Operator PWA</p>

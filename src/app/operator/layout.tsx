@@ -122,15 +122,13 @@ export default function OperatorLayout({
                 <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isOffline ? "bg-red-400" : "bg-emerald-400"}`}></span>
                 <span className={`relative inline-flex rounded-full h-3 w-3 ${isOffline ? "bg-red-500" : "bg-emerald-500"}`}></span>
               </span>
-              <div className="relative h-7 w-7 shrink-0 rounded-lg overflow-hidden bg-zinc-900 border border-zinc-800 p-0.5">
-                <Image
+              <Image
                   src="/logo.png"
                   alt="ZERO GROUP Logo"
                   width={28}
                   height={28}
-                  className="h-full w-full object-contain"
+                  className="h-7 w-7 object-contain shrink-0 drop-shadow-[0_0_5px_rgba(250,84,2,0.5)]"
                 />
-              </div>
               <span className="text-white font-black tracking-tight text-lg">
                 ZERO<span className="text-orange-500">GROUP</span>
               </span>
