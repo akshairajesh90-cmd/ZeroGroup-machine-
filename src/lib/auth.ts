@@ -1,4 +1,5 @@
 // NextAuth v5 configuration - ZERO GROUP
+import * as React from "react";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
@@ -135,7 +136,9 @@ const nextAuthResult = NextAuth({
 
 export const { handlers, signIn, signOut } = nextAuthResult;
 
-export const auth = async (...args: any[]) => {
+const safeCache = typeof (React as any).cache === "function" ? (React as any).cache : (<T extends (...args: any[]) => any>(fn: T): T => fn);
+
+export const auth = safeCache(async (...args: any[]) => {
   if (process.env.CLI_TEST_ROLE) {
     return {
       user: {
@@ -148,4 +151,4 @@ export const auth = async (...args: any[]) => {
     } as any;
   }
   return (nextAuthResult as any).auth(...args);
-};
+});

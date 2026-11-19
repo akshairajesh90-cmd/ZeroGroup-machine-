@@ -1,13 +1,13 @@
 {
-  "name": "ZERO GROUP Driver App",
-  "short_name": "ZG Driver",
-  "description": "ZERO GROUP driver portal — manage orders, shifts, and expenses on the go.",
+  "name": "ZERO GROUP Driver & Operator PWA",
+  "short_name": "ZG Field PWA",
+  "description": "ZERO GROUP field operations portal — manage dispatches, machine logs, shifts, and equipment on the go.",
   "start_url": "/driver/home",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#6366f1",
   "orientation": "portrait",
-  "scope": "/driver",
+  "scope": "/",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",

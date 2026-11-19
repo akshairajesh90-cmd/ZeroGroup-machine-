@@ -1,10 +1,12 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/serverAuth";
 import { revalidatePath } from "next/cache";
 import { InvoiceStatus, PaymentMethod } from "@prisma/client";
 
 export async function getCustomerBalances() {
+  await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
   try {
     const customers = await prisma.customer.findMany({
       include: {
@@ -64,6 +66,7 @@ export async function getCustomerBalances() {
 }
 
 export async function getInvoices(filter?: string) {
+  await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
   try {
     const whereClause: any = { isPendingDelete: false };
     
@@ -115,6 +118,7 @@ export async function getInvoices(filter?: string) {
 }
 
 export async function getCustomerStatement(customerId: string) {
+  await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
   try {
     const customer = await prisma.customer.findUnique({
       where: { id: customerId },
@@ -224,6 +228,7 @@ export async function processPayment(
   discountAmount: number, 
   method: PaymentMethod
 ) {
+  await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
   try {
     const result = await prisma.$transaction(async (tx) => {
       const invoice = await tx.invoice.findUnique({

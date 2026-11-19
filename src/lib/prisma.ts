@@ -39,9 +39,8 @@ pool.on("error", (err) => {
   console.error("[PostgreSQL Pool Transient Error]:", err?.message || err);
 });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPg.pgPool = pool;
-}
+// Cache connection pool on globalThis across all environments to eliminate cold-start handshake latency
+globalForPg.pgPool = pool;
 
 const adapter = new PrismaPg(pool);
 
@@ -52,6 +51,5 @@ export const prisma =
     log: ["error", "warn"],
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPg.prisma = prisma;
-}
+// Cache PrismaClient instance on globalThis to reuse warm connections
+globalForPg.prisma = prisma;

@@ -1,5 +1,10 @@
 import {
   parseGoogleMapsUrl,
+  isGpsAccuracyAcceptable,
+  isGpsVelocityAcceptable,
+  sanitizeGpsReading,
+  MAX_GPS_HORIZONTAL_ACCURACY_METERS,
+  MAX_GPS_VELOCITY_KMH,
 } from "../geo";
 import {
   isAllowedHost,
@@ -282,6 +287,99 @@ describe("Geo Utility & URL Parsing Tests", () => {
       }
       // 16th request rejected
       expect(checkRateLimit(key, 15, 60000)).toBe(false);
+    });
+  });
+
+  describe("Background GPS Telemetry Sanitization & Accuracy / Velocity Filters", () => {
+    test("Horizontal accuracy guard rejects accuracy > 100m and accepts <= 100m", () => {
+      expect(MAX_GPS_HORIZONTAL_ACCURACY_METERS).toBe(100);
+      expect(isGpsAccuracyAcceptable(10)).toBe(true);
+      expect(isGpsAccuracyAcceptable(50)).toBe(true);
+      expect(isGpsAccuracyAcceptable(100)).toBe(true);
+      expect(isGpsAccuracyAcceptable(101)).toBe(false);
+      expect(isGpsAccuracyAcceptable(250)).toBe(false);
+      expect(isGpsAccuracyAcceptable(undefined)).toBe(true);
+      expect(isGpsAccuracyAcceptable(null)).toBe(true);
+      expect(isGpsAccuracyAcceptable(NaN)).toBe(false);
+      expect(isGpsAccuracyAcceptable(Infinity)).toBe(false);
+    });
+
+    test("Velocity sanity filter rejects speed > 130 km/h and accepts <= 130 km/h", () => {
+      expect(MAX_GPS_VELOCITY_KMH).toBe(130);
+      expect(isGpsVelocityAcceptable(0)).toBe(true);
+      expect(isGpsVelocityAcceptable(45)).toBe(true);
+      expect(isGpsVelocityAcceptable(130)).toBe(true);
+      expect(isGpsVelocityAcceptable(131)).toBe(false);
+      expect(isGpsVelocityAcceptable(300)).toBe(false);
+      expect(isGpsVelocityAcceptable(undefined)).toBe(true);
+      expect(isGpsVelocityAcceptable(null)).toBe(true);
+      expect(isGpsVelocityAcceptable(NaN)).toBe(false);
+    });
+
+    test("sanitizeGpsReading accepts clean telemetry reading", () => {
+      const reading = {
+        latitude: 9.6914,
+        longitude: 76.7828,
+        accuracy: 15,
+        speed: 35,
+        timestamp: 10000,
+      };
+      const res = sanitizeGpsReading(reading);
+      expect(res.valid).toBe(true);
+      expect(res.reason).toBe("ACCEPTED");
+    });
+
+    test("sanitizeGpsReading rejects invalid latitude or longitude", () => {
+      const invalidLat = { latitude: 95.0, longitude: 76.7828, accuracy: 15 };
+      expect(sanitizeGpsReading(invalidLat).valid).toBe(false);
+      expect(sanitizeGpsReading(invalidLat).reason).toBe("INVALID_COORDINATES");
+    });
+
+    test("sanitizeGpsReading rejects horizontal accuracy exceeding 100m", () => {
+      const badAccuracy = {
+        latitude: 9.6914,
+        longitude: 76.7828,
+        accuracy: 150, // > 100m
+      };
+      const res = sanitizeGpsReading(badAccuracy);
+      expect(res.valid).toBe(false);
+      expect(res.reason).toBe("ACCURACY_EXCEEDED");
+    });
+
+    test("sanitizeGpsReading rejects direct speed exceeding 130 km/h", () => {
+      const overspeed = {
+        latitude: 9.6914,
+        longitude: 76.7828,
+        accuracy: 20,
+        speed: 145, // > 130 km/h
+      };
+      const res = sanitizeGpsReading(overspeed);
+      expect(res.valid).toBe(false);
+      expect(res.reason).toBe("VELOCITY_EXCEEDED");
+      expect(res.speedKmH).toBe(145);
+    });
+
+    test("sanitizeGpsReading detects calculated velocity exceeding 130 km/h between consecutive pings", () => {
+      // Prev ping in Erattupetta
+      const prev = {
+        latitude: 9.6914,
+        longitude: 76.7828,
+        accuracy: 15,
+        timestamp: 10000,
+      };
+
+      // 5 seconds later, 2.5 km away (Pala direction) = 1800 km/h satellite bounce!
+      const curr = {
+        latitude: 9.7150,
+        longitude: 76.7828,
+        accuracy: 20,
+        timestamp: 15000,
+      };
+
+      const res = sanitizeGpsReading(curr, prev);
+      expect(res.valid).toBe(false);
+      expect(res.reason).toBe("VELOCITY_EXCEEDED");
+      expect(res.speedKmH).toBeGreaterThan(130);
     });
   });
 });

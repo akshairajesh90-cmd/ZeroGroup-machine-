@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuthForApi } from "@/lib/serverAuth";
 import { checkRateLimit } from "@/lib/rate-limiter";
 import { getYardLocation } from "@/lib/gis/yardLocation";
+import { isValidCoordinate, isGpsAccuracyAcceptable, isGpsVelocityAcceptable } from "@/lib/geo";
 
 function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000; // Radius of Earth in meters
@@ -51,15 +52,26 @@ export async function POST(request: Request) {
     const body = await request.json();
     const rawPings: IncomingPing[] = Array.isArray(body?.pings) ? body.pings : [body];
 
-    // Filter valid pings
-    const validPings = rawPings.filter(
-      (p) =>
-        p &&
-        p.latitude !== undefined &&
-        p.latitude !== null &&
-        p.longitude !== undefined &&
-        p.longitude !== null
-    );
+    // Filter and sanitize valid pings: coordinates valid, horizontal accuracy <= 100m, velocity <= 130 km/h
+    const validPings = rawPings.filter((p) => {
+      if (!p || p.latitude === undefined || p.latitude === null || p.longitude === undefined || p.longitude === null) {
+        return false;
+      }
+      const lat = Number(p.latitude);
+      const lng = Number(p.longitude);
+      if (!isValidCoordinate(lat, lng)) {
+        return false;
+      }
+      // Horizontal Accuracy check: reject readings where accuracy > 100m
+      if (!isGpsAccuracyAcceptable(p.accuracy != null ? Number(p.accuracy) : null)) {
+        return false;
+      }
+      // Velocity Sanity check: reject pings with reported speed > 130 km/h
+      if (!isGpsVelocityAcceptable(p.speed != null ? Number(p.speed) : null)) {
+        return false;
+      }
+      return true;
+    });
 
     if (validPings.length === 0) {
       return NextResponse.json({ error: "Missing required location coordinates" }, { status: 400 });

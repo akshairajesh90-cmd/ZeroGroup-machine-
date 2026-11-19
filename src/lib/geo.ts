@@ -38,6 +38,101 @@ export function isValidCoordinate(lat: unknown, lng: unknown): boolean {
 }
 
 /**
+ * Maximum acceptable horizontal GPS accuracy in meters.
+ * Readings with accuracy > 100m are rejected to eliminate coarse cell-tower triangulation errors.
+ */
+export const MAX_GPS_HORIZONTAL_ACCURACY_METERS = 100;
+
+/**
+ * Maximum acceptable velocity in km/h for heavy machinery and logistics fleet.
+ * Pings indicating velocity > 130 km/h are rejected as satellite multipath bounce.
+ */
+export const MAX_GPS_VELOCITY_KMH = 130;
+
+export interface GpsTelemetryPoint {
+  latitude: number;
+  longitude: number;
+  accuracy?: number | null;
+  speed?: number | null; // in km/h
+  timestamp?: number | Date | string;
+}
+
+export interface TelemetrySanitizationResult {
+  valid: boolean;
+  reason?: "INVALID_COORDINATES" | "ACCURACY_EXCEEDED" | "VELOCITY_EXCEEDED" | "ACCEPTED";
+  speedKmH?: number;
+  reading: GpsTelemetryPoint;
+}
+
+/**
+ * Validates horizontal GPS accuracy: rejects accuracy > 100 meters.
+ */
+export function isGpsAccuracyAcceptable(accuracy?: number | null): boolean {
+  if (accuracy === undefined || accuracy === null) return true;
+  if (typeof accuracy !== "number" || Number.isNaN(accuracy) || !Number.isFinite(accuracy)) return false;
+  return accuracy <= MAX_GPS_HORIZONTAL_ACCURACY_METERS;
+}
+
+/**
+ * Validates velocity sanity: rejects speed > 130 km/h.
+ */
+export function isGpsVelocityAcceptable(speedKmH?: number | null): boolean {
+  if (speedKmH === undefined || speedKmH === null) return true;
+  if (typeof speedKmH !== "number" || Number.isNaN(speedKmH) || !Number.isFinite(speedKmH)) return false;
+  return speedKmH <= MAX_GPS_VELOCITY_KMH;
+}
+
+/**
+ * Sanitizes and verifies a GPS telemetry reading against coordinates sanity,
+ * horizontal accuracy filter (<= 100m), and velocity sanity filter (<= 130 km/h).
+ */
+export function sanitizeGpsReading(
+  current: GpsTelemetryPoint,
+  previous?: GpsTelemetryPoint | null
+): TelemetrySanitizationResult {
+  if (!isValidCoordinate(current.latitude, current.longitude)) {
+    return { valid: false, reason: "INVALID_COORDINATES", reading: current };
+  }
+
+  // 1. Horizontal Accuracy Guard (> 100m reject)
+  if (!isGpsAccuracyAcceptable(current.accuracy)) {
+    return { valid: false, reason: "ACCURACY_EXCEEDED", reading: current };
+  }
+
+  // 2. Direct Reported Velocity Guard (> 130 km/h reject)
+  if (current.speed != null && !isGpsVelocityAcceptable(current.speed)) {
+    return { valid: false, reason: "VELOCITY_EXCEEDED", speedKmH: current.speed, reading: current };
+  }
+
+  // 3. Computed Velocity between consecutive pings (> 130 km/h reject)
+  if (previous && isValidCoordinate(previous.latitude, previous.longitude)) {
+    const tCurrent = current.timestamp ? new Date(current.timestamp).getTime() : Date.now();
+    const tPrev = previous.timestamp ? new Date(previous.timestamp).getTime() : 0;
+    const dtSec = (tCurrent - tPrev) / 1000;
+
+    if (dtSec > 0.5 && dtSec < 300) {
+      const distMeters = calculateHaversineDistance(
+        previous.latitude,
+        previous.longitude,
+        current.latitude,
+        current.longitude
+      );
+      const computedSpeedKmH = (distMeters / dtSec) * 3.6;
+      if (computedSpeedKmH > MAX_GPS_VELOCITY_KMH) {
+        return {
+          valid: false,
+          reason: "VELOCITY_EXCEEDED",
+          speedKmH: Math.round(computedSpeedKmH * 10) / 10,
+          reading: current,
+        };
+      }
+    }
+  }
+
+  return { valid: true, reason: "ACCEPTED", reading: current };
+}
+
+/**
  * Extracts coordinates from Google Maps URLs or raw "lat, lng" strings.
  * Priority hierarchy:
  * 1. !3d<lat>!4d<lng> (destination pin marker coordinate - preferred over camera viewport)

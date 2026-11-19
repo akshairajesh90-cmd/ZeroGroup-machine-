@@ -19,8 +19,7 @@ import { calculateOperatorSettlement } from './calculate';
  */
 export async function generateSettlement(input: z.infer<typeof generateSettlementSchema>) {
   try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Unauthorized" };
+    await requireAuth({ allowedRoles: ["OWNER", "ADMIN"] });
 
     const parsed = generateSettlementSchema.parse(input);
     const weekEndingDate = new Date(parsed.weekEnding);
@@ -86,7 +85,7 @@ export async function generateSettlement(input: z.infer<typeof generateSettlemen
  */
 export async function updateSettlement(input: z.infer<typeof updateSettlementSchema>) {
   try {
-    const { employeeId } = await requireAuth();
+    const { employeeId } = await requireAuth({ allowedRoles: ["OWNER", "ADMIN"] });
     const parsed = updateSettlementSchema.parse(input);
 
     const dbSettlement = await prisma.settlement.findUnique({

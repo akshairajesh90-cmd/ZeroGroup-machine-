@@ -56,15 +56,20 @@ export const authConfig = {
       }
       
       if (trigger === "update" && session?.impersonate) {
-        token.isImpersonating = true;
-        token.originalAdminId = token.id;
-        token.id = session.impersonate.id;
-        token.role = session.impersonate.role;
-        token.employeeId = session.impersonate.employeeId;
+        // Security guard: only OWNER or ADMIN can initiate impersonation
+        if (token.role === "OWNER" || token.role === "ADMIN") {
+          token.isImpersonating = true;
+          token.originalAdminId = token.id;
+          token.originalRole = token.role;
+          token.id = session.impersonate.id;
+          token.role = session.impersonate.role;
+          token.employeeId = session.impersonate.employeeId;
+        }
       } else if (trigger === "update" && session?.stopImpersonating && token.isImpersonating) {
         token.isImpersonating = false;
         token.id = token.originalAdminId;
-        token.role = "OWNER";
+        token.role = (token as any).originalRole || "ADMIN";
+        delete (token as any).originalRole;
       } else if (trigger === "update" && session?.updateTokenVersion) {
         token.sessionTokenVersion = (token.sessionTokenVersion as number) + 1;
       }

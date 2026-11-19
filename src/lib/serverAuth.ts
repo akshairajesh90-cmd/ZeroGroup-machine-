@@ -1,7 +1,28 @@
+import * as React from "react";
 import { auth } from "./auth";
 import { prisma } from "./prisma";
 import { Role } from "@prisma/client";
 import { redirect } from "next/navigation";
+
+const safeCache = typeof (React as any).cache === "function" ? (React as any).cache : (<T extends (...args: any[]) => any>(fn: T): T => fn);
+
+// Request-scoped memoized user lookup: primary-key unique probe runs in < 1ms and deduplicates across layout/pages
+const getCachedUser = safeCache(async (userId?: string, email?: string) => {
+  if (userId) {
+    const userById = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { employee: true },
+    });
+    if (userById) return userById;
+  }
+  if (email) {
+    return prisma.user.findUnique({
+      where: { email },
+      include: { employee: true },
+    });
+  }
+  return null;
+});
 
 export interface AuthContext {
   userId: string;
@@ -47,15 +68,7 @@ export async function requireAuth(options?: { allowedRoles?: Role[]; redirectOnF
     };
   }
 
-  const currentUser = await prisma.user.findFirst({
-    where: {
-      OR: [
-        ...(session.user.email ? [{ email: session.user.email }] : []),
-        ...(session.user.id ? [{ id: session.user.id }] : []),
-      ]
-    },
-    include: { employee: true },
-  });
+  let currentUser = await getCachedUser(session.user.id, session.user.email);
 
   if (!currentUser) {
     if (shouldRedirect) redirect("/login?error=SessionExpired");

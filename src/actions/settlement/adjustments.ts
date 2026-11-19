@@ -13,7 +13,7 @@ import { createAdjustmentSchema, approveAdjustmentSchema } from './schemas';
  */
 export async function createManualAdjustment(input: z.infer<typeof createAdjustmentSchema>) {
   try {
-    const { role, employeeId } = await requireAuth();
+    const { role, employeeId } = await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
 
     const parsed = createAdjustmentSchema.parse(input);
     const limit = process.env.MAX_STAFF_ADJUSTMENT_LIMIT ? parseInt(process.env.MAX_STAFF_ADJUSTMENT_LIMIT, 10) : 500;
@@ -54,7 +54,7 @@ export async function createManualAdjustment(input: z.infer<typeof createAdjustm
  */
 export async function approveManualAdjustment(input: z.infer<typeof approveAdjustmentSchema>) {
   try {
-    const { employeeId } = await requireAuth({ allowedRoles: ["OWNER", "ADMIN", "STAFF"] });
+    const { employeeId } = await requireAuth({ allowedRoles: ["OWNER", "ADMIN"] });
     const parsed = approveAdjustmentSchema.parse(input);
 
     const updated = await prisma.manualAdjustment.update({

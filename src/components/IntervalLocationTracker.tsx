@@ -80,9 +80,19 @@ export default function IntervalLocationTracker({
     }
   }, []);
 
-  // 1. Screen Wake Lock & Visibility Focus Flusher
+  // 1. Screen Wake Lock & Visibility Focus Flusher + PWA Service Worker Registration
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // Register Service Worker and eager-cache NextAuth session for offline PWA resilience
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch((err) => {
+        console.warn("[IntervalLocationTracker] Service Worker registration:", err);
+      });
+      navigator.serviceWorker.ready.then((reg) => {
+        reg.active?.postMessage({ type: "CACHE_SESSION_NOW" });
+      });
+    }
 
     const requestWakeLock = async () => {
       if (!("wakeLock" in navigator)) return;
